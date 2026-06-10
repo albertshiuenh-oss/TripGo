@@ -699,9 +699,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
     <i class="ti ti-fingerprint" style="font-size:18px"></i> Face ID / Touch ID 快速登入
   </button>
 
-  <div id="js-home">
+  <div id="js-home" style="flex-direction:column;align-items:center;width:100%;max-width:320px;overflow-y:auto;max-height:70vh;padding-bottom:8px">
     <!-- ① 名字輸入 bar -->
-    <div style="width:100%;max-width:320px;margin-bottom:16px">
+    <div style="width:100%;margin-bottom:14px">
       <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.8);letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px">
         你的名字 / 帳號
       </div>
@@ -716,7 +716,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
     </div>
 
     <!-- ② 旅程列表（輸入名字後顯示） -->
-    <div id="js-trips-preview" style="display:none;width:100%;max-width:320px;margin-bottom:16px;flex-direction:column;gap:0">
+    <div id="js-trips-preview" style="display:none;width:100%;margin-bottom:14px;flex-direction:column;gap:0">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.8);letter-spacing:.5px;text-transform:uppercase">我的旅程</span>
         <span class="jtp-count" id="jtp-count" style="font-size:11px;background:rgba(255,255,255,.25);color:#fff;border-radius:10px;padding:2px 8px"></span>
@@ -732,7 +732,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
     </div>
 
     <!-- ④ 加入 / 建立 按鈕 -->
-    <div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px">
+    <div style="width:100%;display:flex;flex-direction:column;gap:10px">
       <button class="js-big-btn primary" onclick="goSub('join')">
         <div class="jbb-ic blue"><i class="ti ti-login" style="color:var(--blue);font-size:22px"></i></div>
         <div class="jbb-txt">
@@ -2805,10 +2805,13 @@ function renderTripsPreview(inputName){
 
   list.innerHTML = matched.slice(0, 4).map(function(t, i){
     return '<div class="jtp-card" data-tidx="'+i+'">' +
-      '<div>' +
-        '<div class="jtp-role">'+(t.isOrg ? '👑 建立者' : '👤 成員')+'</div>' +
-        '<div class="jtp-name">'+t.tripName+'</div>' +
-        '<div class="jtp-meta">邀請碼：'+t.code+'</div>' +
+      '<div style="min-width:0;flex:1">' +
+        '<div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' +
+          (t.isOrg ? '👑 ' : '👤 ') + t.tripName +
+        '</div>' +
+        '<div style="font-size:10px;color:var(--text2);margin-top:2px;white-space:nowrap">' +
+          (t.isOrg ? '建立者' : '成員') + ' · ' + t.code +
+        '</div>' +
       '</div>' +
       '<i class="ti ti-chevron-right jtp-arr"></i>' +
     '</div>';
