@@ -511,7 +511,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 .asp-save{background:var(--blue);border:none;border-radius:10px;padding:7px 16px;font-size:13px;color:#fff;font-weight:700;cursor:pointer}
 #asp-map{flex:0 0 38%;min-height:120px;position:relative;background:#e8ecef}
 #asp-gmap{position:absolute;inset:0}
-.asp-search-wrap{position:absolute;top:8px;left:8px;right:8px;z-index:5}
+.asp-search-wrap{position:absolute;top:8px;left:8px;right:8px;z-index:50}
 .asp-search-bar{display:flex;align-items:center;gap:8px;padding:0 12px;height:40px;background:#fff;border-radius:20px;box-shadow:0 1px 6px rgba(0,0,0,.2)}
 .asp-search-inp{flex:1;border:none;outline:none;font-size:13px;color:var(--text);background:transparent}
 .asp-form{flex:1;overflow-y:auto;padding:14px;-webkit-overflow-scrolling:touch}
@@ -1851,7 +1851,13 @@ function onAspInput(val){
     if(dd)dd.style.display='none';
     return;
   }
-  if(!aspAcSvc)return;
+  // If aspAcSvc not ready yet, try to init
+  if(!aspAcSvc){
+    if(typeof google!=='undefined'&&google.maps&&google.maps.places){
+      aspAcSvc=new google.maps.places.AutocompleteService();
+      if(aspMap) aspPlSvc=new google.maps.places.PlacesService(aspMap);
+    } else { return; }
+  }
   aspTimer=setTimeout(function(){
     aspAcSvc.getPlacePredictions({input:val,language:'zh-TW'},function(preds,status){
       var dd=document.getElementById('asp-drop');
@@ -1861,22 +1867,24 @@ function onAspInput(val){
       }
       var html='';
       preds.slice(0,5).forEach(function(p){
-        html+='<div class="drop-item" style="background:#fff" data-pid="'+p.place_id+'" onclick="aspSelectPid(this.dataset.pid)">'+
+        html+='<div class="drop-item" style="background:#fff" data-pid="'+p.place_id+'">' +
           '<div class="drop-ic"><i class="ti ti-map-pin"></i></div>'+
           '<div><div class="drop-name">'+p.structured_formatting.main_text+'</div>'+
           '<div class="drop-addr">'+(p.structured_formatting.secondary_text||'')+'</div></div></div>';
       });
       dd.innerHTML=html;
+      // Use event delegation - no inline onclick
+      dd.querySelectorAll('.drop-item').forEach(function(item){
+        item.addEventListener('click',function(){ aspSelectPid(this.dataset.pid); });
+      });
       dd.style.display='block';
     });
   },350);
 }
 function aspSelectPid(pid){
   if(!aspPlSvc)return;
-  // Hide dropdown
   var dd=document.getElementById('asp-drop');
-  if(dd)dd.style.display='none';
-  aspPlSvc.getDetails({placeId:pid,fields:['name','geometry','formatted_address']},function(place,status){
+  aspPlSvc.getDetails({placeId:pid,fields:['name','geometry','formatted_address','rating','types']},function(place,status){
     if(status!==google.maps.places.PlacesServiceStatus.OK)return;
     aspDropPin(place.geometry.location);
     document.getElementById('ns-name').value=place.name||'';
@@ -1886,6 +1894,28 @@ function aspSelectPid(pid){
     document.getElementById('asp-place-info').classList.add('show');
     S.aspLat=place.geometry.location.lat();
     S.aspLng=place.geometry.location.lng();
+    // ③ Show "加入景點" button in dropdown
+    if(dd){
+      dd.innerHTML=
+        '<div style="padding:10px 14px;border-bottom:1px solid var(--border)">' +
+          '<div style="font-size:13px;font-weight:700;color:var(--text)">'+place.name+'</div>' +
+          '<div style="font-size:11px;color:var(--gray);margin-top:2px">'+( place.formatted_address||'')+'</div>' +
+          (place.rating?'<div style="font-size:11px;color:#F9AB00;margin-top:2px">★ '+place.rating+'</div>':'') +
+        '</div>' +
+        '<div style="padding:10px 14px">' +
+          '<button id="asp-add-btn" style="width:100%;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">' +
+            '<i class="ti ti-map-pin-plus" style="font-size:16px"></i> 加入景點' +
+          '</button>' +
+        '</div>';
+      dd.style.display='block';
+      var addBtn=document.getElementById('asp-add-btn');
+      if(addBtn){
+        addBtn.addEventListener('click',function(){
+          dd.style.display='none';
+          saveStop();
+        });
+      }
+    }
   });
 }
 function aspDropPin(latLng){
