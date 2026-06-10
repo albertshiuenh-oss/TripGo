@@ -60,16 +60,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 .jgm-item.red{color:var(--red)}
 .jgm-sep{height:1px;background:var(--border);margin:3px 0}
 
-/* Biometric */
-#js-biometric{
-  display:none;  /* HIDDEN BY DEFAULT */
-  align-items:center;justify-content:center;gap:8px;
-  width:100%;max-width:320px;
-  padding:12px;margin-bottom:16px;
-  border:1.5px solid rgba(255,255,255,.4);border-radius:12px;
-  background:rgba(255,255,255,.15);color:#fff;
-  font-size:13px;cursor:pointer;
-}
 
 /* Home panel */
 #js-home{
@@ -695,20 +685,27 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
   <div class="js-title">TripGo</div>
   <div class="js-sub">團體旅遊管理 APP</div>
 
-  <button id="js-biometric" onclick="doBiometric()">
-    <i class="ti ti-fingerprint" style="font-size:18px"></i> Face ID / Touch ID 快速登入
-  </button>
 
-  <!-- 首頁旅程預覽（輸入名字後顯示） -->
-  <div id="js-trips-preview">
-    <div class="jtp-header">
-      <span>我的旅程</span>
-      <span class="jtp-count" id="jtp-count">0 個</span>
+
+  <div id="js-home" style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:12px">
+
+    <!-- 名字輸入 bar (永遠在最上面) -->
+    <div style="background:#fff;border-radius:14px;padding:12px 16px;box-shadow:0 2px 8px rgba(0,0,0,.12);display:flex;align-items:center;gap:10px">
+      <i class="ti ti-user" style="font-size:18px;color:var(--blue);flex-shrink:0"></i>
+      <input id="js-home-name"
+        placeholder="輸入你的名字或帳號"
+        autocomplete="name"
+        style="border:none;background:transparent;padding:0;margin:0;font-size:15px;flex:1;outline:none;color:var(--text)"
+        oninput="onHomeNameInput(this.value)"/>
     </div>
-    <div id="jtp-list"></div>
-  </div>
 
-  <div id="js-home">
+    <!-- 旅程列表 (輸入名字後才顯示) -->
+    <div id="js-trips-preview" style="display:none;flex-direction:column;gap:8px">
+      <div style="font-size:11px;color:rgba(255,255,255,.8);font-weight:600" id="jtp-count"></div>
+      <div id="jtp-list" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+
+    <!-- 加入 / 建立 按鈕 -->
     <button class="js-big-btn primary" onclick="goSub('join')">
       <div class="jbb-ic blue"><i class="ti ti-login" style="color:var(--blue);font-size:22px"></i></div>
       <div class="jbb-txt">
@@ -725,7 +722,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
       </div>
       <i class="ti ti-chevron-right jbb-arr"></i>
     </button>
-  </div>
+  </div>>
 
   <div id="js-sub">
     <div class="js-sub-hdr">
@@ -1193,7 +1190,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 <!-- ===================== APP JS ===================== -->
 <script>
 'use strict';
-// TripGo v3.1 - build 20260609-0011
+// TripGo v3.2 - build 20260610
 console.log('[TripGo] Script loaded v3.1');
 
 // ── State ──
@@ -1646,7 +1643,7 @@ function renderStops() {
         '</div>' +
         (MS_MODE?'':(
           '<button class="stop-nav" onclick="navStop('+i+',event)"><i class="ti ti-navigation" style="font-size:11px"></i> 導航</button>' +
-          '<i class="ti ti-chevron-right stop-arr" onclick="tapStop('+i+')"></i>'
+          '<i class="ti ti-chevron-right stop-arr" onclick="openStopDetail('+i+')" style="cursor:pointer;padding:4px"></i>'
         )) +
       '</div>' +
     '</div>';
@@ -1701,17 +1698,11 @@ function attachLongpress(i){
 }
 
 function tapStop(i){
+  // A. 點景點名稱：只移動地圖 + 顯示資訊卡，不開 detail panel
   if(MS_MODE){toggleSel(i);return;}
   var s=S.stops[i];
   if(!s)return;
-  // Open detail panel
   S.currentStop=i;
-  document.getElementById('det-title').textContent=s.name;
-  document.getElementById('det-time').textContent=(s.arrive||'')+(s.depart?' → '+s.depart:'');
-  document.getElementById('det-bud').textContent=s.budget||'NT$ 0';
-  renderActs(s);renderNotes(s);
-  document.getElementById('detail').classList.add('show');
-  // Move map + show place card
   var hasCoords = s.lat && s.lng && parseFloat(s.lat)!==0 && parseFloat(s.lng)!==0;
   if(map && hasCoords){
     var lat=parseFloat(s.lat),lng=parseFloat(s.lng);
@@ -1724,17 +1715,36 @@ function tapStop(i){
       });
     }
   } else if(map&&plSvc){
-    // Try name directly first, then with region hint
     plSvc.textSearch({query:s.name},function(results,status){
       if(status===google.maps.places.PlacesServiceStatus.OK&&results&&results.length>0){
         map.panTo(results[0].geometry.location);map.setZoom(15);
         showPlaceCard(results[0].place_id);
       } else {
-        // Fallback: show simple card with no map move
         showSimplePc(s);
       }
     });
   }
+}
+
+// B. 開啟景點細節 panel（點箭頭才觸發）
+function openStopDetail(i){
+  if(MS_MODE){toggleSel(i);return;}
+  var s=S.stops[i];
+  if(!s)return;
+  S.currentStop=i;
+  document.getElementById('det-title').textContent=s.name;
+  document.getElementById('det-time').textContent=(s.arrive||'')+(s.depart?' → '+s.depart:'');
+  document.getElementById('det-bud').textContent=s.budget||'NT$ 0';
+  // Reset edit mode
+  _editMode=false;
+  var ef=document.getElementById('det-edit-fields');
+  if(ef) ef.style.display='none';
+  var eb=document.getElementById('det-edit-btn');
+  if(eb){eb.textContent='編輯';eb.style.color='var(--blue)';eb.style.borderColor='var(--border)';}
+  renderActs(s);renderNotes(s);
+  document.getElementById('detail').classList.add('show');
+  // Also move map to location
+  tapStop(i);
 }
 
 function showSimplePc(s){
@@ -2196,7 +2206,6 @@ function goSub(mode){
   document.getElementById('S-app').classList.remove('show');
   document.getElementById('js-home').style.display='none';
   document.getElementById('js-sub').style.display='block';
-  document.getElementById('js-biometric').style.display='none';
   document.getElementById('js-err').textContent='';
   if(mode==='join'){
     document.getElementById('js-sub-title').textContent='加入群組';
@@ -2204,6 +2213,9 @@ function goSub(mode){
     document.getElementById('sub-create-fields').style.display='none';
     document.getElementById('js-go-label').textContent='加入群組';
     document.getElementById('js-go-icon').className='ti ti-login';
+    // Pre-fill name from home screen input
+    var _hn = document.getElementById('js-home-name');
+    if(_hn && _hn.value.trim()) document.getElementById('inp-join-name').value = _hn.value.trim();
     setTimeout(function(){document.getElementById('inp-join-name').focus();},100);
   } else {
     document.getElementById('js-sub-title').textContent='建立群組';
@@ -2211,6 +2223,9 @@ function goSub(mode){
     document.getElementById('sub-create-fields').style.display='block';
     document.getElementById('js-go-label').textContent='建立群組';
     document.getElementById('js-go-icon').className='ti ti-map-plus';
+    // Pre-fill name from home screen input
+    var _hn2 = document.getElementById('js-home-name');
+    if(_hn2 && _hn2.value.trim()) document.getElementById('inp-create-name').value = _hn2.value.trim();
     setTimeout(function(){document.getElementById('inp-create-name').focus();},100);
   }
 }
@@ -2221,9 +2236,12 @@ function goHome(){
   document.getElementById('js-home').style.display='flex';
   document.getElementById('js-sub').style.display='none';
   document.getElementById('js-err').textContent='';
-  if(localStorage.getItem('tg_code')) document.getElementById('js-biometric').style.display='flex';
-  // Show trips preview on home (all trips, no name filter)
-  renderTripsPreview('');
+  // Restore last name (trips only show when user types)
+  var lastName = localStorage.getItem('tg_last_name') || '';
+  var homeNameEl = document.getElementById('js-home-name');
+  if(homeNameEl) homeNameEl.value = lastName;
+  var preview = document.getElementById('js-trips-preview');
+  if(preview) preview.style.display = 'none';
 }
 function doAction(){
   if(_sub==='join') doJoin(); else doCreate();
@@ -2317,41 +2335,13 @@ function clearSession(){
   localStorage.removeItem('tg_code');
   localStorage.removeItem('tg_uid');
   localStorage.removeItem('tg_name');
-  document.getElementById('js-biometric').style.display='none';
   goHome();
   showToast('✅ 舊資料已清除',2000);
 }
 
-// Biometric
-function doBiometric(){
-  var code=localStorage.getItem('tg_code');
-  var uid=localStorage.getItem('tg_uid');
-  var name=localStorage.getItem('tg_name');
-  if(!code||!uid||!name){alert('請先登入一次再使用此功能');return;}
-  if(window.PublicKeyCredential){
-    navigator.credentials.get({publicKey:{
-      challenge:new Uint8Array(32),rpId:location.hostname,
-      userVerification:'preferred',timeout:30000
-    }}).then(function(){
-      autoLogin(code,uid,name);
-    }).catch(function(){ autoLogin(code,uid,name); });
-  } else { autoLogin(code,uid,name); }
-}
-function autoLogin(code,uid,name){
-  window.FB.get(window.FB.gref('tripgo/groups/'+code)).then(function(gs){
-    if(gs.exists()){
-      var isOrg=gs.val().organizer===uid;
-      startApp(code,uid,name,gs.val().tripName||'旅遊群組',isOrg);
-    }
-  });
-}
 
 // ── Init join screen ──
 window.addEventListener('load',function(){
-  // Show biometric if previous session
-  if(localStorage.getItem('tg_code')){
-    document.getElementById('js-biometric').style.display='flex';
-  }
   // Default: show home
   document.getElementById('js-home').style.display='flex';
   document.getElementById('js-sub').style.display='none';
@@ -2730,6 +2720,11 @@ function pcAddToItinerary(){
 
 
 // ── 首頁旅程預覽 ──
+function onHomeNameInput(val){
+  localStorage.setItem('tg_last_name', val.trim());
+  renderTripsPreview(val);
+}
+
 function renderTripsPreview(inputName){
   var trips = getStoredTrips();
   var preview = document.getElementById('js-trips-preview');
@@ -2737,34 +2732,43 @@ function renderTripsPreview(inputName){
   var countEl = document.getElementById('jtp-count');
   if(!preview || !list) return;
 
-  if(trips.length === 0){
+  var name = (inputName || '').trim();
+  var nameLower = name.toLowerCase();
+
+  if(trips.length === 0 && !name){
     preview.style.display = 'none';
     return;
   }
 
-  // Filter by name match if name is provided
-  var name = inputName ? inputName.trim().toLowerCase() : '';
-  var matched = name
-    ? trips.filter(function(t){ return t.name.toLowerCase().indexOf(name) >= 0; })
+  // Filter stored trips by name
+  var matched = nameLower
+    ? trips.filter(function(t){ return t.name.toLowerCase().indexOf(nameLower) >= 0; })
     : trips;
 
-  if(matched.length === 0){
+  if(matched.length === 0 && !name){
     preview.style.display = 'none';
     return;
   }
 
   var built = matched.filter(function(t){ return t.isOrg; }).length;
   var joined = matched.filter(function(t){ return !t.isOrg; }).length;
-  countEl.textContent = matched.length + ' 個（建立 ' + built + ' · 加入 ' + joined + '）';
+  if(name){
+    countEl.textContent = '「'+name+'」建立 '+built+' 個 · 加入 '+joined+' 個';
+  } else {
+    countEl.textContent = '共 '+matched.length+' 個（建立 '+built+' · 加入 '+joined+'）';
+  }
 
   list.innerHTML = matched.slice(0, 4).map(function(t, i){
-    return '<div class="jtp-card" data-tidx="'+i+'">' +
-      '<div>' +
-        '<div class="jtp-role">'+(t.isOrg ? '👑 建立者' : '👤 成員')+'</div>' +
-        '<div class="jtp-name">'+t.tripName+'</div>' +
-        '<div class="jtp-meta">邀請碼：'+t.code+'</div>' +
+    return '<div class="jtp-card" data-tidx="'+i+'" style="display:flex;align-items:center;gap:8px;background:#fff;border-radius:12px;padding:10px 14px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.1);overflow:hidden">' +
+      '<span style="font-size:13px;margin-right:4px">'+(t.isOrg?'👑':'👤')+'</span>' +
+      '<div style="flex:1;min-width:0;overflow:hidden">' +
+        '<span style="font-size:13px;font-weight:600;color:var(--text)">'+t.tripName+'</span>' +
+        '<span style="font-size:11px;color:var(--text2);margin-left:6px">'+t.code+'</span>' +
       '</div>' +
-      '<i class="ti ti-chevron-right jtp-arr"></i>' +
+      (t.isOrg
+        ? '<button class="jtp-del" data-code="'+t.code+'" style="background:#FCE8E6;border:none;border-radius:8px;padding:4px 8px;cursor:pointer;font-size:11px;color:var(--red);flex-shrink:0;margin-left:4px">🗑</button>'
+        : '') +
+      '<i class="ti ti-chevron-right" style="font-size:14px;color:var(--blue);opacity:.5;flex-shrink:0;margin-left:4px"></i>' +
     '</div>';
   }).join('') + (matched.length > 4 ? '<div style="font-size:11px;color:rgba(255,255,255,.7);text-align:center;padding:6px 0">還有 '+(matched.length-4)+' 個旅程…</div>' : '');
 
@@ -2773,14 +2777,28 @@ function renderTripsPreview(inputName){
   // Attach click handlers
   list.querySelectorAll('.jtp-card').forEach(function(card, i){
     var t = matched[i];
+    // Delete button for organizers
+    var delBtn = card.querySelector('.jtp-del');
+    if(delBtn){
+      delBtn.addEventListener('click', function(e){
+        e.stopPropagation();
+        var code = this.dataset.code;
+        showCustomConfirm('🗑️','刪除旅程？','刪除後所有資料都會消失，<b>無法復原</b>。','確定刪除',function(){
+          window.FB.remove(window.FB.gref('tripgo/groups/'+code));
+          var trips = getStoredTrips().filter(function(x){return x.code!==code;});
+          saveStoredTrips(trips);
+          renderTripsPreview(inputName);
+          showToast('✅ 旅程已刪除',2000);
+        });
+      });
+    }
+    // Click card to enter trip
     card.addEventListener('click', function(){
-      // Auto-login to this trip
       if(!window.FB || !window.FB.ready){ showToast('⏳ 連線中，請稍後', 1500); return; }
       window.FB.get(window.FB.gref('tripgo/groups/'+t.code)).then(function(snap){
         if(snap.exists()){
           startApp(t.code, t.uid, t.name, t.tripName, t.isOrg);
         } else {
-          // Trip no longer exists - remove from list
           var remaining = getStoredTrips().filter(function(x){ return x.code !== t.code; });
           saveStoredTrips(remaining);
           renderTripsPreview(inputName);
