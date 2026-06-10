@@ -1,0 +1,2481 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="TripGo"/>
+<title>TripGo</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css"/>
+<style>
+/* ===================== RESET ===================== */
+*{box-sizing:border-box;margin:0;padding:0;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  -webkit-tap-highlight-color:transparent}
+:root{
+  --blue:#1A73E8;--green:#34A853;--red:#EA4335;--yellow:#F9AB00;
+  --gray:#5F6368;--bg:#fff;--bg2:#F8F9FA;--border:#DADCE0;
+  --text:#202124;--text2:#5F6368;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
+
+/* ===================== JOIN SCREEN ===================== */
+#S-join{
+  position:fixed;inset:0;z-index:100;
+  background:linear-gradient(160deg,#1565C0,#1A73E8 50%,#1976D2);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:32px 24px;
+}
+#S-join.hide{display:none}
+
+.js-gear{
+  position:absolute;top:16px;right:16px;
+  width:38px;height:38px;border-radius:50%;
+  background:rgba(255,255,255,.2);border:none;cursor:pointer;
+  color:#fff;font-size:20px;
+  display:flex;align-items:center;justify-content:center;
+}
+.js-logo{font-size:52px;margin-bottom:8px}
+.js-title{font-size:28px;font-weight:700;color:#fff;letter-spacing:-.5px;margin-bottom:4px}
+.js-sub{font-size:13px;color:rgba(255,255,255,.75);margin-bottom:32px}
+
+/* Gear dropdown */
+#js-gear-menu{
+  position:absolute;top:60px;right:16px;
+  background:#fff;border-radius:14px;padding:6px;
+  box-shadow:0 8px 32px rgba(0,0,0,.22);
+  min-width:180px;
+  display:none;  /* HIDDEN BY DEFAULT */
+  z-index:200;
+}
+#js-gear-menu.show{display:block}
+.jgm-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border-radius:10px;
+  cursor:pointer;font-size:13px;color:var(--text);
+  border:none;background:none;width:100%;text-align:left;
+}
+.jgm-item:active{background:var(--bg2)}
+.jgm-item.red{color:var(--red)}
+.jgm-sep{height:1px;background:var(--border);margin:3px 0}
+
+/* Biometric */
+#js-biometric{
+  display:none;  /* HIDDEN BY DEFAULT */
+  align-items:center;justify-content:center;gap:8px;
+  width:100%;max-width:320px;
+  padding:12px;margin-bottom:16px;
+  border:1.5px solid rgba(255,255,255,.4);border-radius:12px;
+  background:rgba(255,255,255,.15);color:#fff;
+  font-size:13px;cursor:pointer;
+}
+
+/* Home panel */
+#js-home{
+  width:100%;max-width:320px;
+  display:flex;flex-direction:column;gap:12px;
+}
+.js-big-btn{
+  width:100%;padding:18px;border-radius:16px;border:none;cursor:pointer;
+  display:flex;align-items:center;gap:14px;text-align:left;
+  box-shadow:0 4px 16px rgba(0,0,0,.15);
+}
+.js-big-btn:active{opacity:.9}
+.js-big-btn.primary{background:#fff}
+.js-big-btn.outline{background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35)}
+.jbb-ic{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.jbb-ic.blue{background:#E8F0FE}
+.jbb-ic.wh{background:rgba(255,255,255,.25)}
+.jbb-txt{flex:1}
+.jbb-h{font-size:15px;font-weight:700}
+.jbb-s{font-size:11px;margin-top:2px;opacity:.7}
+.js-big-btn.primary .jbb-h{color:var(--blue)}
+.js-big-btn.primary .jbb-s{color:var(--text2)}
+.js-big-btn.outline .jbb-h,.js-big-btn.outline .jbb-s{color:#fff}
+.jbb-arr{font-size:18px;opacity:.5}
+.js-big-btn.primary .jbb-arr{color:var(--blue)}
+.js-big-btn.outline .jbb-arr{color:#fff}
+
+/* Sub panel */
+#js-sub{
+  width:100%;max-width:320px;
+  display:none;  /* HIDDEN BY DEFAULT */
+}
+.js-sub-hdr{display:flex;align-items:center;gap:10px;margin-bottom:22px}
+.js-back{
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(255,255,255,.2);border:none;cursor:pointer;
+  color:#fff;font-size:20px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.js-sub-title{font-size:18px;font-weight:700;color:#fff}
+.js-field{margin-bottom:14px}
+.js-label{display:block;font-size:11px;font-weight:600;color:rgba(255,255,255,.8);
+  letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px}
+.js-input{
+  width:100%;border:none;border-radius:12px;padding:14px 16px;
+  font-size:15px;color:var(--text);outline:none;-webkit-appearance:none;
+  background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12);
+}
+.js-input:focus{box-shadow:0 0 0 3px rgba(255,255,255,.4),0 2px 8px rgba(0,0,0,.12)}
+.js-input.code{text-transform:uppercase;letter-spacing:3px;font-weight:700;font-size:18px;text-align:center}
+.js-go{
+  width:100%;padding:15px;border:none;border-radius:14px;
+  background:#fff;color:var(--blue);font-size:15px;font-weight:700;
+  cursor:pointer;margin-top:8px;
+  box-shadow:0 4px 16px rgba(0,0,0,.15);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.js-go:active{opacity:.9}
+.js-err{font-size:12px;color:rgba(255,200,200,1);min-height:20px;margin-top:8px;text-align:center;font-weight:500}
+
+/* Admin modal */
+#M-admin{
+  position:fixed;inset:0;z-index:300;
+  background:rgba(0,0,0,.5);
+  display:none;  /* HIDDEN BY DEFAULT */
+  align-items:flex-end;justify-content:center;
+}
+#M-admin.show{display:flex}
+.adm-box{
+  background:#fff;border-radius:18px 18px 0 0;
+  padding:20px 20px 40px;width:100%;max-width:400px;
+}
+.adm-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px}
+.adm-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px}
+.adm-field{margin-bottom:12px}
+.adm-label{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;display:block}
+.adm-input{width:100%;border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text);outline:none;background:var(--bg2);-webkit-appearance:none}
+.adm-input:focus{border-color:var(--blue)}
+.adm-btns{display:flex;gap:8px;margin-top:14px}
+.adm-cancel{flex:1;padding:12px;border:1px solid var(--border);border-radius:10px;background:none;cursor:pointer;font-size:13px;color:var(--gray)}
+.adm-ok{flex:2;padding:12px;border:none;border-radius:10px;background:var(--blue);color:#fff;font-size:13px;font-weight:700;cursor:pointer}
+.adm-err{font-size:12px;color:var(--red);text-align:center;min-height:16px;margin-top:6px}
+
+/* ===================== MAIN APP ===================== */
+#S-app{
+  position:fixed;inset:0;z-index:50;
+  display:none;  /* HIDDEN BY DEFAULT - shown after login */
+  flex-direction:column;
+  background:var(--bg);
+}
+#S-app.show{display:flex}
+
+/* Top bar */
+.topbar{
+  display:flex;align-items:center;gap:6px;
+  padding:7px 12px;
+  background:var(--bg);border-bottom:1px solid var(--border);
+  flex-shrink:0;height:44px;
+}
+.tb-logo{font-size:14px;font-weight:700;color:var(--blue);white-space:nowrap}
+.tb-trip{font-size:11px;color:var(--text2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tb-avs{display:flex;align-items:center}
+.av{
+  width:24px;height:24px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:8px;font-weight:700;border:2px solid #fff;
+  flex-shrink:0;position:relative;cursor:pointer;
+}
+.av0{background:#E8F0FE;color:#1A73E8}
+.av1{background:#E6F4EA;color:#34A853}
+.av2{background:#FCE8E6;color:#EA4335}
+.av3{background:#FEF3E2;color:#F9AB00}
+.av4{background:#F3E8FD;color:#8430CE}
+.av5{background:#FDE8F0;color:#C2185B}
+.av6{background:#E8F5E9;color:#2E7D32}
+.av-crown{position:absolute;top:-6px;left:50%;transform:translateX(-50%);font-size:9px;line-height:1}
+.tb-btn{
+  background:none;border:none;cursor:pointer;
+  width:28px;height:28px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--gray);font-size:16px;flex-shrink:0;
+}
+.tb-btn:active{background:var(--bg2)}
+.tb-invite{
+  font-size:10px;background:var(--blue);color:#fff;
+  border:none;border-radius:10px;padding:3px 8px;cursor:pointer;
+  white-space:nowrap;flex-shrink:0;
+}
+.tb-org{font-size:9px;background:#E8F0FE;color:var(--blue);border-radius:8px;padding:2px 6px;white-space:nowrap;display:none}
+
+/* Main layout */
+.main{flex:1;display:flex;overflow:hidden;min-height:0}
+@media(orientation:portrait){
+  .main{flex-direction:column}
+  #map-wrap{height:42vh;flex:none;border-bottom:1px solid var(--border)}
+  .divider{height:10px;flex:none;background:var(--bg);display:flex;align-items:center;justify-content:center;cursor:ns-resize;touch-action:none;position:relative}
+  .divider::before{content:'';position:absolute;top:50%;left:0;right:0;height:1px;background:var(--border)}
+  .divider-dot{width:40px;height:5px;border-radius:3px;background:#C5C5C7;position:relative;z-index:1}
+  #right{flex:1;min-height:0}
+}
+@media(orientation:landscape){
+  .main{flex-direction:row}
+  #map-wrap{width:58%;flex:none;border-right:1px solid var(--border)}
+  .divider{width:10px;flex:none;background:var(--bg);display:flex;align-items:center;justify-content:center;cursor:ew-resize;touch-action:none;flex-direction:column;position:relative}
+  .divider::before{content:'';position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--border)}
+  .divider-dot{width:5px;height:40px;border-radius:3px;background:#C5C5C7;position:relative;z-index:1}
+  #right{flex:1;min-width:0}
+}
+
+/* Map */
+#map-wrap{position:relative;overflow:hidden;background:#e8ecef}
+#gmap{position:absolute;inset:0}
+
+/* Map search bar */
+.map-search{
+  position:absolute;top:10px;left:12px;
+  width:calc(100% - 70px);max-width:380px;
+  z-index:10;
+}
+.map-search-bar{
+  display:flex;align-items:center;gap:8px;
+  padding:0 14px;height:44px;
+  background:#fff;border-radius:22px;
+  box-shadow:0 2px 8px rgba(0,0,0,.25);
+}
+.map-search-bar input{
+  flex:1;border:none;outline:none;font-size:14px;color:var(--text);background:transparent;
+}
+.map-search-bar input::placeholder{color:var(--text2)}
+#search-clear{display:none;background:none;border:none;cursor:pointer;color:var(--gray);font-size:15px;padding:0}
+.map-search-drop{
+  position:absolute;top:calc(100% + 6px);left:0;right:0;
+  background:#fff;border-radius:14px;
+  box-shadow:0 4px 16px rgba(0,0,0,.14);
+  display:none;  /* HIDDEN BY DEFAULT */
+  overflow:hidden;max-height:200px;overflow-y:auto;z-index:10;
+}
+.map-search-drop.show{display:block}
+.drop-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer}
+.drop-item:last-child{border-bottom:none}
+.drop-item:active{background:var(--bg2)}
+.drop-ic{width:28px;height:28px;border-radius:50%;background:#E8F0FE;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.drop-ic i{font-size:13px;color:var(--blue)}
+.drop-name{font-size:13px;font-weight:500;color:var(--text)}
+.drop-addr{font-size:11px;color:var(--gray)}
+
+/* Map controls */
+.map-transport{
+  position:absolute;top:10px;right:10px;
+  background:#fff;border-radius:14px;padding:3px 5px;
+  display:flex;flex-direction:column;gap:1px;
+  box-shadow:0 2px 6px rgba(0,0,0,.18);z-index:10;
+}
+@media(orientation:landscape){.map-transport{flex-direction:row}}
+.tt{padding:5px 6px;border-radius:50%;border:none;background:none;cursor:pointer;font-size:14px;color:var(--gray);display:flex;align-items:center}
+.tt.on{background:#E8F0FE;color:var(--blue)}
+.map-locate{
+  position:absolute;bottom:32px;right:10px;
+  width:36px;height:36px;border-radius:50%;
+  background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.22);
+  border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  color:var(--blue);font-size:18px;z-index:10;
+}
+.route-bar{
+  position:absolute;bottom:32px;left:10px;right:54px;
+  background:#fff;border-radius:12px;
+  padding:6px 12px;box-shadow:0 2px 8px rgba(0,0,0,.18);
+  z-index:10;font-size:11px;
+  display:none;  /* HIDDEN BY DEFAULT */
+  align-items:center;gap:8px;
+}
+.route-bar.show{display:flex}
+.map-bottom{
+  position:absolute;bottom:0;left:0;right:0;height:26px;
+  background:rgba(255,255,255,.9);border-top:1px solid var(--border);
+  padding:0 12px;font-size:10px;color:var(--gray);
+  display:flex;align-items:center;gap:5px;z-index:9;
+}
+
+/* Place card */
+#place-card{
+  position:absolute;bottom:26px;left:8px;right:8px;
+  background:#fff;border-radius:14px;
+  box-shadow:0 4px 20px rgba(0,0,0,.22);
+  z-index:11;
+  display:none;  /* HIDDEN BY DEFAULT */
+  flex-direction:column;
+  max-height:55%;overflow-y:auto;
+}
+#place-card.show{display:flex}
+.pc-handle{width:32px;height:4px;background:var(--border);border-radius:2px;margin:8px auto 0;flex-shrink:0}
+.pc-close{position:absolute;top:8px;right:10px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.08);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.pc-name{font-size:14px;font-weight:700;color:var(--text);padding:6px 12px 0}
+.pc-type{font-size:11px;color:var(--green);padding:2px 12px 0}
+.pc-rating{font-size:11px;color:var(--text2);padding:2px 12px 4px}
+.pc-actions{display:flex;gap:5px;padding:6px 12px;border-bottom:1px solid var(--border);overflow-x:auto}
+.pc-actions::-webkit-scrollbar{display:none}
+.pca{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:50px;border:none;background:none;cursor:pointer}
+.pca-ic{width:36px;height:36px;border-radius:50%;background:#E8F0FE;display:flex;align-items:center;justify-content:center}
+.pca-ic i{font-size:16px;color:var(--blue)}
+.pca span{font-size:10px;color:var(--text2);white-space:nowrap}
+.pc-info-row{display:flex;align-items:flex-start;gap:8px;padding:7px 12px;border-bottom:1px solid var(--border);font-size:11px;color:var(--text2)}
+.pc-info-row:last-child{border-bottom:none;padding-bottom:10px}
+.pc-info-row i{font-size:14px;color:var(--gray);flex-shrink:0;margin-top:1px}
+
+/* Right panel */
+#right{display:flex;flex-direction:column;overflow:hidden}
+.tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;height:38px}
+.tab{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;font-size:11px;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent}
+.tab.on{color:var(--blue);border-bottom-color:var(--blue);font-weight:700}
+.tab i{font-size:15px}
+.pane{flex:1;overflow-y:auto;padding:10px 12px;-webkit-overflow-scrolling:touch;display:none}
+.pane.on{display:block}
+
+/* Itinerary */
+.day-hdr{font-size:9px;font-weight:700;color:var(--blue);letter-spacing:.5px;text-transform:uppercase;padding:10px 0 4px;border-top:1px solid var(--border)}
+.day-hdr:first-child{border-top:none;padding-top:0}
+.stop-wrap{position:relative;overflow:hidden;border-bottom:1px solid var(--border)}
+.stop-wrap:last-child{border-bottom:none}
+.stop-del-bg{position:absolute;right:0;top:0;bottom:0;width:60px;background:var(--red);display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;z-index:0}
+.stop-row{
+  background:#fff;position:relative;z-index:1;
+  display:flex;align-items:center;gap:8px;padding:8px 0;
+  transition:transform .2s;touch-action:pan-y;
+}
+.stop-row.swiped{transform:translateX(-60px)}
+.stop-cb{
+  width:18px;height:18px;border-radius:50%;border:2px solid var(--border);
+  background:#fff;flex-shrink:0;
+  display:none;  /* shown in multiselect mode */
+  align-items:center;justify-content:center;cursor:pointer;
+}
+.stop-cb.on{background:var(--blue);border-color:var(--blue)}
+.stop-cb.on::after{content:'✓';color:#fff;font-size:10px;font-weight:700}
+.multiselect .stop-cb{display:flex}
+.multiselect .stop-del-bg{display:none}
+.stop-txt{flex:1;cursor:pointer;min-width:0}
+.stop-name{font-size:12px;font-weight:500;color:var(--text)}
+.stop-time{font-size:10px;color:var(--gray);margin-top:1px}
+.stop-nav{background:#E8F0FE;border:none;border-radius:8px;padding:3px 7px;font-size:10px;color:var(--blue);cursor:pointer;white-space:nowrap;flex-shrink:0}
+.stop-arr{font-size:14px;color:var(--gray);cursor:pointer;flex-shrink:0}
+.add-stop-btn{width:100%;padding:10px;border:1.5px dashed var(--border);border-radius:10px;background:none;cursor:pointer;font-size:12px;color:var(--blue);display:flex;align-items:center;justify-content:center;gap:5px;margin-top:10px}
+.budget-wrap{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.budget-lbl{display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-bottom:3px}
+.budget-bar-bg{height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.budget-bar-fg{height:100%;background:var(--green);border-radius:3px}
+.budget-nums{display:flex;justify-content:space-between;font-size:11px;margin-top:3px}
+.stop-empty{font-size:12px;color:var(--gray);text-align:center;padding:24px 0}
+
+/* Multiselect bar */
+#ms-bar{
+  position:fixed;bottom:0;left:0;right:0;
+  background:#fff;border-top:1px solid var(--border);
+  padding:10px 12px max(14px,env(safe-area-inset-bottom));
+  z-index:200;
+  display:none;  /* HIDDEN BY DEFAULT */
+  flex-direction:column;gap:8px;
+  box-shadow:0 -4px 20px rgba(0,0,0,.12);
+}
+#ms-bar.show{display:flex}
+.ms-title{font-size:11px;color:var(--text2);text-align:center}
+.ms-actions{display:flex;gap:8px}
+.ms-btn{flex:1;padding:10px 4px;border-radius:12px;border:none;cursor:pointer;font-size:11px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:3px}
+.ms-btn i{font-size:17px}
+.ms-btn.route{background:#FFF3E0;color:#E65100}
+.ms-btn.del{background:#FCE8E6;color:var(--red)}
+.ms-btn.exp{background:#E6F4EA;color:#1E7A3C}
+.ms-cancel{width:100%;padding:9px;border-radius:10px;border:1px solid var(--border);background:none;cursor:pointer;font-size:13px;color:var(--gray)}
+
+/* Detail panel */
+#detail{
+  position:absolute;inset:0;top:38px;
+  background:#fff;z-index:20;
+  display:none;  /* HIDDEN BY DEFAULT */
+  flex-direction:column;
+}
+#detail.show{display:flex}
+.det-hdr{display:flex;align-items:center;gap:8px;padding:0 12px;height:42px;border-bottom:1px solid var(--border);flex-shrink:0}
+.det-back{background:none;border:none;cursor:pointer;color:var(--blue);font-size:20px;display:flex;align-items:center}
+.det-title{font-size:13px;font-weight:700;color:var(--text);flex:1}
+.det-time{font-size:10px;color:var(--gray);background:var(--bg2);border-radius:8px;padding:2px 7px;white-space:nowrap}
+.det-body{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:10px}
+.sec{background:var(--bg2);border-radius:10px;padding:10px 12px}
+.sec-t{font-size:9px;font-weight:700;color:var(--text2);letter-spacing:.4px;text-transform:uppercase;margin-bottom:7px;display:flex;align-items:center;gap:4px}
+.sec-t i{font-size:13px}
+.act-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)}
+.act-row:last-of-type{border-bottom:none}
+.act-chk{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.act-chk.done{background:var(--green);border-color:var(--green)}
+.act-chk i{font-size:11px;color:transparent}
+.act-chk.done i{color:#fff}
+.act-lbl{flex:1;font-size:12px;color:var(--text)}
+.act-lbl.done{text-decoration:line-through;color:var(--gray)}
+.act-del,.note-del{background:none;border:none;cursor:pointer;color:#ccc;font-size:13px}
+.note-row{display:flex;align-items:flex-start;gap:7px;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px;color:var(--text2)}
+.note-row:last-of-type{border-bottom:none}
+.note-dot{width:5px;height:5px;border-radius:50%;background:var(--yellow);flex-shrink:0;margin-top:3px}
+.note-txt{flex:1;line-height:1.5}
+.add-row{display:flex;gap:7px;margin-top:7px}
+.add-inp{flex:1;border:1px solid var(--border);border-radius:14px;padding:6px 10px;font-size:11px;background:#fff;color:var(--text);outline:none;-webkit-appearance:none}
+.add-inp:focus{border-color:var(--blue)}
+.add-ok{background:var(--blue);border:none;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.add-ok i{font-size:14px;color:#fff}
+.bud-row{display:flex;justify-content:space-between;align-items:center}
+.bud-val{font-size:15px;font-weight:700;color:var(--blue)}
+.bud-edit{background:none;border:1px solid var(--border);border-radius:8px;padding:3px 9px;font-size:11px;color:var(--gray);cursor:pointer}
+
+/* Chat */
+#pane-chat{display:none;flex-direction:column}
+#pane-chat.on{display:flex}
+.msg-scroll{flex:1;overflow-y:auto;padding:8px 12px;-webkit-overflow-scrolling:touch}
+.msg-list{display:flex;flex-direction:column;gap:7px}
+.msg{display:flex;gap:5px;align-items:flex-end}
+.msg.me{flex-direction:row-reverse}
+.bubble{max-width:75%;background:var(--bg2);border-radius:14px 14px 14px 4px;padding:7px 10px;font-size:12px;color:var(--text);line-height:1.4}
+.msg.me .bubble{background:#E8F0FE;border-radius:14px 14px 4px 14px;color:#1A3A6E}
+.msg-nm{font-size:9px;color:var(--text2);margin-bottom:1px}
+.msg-t{font-size:9px;color:#bbb;flex-shrink:0}
+.sticker-bubble{font-size:26px;background:none;padding:2px}
+.chat-foot{border-top:1px solid var(--border);flex-shrink:0}
+.sticker-tray{display:none;flex-wrap:wrap;gap:3px;padding:6px 10px;background:var(--bg2)}
+.sticker-tray.show{display:flex}
+.sk{font-size:20px;cursor:pointer;padding:3px;border-radius:6px;border:none;background:none}
+.chat-inp-row{display:flex;gap:5px;padding:7px 10px;align-items:center}
+.chat-inp{flex:1;border:1px solid var(--border);border-radius:18px;padding:7px 12px;font-size:12px;background:var(--bg2);color:var(--text);outline:none;-webkit-appearance:none}
+.chat-send{width:32px;height:32px;border-radius:50%;background:var(--blue);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0}
+
+/* Expense */
+.exp-card{background:var(--bg2);border-radius:10px;padding:9px 11px;margin-bottom:7px}
+.exp-top{display:flex;justify-content:space-between;align-items:center}
+.exp-nm{font-size:12px;font-weight:500;color:var(--text)}
+.exp-amt{font-size:12px;font-weight:700;color:var(--blue)}
+.exp-meta{font-size:10px;color:var(--text2);margin-top:2px}
+.settle-box{background:#E6F4EA;border-radius:10px;padding:9px 11px;margin-top:4px}
+.settle-t{font-size:10px;font-weight:700;color:#1E7A3C;margin-bottom:5px}
+.settle-row{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;color:var(--text)}
+.settle-amt{font-size:11px;font-weight:700;color:#1E7A3C}
+.add-exp-btn{width:100%;padding:9px;border:1.5px dashed var(--border);border-radius:10px;background:none;cursor:pointer;font-size:12px;color:var(--blue);display:flex;align-items:center;justify-content:center;gap:5px;margin-top:8px}
+
+/* Locations */
+.loc-row{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--border)}
+.loc-row:last-child{border-bottom:none}
+.loc-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0}
+.loc-nm{font-size:12px;font-weight:500;color:var(--text)}
+.loc-st{font-size:10px;color:var(--text2)}
+.loc-see{font-size:10px;padding:3px 9px;border-radius:8px;background:#E8F0FE;border:none;color:var(--blue);cursor:pointer}
+
+/* Modals */
+.modal{
+  position:fixed;inset:0;z-index:150;
+  background:rgba(0,0,0,.4);
+  display:none;  /* HIDDEN BY DEFAULT */
+  align-items:flex-end;justify-content:center;
+}
+.modal.show{display:flex}
+.modal-box{
+  background:#fff;border-radius:18px 18px 0 0;
+  padding:18px 18px max(32px,calc(env(safe-area-inset-bottom)+18px));
+  width:100%;max-width:480px;
+  max-height:80vh;overflow-y:auto;
+}
+.m-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px}
+.m-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px}
+.m-field{margin-bottom:10px}
+.m-lbl{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;display:block}
+.m-inp{width:100%;border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text);outline:none;-webkit-appearance:none;background:var(--bg2)}
+.m-inp:focus{border-color:var(--blue)}
+.m-sel{width:100%;border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text);outline:none;background:var(--bg2)}
+.m-row{display:flex;gap:8px}
+.m-row .m-field{flex:1}
+.m-btns{position:sticky;bottom:0;background:#fff;padding:12px 0 0;display:flex;gap:8px}
+.m-cancel{flex:1;padding:12px;border:1px solid var(--border);border-radius:10px;background:none;cursor:pointer;font-size:13px;color:var(--gray)}
+.m-ok{flex:2;padding:12px;border:none;border-radius:10px;background:var(--blue);color:#fff;font-size:13px;font-weight:700;cursor:pointer}
+.invite-code-box{background:#E8F0FE;border-radius:12px;padding:16px;text-align:center;margin-bottom:12px}
+.invite-code-big{font-size:26px;font-weight:700;color:var(--blue);letter-spacing:6px}
+.invite-hint{font-size:11px;color:var(--text2);margin-top:4px}
+.copy-btn{margin-top:8px;padding:7px 18px;border:none;border-radius:8px;background:var(--blue);color:#fff;font-size:12px;cursor:pointer;font-weight:600}
+.mem-row{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--border)}
+.mem-row:last-child{border-bottom:none}
+.mem-av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.mem-nm{font-size:12px;font-weight:500;color:var(--text)}
+.mem-role{font-size:10px;color:var(--text2)}
+.mem-acts{display:flex;gap:4px}
+.mem-org-btn{font-size:10px;padding:3px 7px;border-radius:7px;border:1px solid var(--border);background:none;cursor:pointer;color:var(--gray)}
+.mem-org-btn.on{background:#E8F0FE;color:var(--blue);border-color:var(--blue)}
+.mem-del-btn{font-size:10px;padding:3px 7px;border-radius:7px;border:1px solid #FCE8E6;background:none;cursor:pointer;color:var(--red)}
+
+/* Add stop fullscreen */
+#add-stop-screen{
+  position:fixed;inset:0;z-index:180;
+  background:#fff;
+  display:none;  /* HIDDEN BY DEFAULT */
+  flex-direction:column;
+}
+#add-stop-screen.show{display:flex}
+.asp-hdr{display:flex;align-items:center;gap:10px;padding:0 14px;height:50px;border-bottom:1px solid var(--border);flex-shrink:0;background:#fff}
+.asp-cancel{background:none;border:none;cursor:pointer;font-size:14px;color:var(--blue)}
+.asp-title{font-size:15px;font-weight:700;color:var(--text);flex:1}
+.asp-save{background:var(--blue);border:none;border-radius:10px;padding:7px 16px;font-size:13px;color:#fff;font-weight:700;cursor:pointer}
+#asp-map{flex:0 0 38%;min-height:120px;position:relative;background:#e8ecef}
+#asp-gmap{position:absolute;inset:0}
+.asp-search-wrap{position:absolute;top:8px;left:8px;right:8px;z-index:5}
+.asp-search-bar{display:flex;align-items:center;gap:8px;padding:0 12px;height:40px;background:#fff;border-radius:20px;box-shadow:0 1px 6px rgba(0,0,0,.2)}
+.asp-search-inp{flex:1;border:none;outline:none;font-size:13px;color:var(--text);background:transparent}
+.asp-form{flex:1;overflow-y:auto;padding:14px;-webkit-overflow-scrolling:touch}
+.asp-place-info{background:#E8F5E9;border-radius:10px;padding:10px 12px;margin-bottom:12px;display:none}
+.asp-place-info.show{display:block}
+.asp-pname{font-size:13px;font-weight:700;color:var(--green)}
+.asp-paddr{font-size:11px;color:var(--text2);margin-top:2px}
+.asp-fi{margin-bottom:10px}
+.asp-lbl{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;display:block}
+.asp-inp{width:100%;border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text);outline:none;-webkit-appearance:none;background:var(--bg2)}
+.asp-inp:focus{border-color:var(--blue)}
+.asp-row{display:flex;gap:8px}
+.asp-row .asp-fi{flex:1}
+.asp-bottom-pad{height:max(16px,env(safe-area-inset-bottom))}
+
+/* Segment expense modal */
+.seg-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
+.seg-row:last-child{border-bottom:none}
+.seg-sub{font-size:10px;color:var(--text2);margin-top:1px}
+
+/* Toast */
+.toast{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  background:rgba(0,0,0,.75);color:#fff;
+  padding:14px 22px;border-radius:14px;
+  font-size:13px;text-align:center;line-height:1.5;
+  z-index:9999;
+  display:none;  /* HIDDEN BY DEFAULT */
+}
+.toast.show{display:block}
+
+/* Confirm dialog */
+#confirm-dialog{
+  position:fixed;inset:0;z-index:9998;
+  background:rgba(0,0,0,.45);
+  display:none;  /* HIDDEN BY DEFAULT */
+  align-items:center;justify-content:center;padding:24px;
+}
+#confirm-dialog.show{display:flex}
+.cd-box{background:#fff;border-radius:16px;padding:24px 20px 18px;width:100%;max-width:300px;text-align:center}
+.cd-icon{font-size:34px;margin-bottom:8px}
+.cd-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px}
+.cd-msg{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:16px}
+.cd-btns{display:flex;gap:8px}
+.cd-no{flex:1;padding:11px;border-radius:12px;border:1px solid var(--border);background:none;cursor:pointer;font-size:13px;color:var(--gray)}
+.cd-yes{flex:2;padding:11px;border-radius:12px;border:none;background:var(--blue);color:#fff;font-size:13px;font-weight:700;cursor:pointer}
+
+/* ── Trip Switcher ── */
+#trip-switcher{
+  position:fixed;inset:0;z-index:500;
+  background:linear-gradient(160deg,#1565C0,#1A73E8 50%,#1976D2);
+  display:none;
+  flex-direction:column;
+  padding:0;
+}
+#trip-switcher.show{display:flex}
+.tsw-header{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 16px;
+  flex-shrink:0;
+}
+.tsw-back{
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(255,255,255,.2);border:none;cursor:pointer;
+  color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;
+}
+.tsw-title{font-size:17px;font-weight:700;color:#fff;flex:1}
+.tsw-body{flex:1;overflow-y:auto;padding:0 16px 20px}
+.tsw-section-title{font-size:11px;font-weight:700;color:rgba(255,255,255,.7);
+  letter-spacing:.5px;text-transform:uppercase;margin:16px 0 8px}
+.tsw-trip-card{
+  background:#fff;border-radius:14px;padding:14px 16px;
+  margin-bottom:8px;cursor:pointer;
+  display:flex;align-items:center;gap:12px;
+  box-shadow:0 2px 8px rgba(0,0,0,.1);
+}
+.tsw-trip-card:active{opacity:.9}
+.tsw-trip-card.current{background:#E8F0FE;border:2px solid var(--blue)}
+.tsw-trip-ic{width:40px;height:40px;border-radius:10px;background:#E8F0FE;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tsw-trip-ic i{font-size:20px;color:var(--blue)}
+.tsw-trip-name{font-size:14px;font-weight:700;color:var(--text)}
+.tsw-trip-meta{font-size:11px;color:var(--text2);margin-top:2px}
+.tsw-trip-arr{font-size:18px;color:var(--blue);opacity:.5}
+.tsw-new-btns{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.tsw-new-btn{
+  width:100%;padding:15px;border-radius:14px;border:none;cursor:pointer;
+  display:flex;align-items:center;gap:12px;text-align:left;
+  box-shadow:0 2px 8px rgba(0,0,0,.1);
+}
+.tsw-new-btn.primary{background:#fff}
+.tsw-new-btn.outline{background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35)}
+.tsw-new-btn.primary .tsw-nb-title{color:var(--blue)}
+.tsw-new-btn.outline .tsw-nb-title,.tsw-new-btn.outline .tsw-nb-sub{color:#fff}
+.tsw-nb-ic{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tsw-nb-ic.blue{background:#E8F0FE}
+.tsw-nb-ic.wh{background:rgba(255,255,255,.25)}
+.tsw-nb-title{font-size:14px;font-weight:700}
+.tsw-nb-sub{font-size:11px;margin-top:2px;opacity:.7}
+.tsw-nb-arr{font-size:18px;opacity:.4;margin-left:auto}
+.tsw-new-btn.primary .tsw-nb-arr{color:var(--blue)}
+.tsw-new-btn.outline .tsw-nb-arr{color:#fff}
+
+/* Fullscreen mode */
+.fullscreen-mode .topbar{display:none}
+.fullscreen-mode #right .tabs{display:none}
+/* show exit button in fullscreen */
+#fs-exit{
+  position:fixed;top:10px;right:10px;z-index:1000;
+  background:rgba(0,0,0,.5);color:#fff;border:none;cursor:pointer;
+  border-radius:20px;padding:6px 12px;font-size:12px;
+  display:none;
+  align-items:center;gap:5px;
+}
+#fs-exit.show{display:flex}
+
+/* Online/Offline indicator */
+#net-status{
+  display:flex;align-items:center;gap:4px;
+  font-size:10px;padding:2px 8px;border-radius:10px;
+  margin-left:4px;flex-shrink:0;
+}
+#net-status.online{background:#E6F4EA;color:#1E7A3C}
+#net-status.offline{background:#FCE8E6;color:var(--red)}
+
+/* Offline queue badge */
+#offline-badge{
+  position:fixed;top:50px;left:50%;transform:translateX(-50%);
+  background:#EA4335;color:#fff;border-radius:20px;
+  padding:6px 14px;font-size:12px;z-index:999;
+  display:none;
+  align-items:center;gap:6px;
+  box-shadow:0 2px 8px rgba(0,0,0,.2);
+}
+#offline-badge.show{display:flex}
+#pending-count{font-weight:700}
+
+/* Trip name clickable */
+.tb-trip{cursor:pointer;text-decoration:none}
+.tb-trip:active{opacity:.7}
+/* TripGo logo double-tap */
+.tb-logo{cursor:pointer;user-select:none}
+</style>
+</head>
+<body>
+
+<!-- ========== JOIN SCREEN ========== -->
+<div id="S-join">
+  <button class="js-gear" id="js-gear-btn" onclick="toggleGear(event)">
+    <i class="ti ti-settings"></i>
+  </button>
+  <div id="js-gear-menu">
+    <button class="jgm-item" onclick="openAdmin()">
+      <i class="ti ti-shield" style="color:var(--blue)"></i> 管理員設定
+    </button>
+    <div class="jgm-sep"></div>
+    <button class="jgm-item red" onclick="clearSession()">
+      <i class="ti ti-trash"></i> 清除舊資料
+    </button>
+  </div>
+
+  <div class="js-logo">🗺️</div>
+  <div class="js-title">TripGo</div>
+  <div class="js-sub">團體旅遊管理 APP</div>
+
+  <button id="js-biometric" onclick="doBiometric()">
+    <i class="ti ti-fingerprint" style="font-size:18px"></i> Face ID / Touch ID 快速登入
+  </button>
+
+  <div id="js-home">
+    <button class="js-big-btn primary" onclick="goSub('join')">
+      <div class="jbb-ic blue"><i class="ti ti-login" style="color:var(--blue);font-size:22px"></i></div>
+      <div class="jbb-txt">
+        <div class="jbb-h">加入群組</div>
+        <div class="jbb-s">輸入邀請碼，加入朋友的旅遊</div>
+      </div>
+      <i class="ti ti-chevron-right jbb-arr"></i>
+    </button>
+    <button class="js-big-btn outline" onclick="goSub('create')">
+      <div class="jbb-ic wh"><i class="ti ti-map-plus" style="color:#fff;font-size:22px"></i></div>
+      <div class="jbb-txt">
+        <div class="jbb-h">建立群組</div>
+        <div class="jbb-s">建立新旅遊，邀請朋友加入</div>
+      </div>
+      <i class="ti ti-chevron-right jbb-arr"></i>
+    </button>
+  </div>
+
+  <div id="js-sub">
+    <div class="js-sub-hdr">
+      <button class="js-back" onclick="goHome()"><i class="ti ti-arrow-left"></i></button>
+      <span class="js-sub-title" id="js-sub-title">加入群組</span>
+    </div>
+    <div id="sub-join-fields">
+      <div class="js-field">
+        <label class="js-label">你的名字</label>
+        <input class="js-input" id="inp-join-name" placeholder="輸入你的名字" autocomplete="name"/>
+      </div>
+      <div class="js-field">
+        <label class="js-label">邀請碼</label>
+        <input class="js-input code" id="inp-invite" placeholder="TRIP1234" maxlength="8"/>
+      </div>
+    </div>
+    <div id="sub-create-fields" style="display:none">
+      <div class="js-field">
+        <label class="js-label">你的名字</label>
+        <input class="js-input" id="inp-create-name" placeholder="輸入你的名字" autocomplete="name"/>
+      </div>
+      <div class="js-field">
+        <label class="js-label">旅遊名稱</label>
+        <input class="js-input" id="inp-trip-name" placeholder="例：日本山陰之旅"/>
+      </div>
+    </div>
+    <button class="js-go" id="js-go-btn" onclick="doAction()">
+      <i class="ti ti-login" id="js-go-icon" style="font-size:17px"></i>
+      <span id="js-go-label">加入群組</span>
+    </button>
+    <div class="js-err" id="js-err"></div>
+  </div>
+</div>
+
+<!-- Admin modal -->
+<div id="M-admin" onclick="if(event.target===this)closeAdmin()">
+  <div class="adm-box">
+    <div class="adm-handle"></div>
+    <div class="adm-title">🛡 管理員登入</div>
+    <div class="adm-field">
+      <label class="adm-label">Email</label>
+      <input class="adm-input" id="adm-email" type="email" placeholder="hau747@hotmail.com"/>
+    </div>
+    <div class="adm-field">
+      <label class="adm-label">密碼</label>
+      <input class="adm-input" id="adm-pw" type="password" placeholder="密碼"/>
+    </div>
+    <div class="adm-err" id="adm-err"></div>
+    <div class="adm-btns">
+      <button class="adm-cancel" onclick="closeAdmin()">取消</button>
+      <button class="adm-ok" onclick="doAdmin()">登入</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== MAIN APP ========== -->
+<div id="S-app">
+  <div class="topbar">
+    <span class="tb-logo" id="tb-logo" ondblclick="toggleFullscreen()"><i class="ti ti-map-2"></i> TripGo</span>
+    <span class="tb-trip" id="tb-trip" onclick="openTripSwitcher()" title="點擊切換旅程">旅遊群組</span>
+    <span id="net-status" class="online"><i class="ti ti-wifi" style="font-size:11px"></i><span id="net-label">線上</span></span>
+    <div class="tb-avs" id="tb-avs"></div>
+    <button class="tb-btn" onclick="openModal('M-members')" title="成員管理"><i class="ti ti-users"></i></button>
+    <button class="tb-invite" onclick="openModal('M-invite')"><i class="ti ti-share" style="font-size:11px"></i> 邀請</button>
+    <span class="tb-org" id="tb-org">👑 組織者</span>
+  </div>
+
+  <div class="main">
+    <!-- Map -->
+    <div id="map-wrap">
+      <div id="gmap"></div>
+      <div class="map-search">
+        <div class="map-search-bar">
+          <i class="ti ti-search" style="font-size:17px;color:var(--blue);flex-shrink:0"></i>
+          <input id="search-inp" placeholder="搜尋地址或地名…" oninput="onSearchInput(this.value)" onblur="onSearchBlur()"/>
+          <button id="search-clear" onclick="clearSearch()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="map-search-drop" id="search-drop"></div>
+      </div>
+      <div class="map-transport">
+        <button class="tt on" onclick="setTM('DRIVING',this)"><i class="ti ti-car"></i></button>
+        <button class="tt" onclick="setTM('TRANSIT',this)"><i class="ti ti-bus"></i></button>
+        <button class="tt" onclick="setTM('WALKING',this)"><i class="ti ti-walk"></i></button>
+      </div>
+      <button class="map-locate" onclick="goToMe()"><i class="ti ti-current-location"></i></button>
+      <div class="route-bar" id="route-bar">
+        <i class="ti ti-navigation" style="font-size:13px;color:var(--blue)"></i>
+        <span id="route-txt" style="flex:1;font-size:11px"></span>
+        <button onclick="clearRoute()" style="background:none;border:none;cursor:pointer;color:var(--gray)"><i class="ti ti-x" style="font-size:13px"></i></button>
+      </div>
+      <!-- Place card -->
+      <div id="place-card">
+        <div class="pc-handle"></div>
+        <button class="pc-close" onclick="closePc()"><i class="ti ti-x" style="font-size:13px;color:var(--gray)"></i></button>
+        <div class="pc-name" id="pc-name"></div>
+        <div class="pc-type" id="pc-type"></div>
+        <div class="pc-rating" id="pc-rating"></div>
+        <div class="pc-actions">
+          <button class="pca" onclick="pcNav()"><div class="pca-ic"><i class="ti ti-navigation"></i></div><span>導航</span></button>
+          <button class="pca" onclick="pcCall()"><div class="pca-ic"><i class="ti ti-phone"></i></div><span>電話</span></button>
+          <button class="pca" onclick="pcWeb()"><div class="pca-ic"><i class="ti ti-world"></i></div><span>網站</span></button>
+          <button class="pca" onclick="pcShare()"><div class="pca-ic"><i class="ti ti-share"></i></div><span>分享</span></button>
+        </div>
+        <div id="pc-info"></div>
+      </div>
+      <div class="map-bottom">
+        <i class="ti ti-users" style="font-size:12px"></i>
+        <span id="map-members">載入中</span>
+        <span style="margin-left:auto;display:flex;align-items:center;gap:3px;color:var(--blue)">
+          <i class="ti ti-current-location" style="font-size:11px"></i>
+          <span id="loc-st">定位中…</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Divider -->
+    <div class="divider" id="divider"><div class="divider-dot"></div></div>
+
+    <!-- Right panel -->
+    <div id="right">
+      <div class="tabs">
+        <div class="tab on" onclick="showPane('itinerary',this)"><i class="ti ti-route"></i>行程</div>
+        <div class="tab" onclick="showPane('chat',this)"><i class="ti ti-message-circle"></i>群組</div>
+        <div class="tab" onclick="showPane('expense',this)"><i class="ti ti-receipt"></i>費用</div>
+        <div class="tab" onclick="showPane('locations',this)"><i class="ti ti-map-pin"></i>位置</div>
+      </div>
+
+      <!-- Itinerary pane -->
+      <div class="pane on" id="pane-itinerary">
+        <div id="stop-list"></div>
+        <button class="add-stop-btn" onclick="openAddStop()"><i class="ti ti-plus"></i>新增景點</button>
+        <div class="budget-wrap">
+          <div class="budget-lbl"><span>預算使用</span><span id="bud-pct">0%</span></div>
+          <div class="budget-bar-bg"><div class="budget-bar-fg" id="bud-fill" style="width:0%"></div></div>
+          <div class="budget-nums">
+            <span style="color:var(--blue);font-weight:700" id="bud-used">NT$ 0</span>
+            <span style="color:var(--gray)">/ NT$ 200,000</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat pane -->
+      <div class="pane" id="pane-chat">
+        <div class="msg-scroll" id="msg-scroll">
+          <div style="font-size:10px;color:var(--gray);text-align:center;padding:6px" id="chat-st">連線中…</div>
+          <div class="msg-list" id="msg-list"></div>
+        </div>
+        <div class="chat-foot">
+          <div class="sticker-tray" id="sticker-tray">
+            <button class="sk" onclick="sendSticker('🎉')">🎉</button><button class="sk" onclick="sendSticker('👍')">👍</button>
+            <button class="sk" onclick="sendSticker('🌺')">🌺</button><button class="sk" onclick="sendSticker('🏖️')">🏖️</button>
+            <button class="sk" onclick="sendSticker('🙌')">🙌</button><button class="sk" onclick="sendSticker('😄')">😄</button>
+            <button class="sk" onclick="sendSticker('🍜')">🍜</button><button class="sk" onclick="sendSticker('📸')">📸</button>
+            <button class="sk" onclick="sendSticker('🚗')">🚗</button><button class="sk" onclick="sendSticker('❤️')">❤️</button>
+          </div>
+          <div class="chat-inp-row">
+            <button onclick="toggleStickers()" style="background:none;border:none;cursor:pointer;font-size:20px">😊</button>
+            <input class="chat-inp" id="chat-inp" placeholder="輸入訊息…" onkeydown="if(event.key==='Enter')sendMsg()"/>
+            <button class="chat-send" onclick="sendMsg()"><i class="ti ti-send" style="font-size:13px"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Expense pane -->
+      <div class="pane" id="pane-expense">
+        <div style="font-size:10px;color:var(--green);display:flex;align-items:center;gap:3px;margin-bottom:6px"><i class="ti ti-cloud-check" style="font-size:12px"></i>雲端同步</div>
+        <div id="exp-list"></div>
+        <div class="settle-box">
+          <div class="settle-t">💰 結算：誰還要給誰多少</div>
+          <div id="settle-rows"><div style="font-size:11px;color:var(--gray)">新增花費後自動計算…</div></div>
+        </div>
+        <button class="add-exp-btn" onclick="openModal('M-expense')"><i class="ti ti-plus"></i>新增花費</button>
+      </div>
+
+      <!-- Locations pane -->
+      <div class="pane" id="pane-locations">
+        <div style="font-size:10px;color:var(--text2);margin-bottom:8px">成員即時位置</div>
+        <div id="loc-list"></div>
+      </div>
+
+      <!-- Detail panel (inside right) -->
+      <div id="detail">
+        <div class="det-hdr">
+          <button class="det-back" onclick="closeDetail()"><i class="ti ti-arrow-left"></i></button>
+          <span class="det-title" id="det-title"></span>
+          <span class="det-time" id="det-time"></span>
+        </div>
+        <div class="det-body">
+          <div class="sec">
+            <div class="sec-t"><i class="ti ti-checkbox"></i>活動清單</div>
+            <div id="act-list"></div>
+            <div class="add-row"><input class="add-inp" id="act-inp" placeholder="新增活動…"/><button class="add-ok" onclick="addAct()"><i class="ti ti-plus"></i></button></div>
+          </div>
+          <div class="sec">
+            <div class="sec-t"><i class="ti ti-alert-triangle"></i>注意事項</div>
+            <div id="note-list"></div>
+            <div class="add-row"><input class="add-inp" id="note-inp" placeholder="新增注意事項…"/><button class="add-ok" onclick="addNote()"><i class="ti ti-plus"></i></button></div>
+          </div>
+          <div class="sec">
+            <div class="sec-t"><i class="ti ti-coin"></i>費用預估</div>
+            <div class="bud-row">
+              <span style="font-size:12px;color:var(--text2)">每人預估</span>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="bud-val" id="det-bud"></span>
+                <button class="bud-edit" onclick="editBudget()">修改</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Multiselect bar -->
+<div id="ms-bar">
+  <div class="ms-title" id="ms-title">已選 0 個景點</div>
+  <div class="ms-actions">
+    <button class="ms-btn route" onclick="msRoute()"><i class="ti ti-route"></i>行程路線</button>
+    <button class="ms-btn exp" onclick="msExpense()"><i class="ti ti-calculator"></i>費用計算</button>
+    <button class="ms-btn del" onclick="msDelete()"><i class="ti ti-trash"></i>刪除</button>
+  </div>
+  <button class="ms-cancel" onclick="exitMS()">取消</button>
+</div>
+
+<!-- Add stop fullscreen -->
+<div id="add-stop-screen">
+  <div class="asp-hdr">
+    <button class="asp-cancel" onclick="closeAddStop()">取消</button>
+    <span class="asp-title">新增景點</span>
+    <button class="asp-save" onclick="saveStop()">儲存</button>
+  </div>
+  <div id="asp-map">
+    <div id="asp-gmap"></div>
+    <div class="asp-search-wrap">
+      <div class="asp-search-bar">
+        <i class="ti ti-search" style="font-size:15px;color:var(--blue);flex-shrink:0"></i>
+        <input class="asp-search-inp" id="asp-inp" placeholder="搜尋景點名稱或地址…" 
+          oninput="onAspInput(this.value)" 
+          onblur="setTimeout(function(){var d=document.getElementById('asp-drop');if(d)d.style.display='none';},250)"/>
+      </div>
+      <div id="asp-drop" style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;
+        background:#fff;border-radius:14px;box-shadow:0 4px 16px rgba(0,0,0,.18);
+        overflow:hidden;max-height:200px;overflow-y:auto;z-index:20"></div>
+    </div>
+  </div>
+  <div class="asp-form">
+    <div class="asp-place-info" id="asp-place-info">
+      <div class="asp-pname" id="asp-pname"></div>
+      <div class="asp-paddr" id="asp-paddr"></div>
+    </div>
+    <div class="asp-fi"><label class="asp-lbl">景點名稱</label><input class="asp-inp" id="ns-name" placeholder="美麗海水族館"/></div>
+    <div class="asp-row">
+      <div class="asp-fi"><label class="asp-lbl">抵達時間</label><input class="asp-inp" id="ns-arrive" placeholder="09:00"/></div>
+      <div class="asp-fi"><label class="asp-lbl">離開時間</label><input class="asp-inp" id="ns-depart" placeholder="12:00"/></div>
+    </div>
+    <div class="asp-fi"><label class="asp-lbl">備註</label><input class="asp-inp" id="ns-note" placeholder="（選填）"/></div>
+    <div class="asp-fi"><label class="asp-lbl">天數標籤</label><input class="asp-inp" id="ns-day" placeholder="Day 1"/></div>
+    <div class="asp-bottom-pad"></div>
+  </div>
+</div>
+
+<!-- Modals -->
+<div class="modal" id="M-expense" onclick="if(event.target===this)closeModal('M-expense')">
+  <div class="modal-box">
+    <div class="m-handle"></div>
+    <div class="m-title">新增花費</div>
+    <div class="m-field"><label class="m-lbl">花費名稱</label><input class="m-inp" id="m-name" placeholder="午餐、門票…"/></div>
+    <div class="m-row">
+      <div class="m-field"><label class="m-lbl">金額 (NT$)</label><input class="m-inp" id="m-amt" type="number" placeholder="0"/></div>
+      <div class="m-field"><label class="m-lbl">付款人</label><select class="m-sel" id="m-payer"></select></div>
+    </div>
+    <div class="m-field"><label class="m-lbl">平攤人數</label>
+      <select class="m-sel" id="m-split"><option value="all">全體成員</option><option value="5">5人</option><option value="4">4人</option><option value="3">3人</option><option value="2">2人</option></select>
+    </div>
+    <div class="m-btns"><button class="m-cancel" onclick="closeModal('M-expense')">取消</button><button class="m-ok" onclick="confirmExpense()">確認新增</button></div>
+  </div>
+</div>
+
+<div class="modal" id="M-invite" onclick="if(event.target===this)closeModal('M-invite')">
+  <div class="modal-box">
+    <div class="m-handle"></div>
+    <div class="m-title">邀請團員加入</div>
+    <div class="invite-code-box">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:5px">群組邀請碼</div>
+      <div class="invite-code-big" id="invite-code-show">—</div>
+      <div class="invite-hint">團員輸入此碼即可加入</div>
+      <button class="copy-btn" onclick="copyCode()">複製邀請碼</button>
+    </div>
+    <div class="m-btns"><button class="m-ok" onclick="closeModal('M-invite')">關閉</button></div>
+  </div>
+</div>
+
+<div class="modal" id="M-members" onclick="if(event.target===this)closeModal('M-members')">
+  <div class="modal-box">
+    <div class="m-handle"></div>
+    <div class="m-title">👥 成員管理 <span style="font-size:11px;color:var(--text2)" id="mem-count"></span></div>
+    <div id="mem-list"></div>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">手動新增成員</div>
+      <div style="display:flex;gap:7px"><input class="m-inp" id="new-mem-name" placeholder="名字" style="flex:1"/><button class="m-ok" style="flex:0;padding:9px 12px;white-space:nowrap" onclick="addMember()">新增</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="M-seg-expense" onclick="if(event.target===this)closeModal('M-seg-expense')">
+  <div class="modal-box">
+    <div class="m-handle"></div>
+    <div class="m-title">📊 選段費用分析</div>
+    <div id="seg-content"></div>
+    <div class="m-btns"><button class="m-ok" onclick="closeModal('M-seg-expense')">關閉</button></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Confirm dialog -->
+<div id="confirm-dialog">
+  <div class="cd-box">
+    <div class="cd-icon" id="cd-icon"></div>
+    <div class="cd-title" id="cd-title"></div>
+    <div class="cd-msg" id="cd-msg"></div>
+    <div class="cd-btns">
+      <button class="cd-no" id="cd-no">不用了</button>
+      <button class="cd-yes" id="cd-yes"></button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== FIREBASE MODULE ===================== -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+(function(){
+  var fbConfig = {
+    apiKey:"AIzaSyBY0DDBOOUfEaFX2DUl8iMkLmCyIPhKc3I",
+    authDomain:"tripgo-6b6ed.firebaseapp.com",
+    databaseURL:"https://tripgo-6b6ed-default-rtdb.firebaseio.com",
+    projectId:"tripgo-6b6ed",
+    storageBucket:"tripgo-6b6ed.firebasestorage.app",
+    messagingSenderId:"612261656504",
+    appId:"1:612261656504:web:9191b3198e3de0549a014d"
+  };
+  var app = firebase.initializeApp(fbConfig);
+  var db  = firebase.database();
+
+  // ── Offline queue ──
+  var _queue = [];
+  try { _queue = JSON.parse(localStorage.getItem('tg_offline_queue') || '[]'); } catch(e){}
+  var _online = navigator.onLine;
+
+  function saveQueue(){ try { localStorage.setItem('tg_offline_queue', JSON.stringify(_queue)); } catch(e){} }
+
+  function updateOfflineUI(){
+    var badge = document.getElementById('offline-badge');
+    var ns    = document.getElementById('net-status');
+    var nl    = document.getElementById('net-label');
+    if(!badge || !ns) return;
+    if(_online){
+      badge.classList.remove('show');
+      ns.className = 'online';
+      var ic = ns.querySelector('i'); if(ic) ic.className = 'ti ti-wifi';
+      if(nl) nl.textContent = '線上';
+    } else {
+      ns.className = 'offline';
+      var ic2 = ns.querySelector('i'); if(ic2) ic2.className = 'ti ti-wifi-off';
+      if(nl) nl.textContent = '離線';
+      if(_queue.length > 0){
+        badge.classList.add('show');
+        var pc = document.getElementById('pending-count');
+        if(pc) pc.textContent = _queue.length;
+      }
+    }
+  }
+
+  function flushQueue(){
+    if(!_online || _queue.length === 0) return;
+    var q = _queue.slice(); _queue = []; saveQueue(); updateOfflineUI();
+    q.forEach(function(op){
+      try {
+        if(op.type === 'set')    db.ref(op.path).set(op.data);
+        else if(op.type === 'push')   db.ref(op.path).push(op.data);
+        else if(op.type === 'remove') db.ref(op.path).remove();
+      } catch(e){ _queue.push(op); }
+    });
+    saveQueue();
+  }
+
+  window.addEventListener('online',  function(){ _online=true;  updateOfflineUI(); flushQueue(); });
+  window.addEventListener('offline', function(){ _online=false; updateOfflineUI(); });
+
+  // ── Wrapped ops with offline support ──
+  function safeSet(pathOrRef, data){
+    var path = (typeof pathOrRef === 'string') ? pathOrRef : pathOrRef.path || pathOrRef.toString();
+    if(_online) return db.ref(path).set(data);
+    _queue.push({type:'set', path:path, data:data}); saveQueue(); updateOfflineUI();
+    return Promise.resolve();
+  }
+  function safePush(pathOrRef, data){
+    var path = (typeof pathOrRef === 'string') ? pathOrRef : pathOrRef.path || pathOrRef.toString();
+    if(_online) return db.ref(path).push(data);
+    _queue.push({type:'push', path:path, data:data}); saveQueue(); updateOfflineUI();
+    return Promise.resolve({key: '-local-'+Date.now()});
+  }
+  function safeRemove(pathOrRef){
+    var path = (typeof pathOrRef === 'string') ? pathOrRef : pathOrRef.path || pathOrRef.toString();
+    if(_online) return db.ref(path).remove();
+    _queue.push({type:'remove', path:path}); saveQueue(); updateOfflineUI();
+    return Promise.resolve();
+  }
+
+  // ── Expose to global ──
+  // gref returns the path string (compat SDK uses db.ref(path))
+  window.FB = {
+    ready: true,
+    gref: function(path){ return path; },
+    set:          safeSet,
+    push:         safePush,
+    remove:       safeRemove,
+    get:          function(path){ return db.ref(path).once('value'); },
+    onValue:      function(path, cb){ db.ref(path).on('value', cb); },
+    onChildAdded: function(path, cb){ db.ref(path).on('child_added', cb); },
+    flushQueue:   flushQueue
+  };
+
+  window._fbReady = true;
+  console.log('[TripGo] Firebase ready (compat)');
+  requestAnimationFrame(function(){ updateOfflineUI(); });
+  if(typeof window._onFbReady === 'function') window._onFbReady();
+})();
+</script>
+
+<!-- ===================== APP JS ===================== -->
+<script>
+'use strict';
+// TripGo v3.1 - build 20260609-0011
+console.log('[TripGo] Script loaded v3.1');
+
+// ── State ──
+var S = {
+  groupCode: null,
+  myUid: null,
+  myName: null,
+  isOrg: false,
+  members: [],
+  stops: [],
+  expenses: {},
+  allLocs: {},
+  selectedStops: new Set(),
+  multiselect: false,
+  currentStop: -1,
+  travelMode: 'DRIVING',
+  currentPlace: null,
+  aspLat: 0, aspLng: 0,
+  subMode: 'join'
+};
+
+// ── Ready flags ──
+window._fbReady = false;
+window._mapsReady = false;
+
+function checkInit() {
+  if (!window._fbReady || !window._mapsReady) return;
+  // Both ready - try auto-login
+  var code = localStorage.getItem('tg_code');
+  var uid  = localStorage.getItem('tg_uid');
+  var name = localStorage.getItem('tg_name');
+  if (code && uid && name) {
+    window.FB.get(window.FB.gref('tripgo/groups/'+code+'/members/'+uid)).then(function(snap) {
+      if (snap.exists()) {
+        window.FB.get(window.FB.gref('tripgo/groups/'+code)).then(function(gs) {
+          if (gs.exists()) {
+            var isOrg = gs.val().organizer === uid;
+            startApp(code, uid, name, gs.val().tripName||'旅遊群組', isOrg);
+          }
+        });
+      } else {
+        // Session invalid
+        localStorage.removeItem('tg_code');
+        localStorage.removeItem('tg_uid');
+        localStorage.removeItem('tg_name');
+      }
+    }).catch(function(){});
+  }
+}
+
+window._onFbReady = checkInit;
+
+// ── Google Maps ──
+var map, dsvc, drend, acSvc, plSvc;
+var myMarker, myCircle;
+var memberMarkers = {};
+var aspMap, aspAcSvc, aspPlSvc, aspMarker;
+var searchTimer = null, aspTimer = null;
+
+window.initMap = function() {
+  window._mapsReady = true;
+  // Hide loading placeholder
+  var ph = document.getElementById('map-ph');
+  if (ph) ph.style.display = 'none';
+  // Init main map
+  map = new google.maps.Map(document.getElementById('gmap'), {
+    center: {lat:25.0,lng:121.5}, zoom: 10,
+    mapTypeControl:false, streetViewControl:false,
+    fullscreenControl:false, zoomControl:false,
+    styles:[{featureType:'poi',elementType:'labels',stylers:[{visibility:'simplified'}]}]
+  });
+  dsvc = new google.maps.DirectionsService();
+  drend = new google.maps.DirectionsRenderer({
+    map: map, suppressMarkers: true,
+    polylineOptions: {strokeColor:'#1A73E8', strokeWeight:4}
+  });
+  acSvc = new google.maps.places.AutocompleteService();
+  plSvc = new google.maps.places.PlacesService(map);
+
+  // Click map place
+  map.addListener('click', function(e) {
+    if (e.placeId) { e.stop(); showPlaceCard(e.placeId); }
+    else closePc();
+  });
+
+  // Get location
+  getMyLoc();
+  // Trigger resize
+  setTimeout(function(){ google.maps.event.trigger(map,'resize'); }, 300);
+  setTimeout(function(){ google.maps.event.trigger(map,'resize'); }, 1000);
+
+  checkInit();
+};
+
+// ── Start App (called after login) ──
+function startApp(code, uid, name, tripName, isOrg) {
+  S.groupCode = code;
+  S.myUid = uid;
+  S.myName = name;
+  S.isOrg = isOrg;
+
+  // Save session
+  localStorage.setItem('tg_code', code);
+  localStorage.setItem('tg_uid', uid);
+  localStorage.setItem('tg_name', name);
+  // Save to trip history
+  if(typeof updateCurrentTrip === 'function') updateCurrentTrip(code, uid, name, tripName, isOrg);
+
+  // Update invite code display
+  document.getElementById('invite-code-show').textContent = code;
+  document.getElementById('tb-trip').textContent = tripName;
+  document.getElementById('tb-org').style.display = isOrg ? 'inline' : 'none';
+
+  // Show app, hide join
+  document.getElementById('S-join').classList.add('hide');
+  document.getElementById('S-app').classList.add('show');
+
+  // Set map height for iOS and trigger resize
+  setMapHeight();
+  setTimeout(function(){ if(map) google.maps.event.trigger(map,'resize'); }, 200);
+  setTimeout(function(){ if(map) google.maps.event.trigger(map,'resize'); }, 600);
+
+  // Subscribe Firebase
+  var FB = window.FB;
+  // Members
+  FB.onValue(FB.gref('tripgo/groups/'+code+'/members'), function(snap) {
+    S.members = snap.val() ? Object.values(snap.val()) : [];
+    renderAvatars();
+    renderMembers();
+    renderPayerSelect();
+    renderLocList();
+  });
+  // Stops
+  FB.onValue(FB.gref('tripgo/groups/'+code+'/stops'), function(snap) {
+    if (snap.val()) {
+      S.stops = Object.entries(snap.val())
+        .sort(function(a,b){ return a[0]<b[0]?-1:1; })
+        .map(function(e){ return Object.assign({_key:e[0]},e[1]); });
+    } else {
+      S.stops = [];
+    }
+    renderStops();
+  });
+  // Chat
+  var firstMsg = true;
+  FB.onChildAdded(FB.gref('tripgo/groups/'+code+'/chat'), function(snap) {
+    var m = snap.val();
+    appendMsg(m.uid, m.name, m.text, m.sticker, m.time);
+    if (!firstMsg) document.getElementById('msg-scroll').scrollTop = 9999;
+  });
+  setTimeout(function(){ firstMsg=false; document.getElementById('chat-st').style.display='none'; }, 2000);
+  // Expenses
+  FB.onValue(FB.gref('tripgo/groups/'+code+'/expenses'), function(snap) {
+    S.expenses = snap.val() || {};
+    renderExpenses();
+  });
+  // Locations
+  FB.onValue(FB.gref('tripgo/groups/'+code+'/locations'), function(snap) {
+    S.allLocs = snap.val() || {};
+    updateMemberMarkers();
+    renderLocList();
+  });
+  // Start location sharing
+  startLocShare(code, uid, name);
+}
+
+// ── Map height (iOS fix) ──
+function setMapHeight() {
+  var topH = document.querySelector('.topbar') ? document.querySelector('.topbar').offsetHeight : 44;
+  var portrait = window.innerHeight > window.innerWidth;
+  var mw = document.getElementById('map-wrap');
+  if (!mw) return;
+  if (portrait) {
+    var h = Math.floor((window.innerHeight - topH) * 0.42);
+    mw.style.height = Math.max(h, 140) + 'px';
+    mw.style.width = '';
+  } else {
+    mw.style.height = '';
+    mw.style.width = Math.floor(window.innerWidth * 0.58) + 'px';
+  }
+  if (map) google.maps.event.trigger(map, 'resize');
+}
+window.addEventListener('resize', setMapHeight);
+window.addEventListener('orientationchange', function(){ setTimeout(setMapHeight, 300); });
+
+// ── Location ──
+function getMyLoc() {
+  if (!navigator.geolocation) { document.getElementById('loc-st').textContent='不支援定位'; return; }
+  navigator.geolocation.watchPosition(function(pos) {
+    var lat=pos.coords.latitude, lng=pos.coords.longitude, acc=pos.coords.accuracy;
+    S.myLatLng = {lat:lat,lng:lng};
+    document.getElementById('loc-st').textContent = '已定位';
+    if (!myMarker) {
+      myMarker = new google.maps.Marker({
+        position:{lat:lat,lng:lng}, map:map, zIndex:999,
+        icon:{path:google.maps.SymbolPath.CIRCLE,scale:10,fillColor:'#1A73E8',fillOpacity:1,strokeColor:'#fff',strokeWeight:3},
+        title:'你的位置'
+      });
+      myCircle = new google.maps.Circle({
+        map:map,center:{lat:lat,lng:lng},radius:acc,
+        fillColor:'#1A73E8',fillOpacity:.1,strokeColor:'#1A73E8',strokeOpacity:.3,strokeWeight:1
+      });
+      map.panTo({lat:lat,lng:lng});
+    } else {
+      myMarker.setPosition({lat:lat,lng:lng});
+      myCircle.setCenter({lat:lat,lng:lng});
+      myCircle.setRadius(acc);
+    }
+    // Upload to Firebase
+    if (S.groupCode && S.myUid) {
+      window.FB.set(window.FB.gref('tripgo/groups/'+S.groupCode+'/locations/'+S.myUid),
+        {uid:S.myUid,name:S.myName,lat:lat,lng:lng,acc:acc,at:Date.now()});
+    }
+  }, function(){ document.getElementById('loc-st').textContent='定位失敗'; },
+  {enableHighAccuracy:true,maximumAge:5000,timeout:10000});
+}
+function startLocShare(code,uid,name){ /* handled by watchPosition above */ }
+
+function goToMe() {
+  if (S.myLatLng) { map.panTo(S.myLatLng); map.setZoom(16); }
+  else alert('尚未取得位置');
+}
+
+function updateMemberMarkers() {
+  Object.entries(S.allLocs).forEach(function(e) {
+    var uid=e[0], loc=e[1];
+    if (uid===S.myUid) return;
+    if (!memberMarkers[uid]) {
+      memberMarkers[uid] = new google.maps.Marker({
+        position:{lat:loc.lat,lng:loc.lng}, map:map, zIndex:998,
+        icon:{path:google.maps.SymbolPath.CIRCLE,scale:9,fillColor:'#F9AB00',fillOpacity:1,strokeColor:'#fff',strokeWeight:2},
+        title:loc.name
+      });
+      var iw = new google.maps.InfoWindow({content:'<div style="font-size:12px;font-weight:600">'+loc.name+'</div>'});
+      memberMarkers[uid].addListener('click',function(){ iw.open(map,memberMarkers[uid]); });
+    } else {
+      memberMarkers[uid].setPosition({lat:loc.lat,lng:loc.lng});
+    }
+  });
+}
+
+// ── Transport ──
+function setTM(mode,el) {
+  S.travelMode = mode;
+  document.querySelectorAll('.tt').forEach(function(t){ t.classList.remove('on'); });
+  el.classList.add('on');
+}
+
+// ── Route ──
+function navTo(dest, label) {
+  var origin = S.myLatLng || {lat:25,lng:121};
+  document.getElementById('route-bar').classList.add('show');
+  document.getElementById('route-txt').textContent = '計算路線中…';
+  dsvc.route({origin:origin,destination:dest,travelMode:google.maps.TravelMode[S.travelMode]},
+    function(result,status) {
+      if (status==='OK') {
+        drend.setDirections(result);
+        var leg=result.routes[0].legs[0];
+        document.getElementById('route-txt').textContent = '📍 '+label+' · '+leg.distance.text+' · '+leg.duration.text;
+      } else {
+        document.getElementById('route-txt').textContent = '無法計算路線';
+      }
+    });
+}
+function clearRoute() {
+  drend.setDirections({routes:[]});
+  document.getElementById('route-bar').classList.remove('show');
+}
+
+// ── Search ──
+function onSearchInput(val) {
+  document.getElementById('search-clear').style.display = val ? 'block' : 'none';
+  if (searchTimer) clearTimeout(searchTimer);
+  if (!val) { document.getElementById('search-drop').classList.remove('show'); return; }
+  searchTimer = setTimeout(function(){ doSearch(val); }, 300);
+}
+function onSearchBlur() {
+  setTimeout(function(){ document.getElementById('search-drop').classList.remove('show'); }, 250);
+}
+function doSearch(val) {
+  if (!acSvc) return;
+  acSvc.getPlacePredictions({input:val,language:'zh-TW'}, function(preds,status) {
+    var drop = document.getElementById('search-drop');
+    if (status!==google.maps.places.PlacesServiceStatus.OK||!preds) {
+      drop.classList.remove('show'); return;
+    }
+    var html='';
+    preds.slice(0,5).forEach(function(p) {
+      html += '<div class="drop-item" data-pid="'+p.place_id+'" data-name="'+
+        p.structured_formatting.main_text.replace(/"/g,'&quot;')+'">' +
+        '<div class="drop-ic"><i class="ti ti-map-pin"></i></div>' +
+        '<div><div class="drop-name">'+p.structured_formatting.main_text+'</div>' +
+        '<div class="drop-addr">'+(p.structured_formatting.secondary_text||'')+'</div></div></div>';
+    });
+    drop.innerHTML = html;
+    drop.classList.add('show');
+    drop.querySelectorAll('.drop-item').forEach(function(item){
+      item.addEventListener('click', function(){
+        selectPlace(this.dataset.pid, this.dataset.name);
+      });
+    });
+  });
+}
+
+function selectPlace(pid, name) {
+  document.getElementById('search-inp').value = name;
+  document.getElementById('search-clear').style.display = 'block';
+  document.getElementById('search-drop').classList.remove('show');
+  plSvc.getDetails({placeId:pid,fields:['geometry','name']}, function(place,status) {
+    if (status===google.maps.places.PlacesServiceStatus.OK&&place.geometry) {
+      map.panTo(place.geometry.location); map.setZoom(15);
+      showPlaceCard(pid);
+    }
+  });
+}
+function clearSearch() {
+  document.getElementById('search-inp').value = '';
+  document.getElementById('search-clear').style.display = 'none';
+  document.getElementById('search-drop').classList.remove('show');
+}
+
+// ── Place card ──
+function showPlaceCard(pid) {
+  plSvc.getDetails({placeId:pid,fields:['name','rating','user_ratings_total','formatted_address',
+    'formatted_phone_number','website','types','opening_hours','geometry','editorial_summary']},
+    function(place,status) {
+      if (status!==google.maps.places.PlacesServiceStatus.OK) return;
+      S.currentPlace = place;
+      document.getElementById('pc-name').textContent = place.name;
+      var typeMap={restaurant:'🍽 餐廳',cafe:'☕ 咖啡廳',bar:'🍺 酒吧',food:'🍽 餐飲',
+        lodging:'🏨 住宿',tourist_attraction:'🎡 景點',museum:'🏛 博物館',
+        store:'🛍 商店',aquarium:'🐠 水族館',amusement_park:'🎢 遊樂園',
+        park:'🌳 公園',spa:'♨️ 溫泉',natural_feature:'🏞 自然景觀',
+        shrine:'⛩️ 神社',transit_station:'🚉 交通',airport:'✈️ 機場'};
+      var typeTxt='📍 地點';
+      if (place.types) for(var i=0;i<place.types.length;i++) if(typeMap[place.types[i]]){typeTxt=typeMap[place.types[i]];break;}
+      document.getElementById('pc-type').textContent = typeTxt;
+      var rat='';
+      if (place.rating) {
+        var s=Math.round(place.rating),ss='';
+        for(var j=0;j<5;j++) ss+=(j<s?'★':'☆');
+        rat='<span style="color:#F9AB00">'+ss+'</span> '+place.rating+' ('+( place.user_ratings_total||0)+')';
+      }
+      document.getElementById('pc-rating').innerHTML = rat;
+      var info='';
+      // Match stop info
+      var ms=S.stops.find(function(st){return st.name&&(st.name===place.name||place.name.indexOf(st.name)>=0||st.name.indexOf(place.name)>=0);});
+      if(ms){
+        if(ms.arrive||ms.depart) info+='<div class="pc-info-row"><i class="ti ti-clock" style="color:var(--blue)"></i><span style="color:var(--blue);font-weight:500">行程：'+(ms.arrive||'')+(ms.depart?' → '+ms.depart:'')+'</span></div>';
+        if(ms.note) info+='<div class="pc-info-row"><i class="ti ti-note" style="color:var(--blue)"></i><span style="color:var(--blue)">'+ms.note+'</span></div>';
+      }
+      if(place.editorial_summary&&place.editorial_summary.overview)
+        info+='<div class="pc-info-row"><i class="ti ti-info-circle"></i><span>'+place.editorial_summary.overview+'</span></div>';
+      if(place.formatted_address)
+        info+='<div class="pc-info-row"><i class="ti ti-map-pin"></i><span>'+place.formatted_address+'</span></div>';
+      if(place.formatted_phone_number)
+        info+='<div class="pc-info-row"><i class="ti ti-phone"></i><span>'+place.formatted_phone_number+'</span></div>';
+      if(place.opening_hours){
+        var open=place.opening_hours.isOpen();
+        info+='<div class="pc-info-row"><i class="ti ti-clock"></i><span>'+(open?'<b style="color:var(--green)">營業中</b>':'<b style="color:var(--red)">已打烊</b>')+'</span></div>';
+      }
+      if(place.website)
+        info+='<div class="pc-info-row"><i class="ti ti-world"></i><a href="'+place.website+'" target="_blank" style="color:var(--blue)">查看官網</a></div>';
+      document.getElementById('pc-info').innerHTML = info;
+      document.getElementById('place-card').classList.add('show');
+    });
+}
+function closePc() {
+  document.getElementById('place-card').classList.remove('show');
+  S.currentPlace = null;
+}
+function pcNav() {
+  if (!S.currentPlace||!S.currentPlace.geometry) return;
+  navTo(S.currentPlace.geometry.location, S.currentPlace.name);
+  closePc();
+}
+function pcCall() {
+  if (S.currentPlace&&S.currentPlace.formatted_phone_number) window.open('tel:'+S.currentPlace.formatted_phone_number);
+  else alert('此地點無電話資訊');
+}
+function pcWeb() {
+  if (S.currentPlace&&S.currentPlace.website) window.open(S.currentPlace.website,'_blank');
+  else alert('此地點無網站資訊');
+}
+function pcShare() {
+  if (!S.currentPlace||!S.groupCode) return;
+  var txt='📍 '+S.currentPlace.name+(S.currentPlace.formatted_address?' - '+S.currentPlace.formatted_address:'');
+  window.FB.push(window.FB.gref('tripgo/groups/'+S.groupCode+'/chat'),
+    {uid:S.myUid,name:S.myName,text:txt,sticker:false,time:getTime()});
+  closePc();
+  showPane('chat', document.querySelectorAll('.tab')[1]);
+}
+
+// ── Divider drag ──
+(function(){
+  var div=document.getElementById('divider');
+  var mw=document.getElementById('map-wrap');
+  var dragging=false,start=0,startSz=0;
+  var portrait=function(){return window.innerHeight>window.innerWidth;};
+  function sd(x,y){
+    dragging=true;
+    start=portrait()?y:x;
+    startSz=portrait()?mw.offsetHeight:mw.offsetWidth;
+    document.body.style.userSelect='none';
+  }
+  function md(x,y){
+    if(!dragging)return;
+    var d=portrait()?(y-start):(x-start);
+    var ns=startSz+d;
+    var max=portrait()?window.innerHeight*.78:window.innerWidth*.78;
+    var min=100;
+    ns=Math.min(Math.max(ns,min),max);
+    if(portrait()) mw.style.height=ns+'px';
+    else mw.style.width=ns+'px';
+    if(map) google.maps.event.trigger(map,'resize');
+  }
+  function ed(){dragging=false;document.body.style.userSelect='';}
+  div.addEventListener('touchstart',function(e){sd(e.touches[0].clientX,e.touches[0].clientY);},{passive:true});
+  window.addEventListener('touchmove',function(e){if(dragging)md(e.touches[0].clientX,e.touches[0].clientY);},{passive:true});
+  window.addEventListener('touchend',ed);
+  div.addEventListener('mousedown',function(e){sd(e.clientX,e.clientY);e.preventDefault();});
+  window.addEventListener('mousemove',function(e){if(dragging)md(e.clientX,e.clientY);});
+  window.addEventListener('mouseup',ed);
+})();
+
+// ── Stops ──
+var MS_MODE = false;
+var MS_SET = new Set();
+
+function renderStops() {
+  var el = document.getElementById('stop-list');
+  if (!S.stops||S.stops.length===0) {
+    el.innerHTML='<div class="stop-empty">尚無行程景點<br>點下方「新增景點」開始規劃</div>';
+    return;
+  }
+  var lastDay='', html='';
+  S.stops.forEach(function(s,i){
+    if(s.day && s.day!==lastDay){
+      lastDay=s.day;
+      html+='<div class="day-hdr">'+s.day+'</div>';
+    }
+    var checked=MS_SET.has(i);
+    html+='<div class="stop-wrap" id="sw-'+i+'">' +
+      '<div class="stop-del-bg" data-key="'+s._key+'"><i class="ti ti-trash" style="font-size:20px"></i></div>' +
+      '<div class="stop-row" id="sr-'+i+'">' +
+        '<div class="stop-cb'+(checked?' on':'')+'" id="cb-'+i+'" onclick="toggleSel('+i+')"></div>' +
+        '<div class="stop-txt" onclick="tapStop('+i+')">' +
+          '<div class="stop-name">'+s.name+'</div>' +
+          '<div class="stop-time">'+(s.arrive||'')+(s.depart?' → '+s.depart:'')+(s.note?' · '+s.note.substring(0,20):'')+'</div>' +
+        '</div>' +
+        (MS_MODE?'':(
+          '<button class="stop-nav" onclick="navStop('+i+',event)"><i class="ti ti-navigation" style="font-size:11px"></i> 導航</button>' +
+          '<i class="ti ti-chevron-right stop-arr" onclick="tapStop('+i+')"></i>'
+        )) +
+      '</div>' +
+    '</div>';
+  });
+  el.innerHTML = html;
+  if(MS_MODE) document.getElementById('stop-list').classList.add('multiselect');
+  else document.getElementById('stop-list').classList.remove('multiselect');
+  // Delegate delete button clicks
+  el.querySelectorAll('.stop-del-bg').forEach(function(btn){
+    btn.addEventListener('click', function(){ deleteStop(this.dataset.key); });
+  });
+  // Attach swipe & longpress
+  S.stops.forEach(function(s,i){
+    attachSwipe(i,s._key);
+    attachLongpress(i);
+  });
+}
+
+function attachSwipe(i, key){
+  var row=document.getElementById('sr-'+i);
+  if(!row)return;
+  var startX=0,startY=0,dx=0;
+  row.addEventListener('touchstart',function(e){startX=e.touches[0].clientX;startY=e.touches[0].clientY;dx=0;},{passive:true});
+  row.addEventListener('touchmove',function(e){
+    dx=e.touches[0].clientX-startX;
+    var dy=e.touches[0].clientY-startY;
+    if(Math.abs(dy)>Math.abs(dx))return;
+    if(dx<-20&&!MS_MODE){row.style.transform='translateX('+Math.max(dx,-60)+'px)';row.style.transition='none';}
+  },{passive:true});
+  row.addEventListener('touchend',function(){
+    row.style.transition='transform .2s';
+    if(dx<-40&&!MS_MODE) row.classList.add('swiped');
+    else row.style.transform='translateX(0)';
+  },{passive:true});
+}
+
+function attachLongpress(i){
+  var row=document.getElementById('sr-'+i);
+  if(!row)return;
+  var t=null;
+  function start(){t=setTimeout(function(){
+    if(!MS_MODE){MS_MODE=true;MS_SET.clear();MS_SET.add(i);renderStops();updateMSBar();}
+    else{toggleSel(i);}
+  },500);}
+  function cancel(){clearTimeout(t);}
+  row.addEventListener('touchstart',start,{passive:true});
+  row.addEventListener('touchend',cancel,{passive:true});
+  row.addEventListener('touchmove',cancel,{passive:true});
+  row.addEventListener('mousedown',start);
+  row.addEventListener('mouseup',cancel);
+  row.addEventListener('mouseleave',cancel);
+}
+
+function tapStop(i){
+  if(MS_MODE){toggleSel(i);return;}
+  var s=S.stops[i];
+  if(!s)return;
+  // Open detail panel
+  S.currentStop=i;
+  document.getElementById('det-title').textContent=s.name;
+  document.getElementById('det-time').textContent=(s.arrive||'')+(s.depart?' → '+s.depart:'');
+  document.getElementById('det-bud').textContent=s.budget||'NT$ 0';
+  renderActs(s);renderNotes(s);
+  document.getElementById('detail').classList.add('show');
+  // Move map + show place card
+  var hasCoords = s.lat && s.lng && parseFloat(s.lat)!==0 && parseFloat(s.lng)!==0;
+  if(map && hasCoords){
+    var lat=parseFloat(s.lat),lng=parseFloat(s.lng);
+    map.panTo({lat:lat,lng:lng});map.setZoom(15);
+    if(plSvc){
+      plSvc.textSearch({query:s.name,location:{lat:lat,lng:lng},radius:500},function(results,status){
+        if(status===google.maps.places.PlacesServiceStatus.OK&&results&&results.length>0)
+          showPlaceCard(results[0].place_id);
+        else showSimplePc(s);
+      });
+    }
+  } else if(map&&plSvc){
+    // Try name directly first, then with region hint
+    plSvc.textSearch({query:s.name},function(results,status){
+      if(status===google.maps.places.PlacesServiceStatus.OK&&results&&results.length>0){
+        map.panTo(results[0].geometry.location);map.setZoom(15);
+        showPlaceCard(results[0].place_id);
+      } else {
+        // Fallback: show simple card with no map move
+        showSimplePc(s);
+      }
+    });
+  }
+}
+
+function showSimplePc(s){
+  S.currentPlace={name:s.name};
+  document.getElementById('pc-name').textContent=s.name;
+  document.getElementById('pc-type').textContent='📍 行程景點';
+  document.getElementById('pc-rating').innerHTML='';
+  var info='';
+  if(s.arrive||s.depart) info+='<div class="pc-info-row"><i class="ti ti-clock"></i><span>'+(s.arrive||'')+(s.depart?' → '+s.depart:'')+'</span></div>';
+  if(s.note) info+='<div class="pc-info-row"><i class="ti ti-info-circle"></i><span>'+s.note+'</span></div>';
+  document.getElementById('pc-info').innerHTML=info;
+  document.getElementById('place-card').classList.add('show');
+}
+
+function navStop(i,e){
+  if(e)e.stopPropagation();
+  var s=S.stops[i];if(!s)return;
+  var dest=s.lat&&s.lng&&s.lat!==0?{lat:s.lat,lng:s.lng}:s.name;
+  map.setZoom(13);
+  navTo(dest,s.name);
+}
+
+function deleteStop(key){
+  if(!confirm('確定刪除？'))return;
+  window.FB.remove(window.FB.gref('tripgo/groups/'+S.groupCode+'/stops/'+key));
+}
+
+// Multiselect
+function toggleSel(i){
+  if(MS_SET.has(i))MS_SET.delete(i);else MS_SET.add(i);
+  var cb=document.getElementById('cb-'+i);
+  if(cb){cb.classList.toggle('on',MS_SET.has(i));}
+  updateMSBar();
+  if(MS_SET.size===0)exitMS();
+}
+function updateMSBar(){
+  var n=MS_SET.size;
+  document.getElementById('ms-title').textContent='已選 '+n+' 個景點';
+  document.getElementById('ms-bar').classList.toggle('show',n>0);
+}
+function exitMS(){
+  MS_MODE=false;MS_SET.clear();
+  document.getElementById('ms-bar').classList.remove('show');
+  renderStops();
+}
+function msRoute(){
+  var sel=Array.from(MS_SET).sort(function(a,b){return a-b;});
+  if(sel.length<2){alert('請至少選 2 個景點');return;}
+  var stops=S.stops;
+  var wp=sel.slice(1,-1).map(function(i){return{location:{lat:stops[i].lat,lng:stops[i].lng},stopover:true};});
+  if(!window._orangeR) window._orangeR=new google.maps.DirectionsRenderer({
+    map:map,suppressMarkers:false,
+    polylineOptions:{strokeColor:'#FF6D00',strokeWeight:6,strokeOpacity:.9}
+  });
+  dsvc.route({origin:{lat:stops[sel[0]].lat,lng:stops[sel[0]].lng},
+    destination:{lat:stops[sel[sel.length-1]].lat,lng:stops[sel[sel.length-1]].lng},
+    waypoints:wp,travelMode:google.maps.TravelMode.DRIVING},
+    function(result,status){if(status==='OK')window._orangeR.setDirections(result);});
+  exitMS();
+}
+function msDelete(){
+  var n=MS_SET.size;
+  if(!confirm('確定刪除 '+n+' 個景點？'))return;
+  Array.from(MS_SET).forEach(function(i){
+    window.FB.remove(window.FB.gref('tripgo/groups/'+S.groupCode+'/stops/'+S.stops[i]._key));
+  });
+  exitMS();
+}
+function msExpense(){
+  var sel=Array.from(MS_SET).sort(function(a,b){return a-b;});
+  var names=sel.map(function(i){return S.stops[i].name;});
+  var matched=Object.values(S.expenses).filter(function(e){return names.some(function(n){return e.stopName&&e.stopName===n;});});
+  var paid={},share={},total=0;
+  S.members.forEach(function(m){paid[m.name]=0;share[m.name]=0;});
+  matched.forEach(function(e){
+    total+=e.amt;
+    paid[e.payer]=(paid[e.payer]||0)+e.amt;
+    Object.keys(share).slice(0,e.split).forEach(function(n){share[n]=(share[n]||0)+e.per;});
+  });
+  var html='<div style="font-size:11px;color:var(--text2);margin-bottom:8px">景點：'+names.join('、')+'</div>';
+  if(matched.length===0){
+    html+='<div style="font-size:12px;color:var(--gray)">這幾個景點尚無花費記錄</div>';
+  } else {
+    matched.forEach(function(e){
+      html+='<div class="seg-row"><div><div>'+e.name+'</div><div class="seg-sub">付：'+e.payer+' · '+e.split+'人 · NT$'+e.per+'</div></div><div style="font-weight:700;color:var(--blue)">NT$'+e.amt.toLocaleString()+'</div></div>';
+    });
+    html+='<div class="seg-row" style="border-top:2px solid var(--border);margin-top:4px"><b>合計</b><b style="color:var(--blue)">NT$'+total.toLocaleString()+'</b></div>';
+    var balance={};
+    Object.keys(paid).forEach(function(n){balance[n]=(paid[n]||0)-(share[n]||0);});
+    var cr=[],db=[];
+    Object.entries(balance).forEach(function(e){if(e[1]>10)cr.push({name:e[0],amt:e[1]});else if(e[1]<-10)db.push({name:e[0],amt:-e[1]});});
+    if(db.length>0){
+      html+='<div style="font-size:11px;font-weight:700;color:#1E7A3C;margin-top:8px">結算</div>';
+      db.forEach(function(d){cr.forEach(function(c){if(d.amt>0&&c.amt>0){var t=Math.min(d.amt,c.amt);html+='<div class="seg-row"><span>'+d.name+' → '+c.name+'</span><span style="color:#1E7A3C;font-weight:700">NT$'+Math.round(t)+'</span></div>';d.amt-=t;c.amt-=t;}});});
+    }
+  }
+  document.getElementById('seg-content').innerHTML=html;
+  openModal('M-seg-expense');
+  exitMS();
+}
+
+// ── Detail panel ──
+function closeDetail(){
+  document.getElementById('detail').classList.remove('show');
+}
+function renderActs(s){
+  var acts=(s&&s.activities)||[],html='';
+  acts.forEach(function(a,i){
+    html+='<div class="act-row"><div class="act-chk'+(a.done?' done':'')+'" onclick="tAct('+i+')"><i class="ti ti-check"></i></div>'+
+      '<span class="act-lbl'+(a.done?' done':'')+'">'+a.label+'</span>'+
+      '<button class="act-del" onclick="dAct('+i+')"><i class="ti ti-x"></i></button></div>';
+  });
+  document.getElementById('act-list').innerHTML=html;
+}
+function renderNotes(s){
+  var notes=(s&&s.notes)||[],html='';
+  notes.forEach(function(n,i){
+    html+='<div class="note-row"><div class="note-dot"></div><span class="note-txt">'+n+'</span>'+
+      '<button class="note-del" onclick="dNote('+i+')"><i class="ti ti-x"></i></button></div>';
+  });
+  document.getElementById('note-list').innerHTML=html;
+}
+function tAct(i){var s=S.stops[S.currentStop];if(!s||!s.activities)return;s.activities[i].done=!s.activities[i].done;renderActs(s);}
+function dAct(i){var s=S.stops[S.currentStop];if(!s||!s.activities)return;s.activities.splice(i,1);renderActs(s);}
+function addAct(){var inp=document.getElementById('act-inp'),v=inp.value.trim();if(!v)return;var s=S.stops[S.currentStop];if(!s)return;if(!s.activities)s.activities=[];s.activities.push({label:v,done:false});inp.value='';renderActs(s);}
+function dNote(i){var s=S.stops[S.currentStop];if(!s||!s.notes)return;s.notes.splice(i,1);renderNotes(s);}
+function addNote(){var inp=document.getElementById('note-inp'),v=inp.value.trim();if(!v)return;var s=S.stops[S.currentStop];if(!s)return;if(!s.notes)s.notes=[];s.notes.push(v);inp.value='';renderNotes(s);}
+function editBudget(){var v=prompt('修改每人費用預估（NT$）：');if(!v)return;var s=S.stops[S.currentStop];if(s){s.budget='NT$ '+parseInt(v).toLocaleString();document.getElementById('det-bud').textContent=s.budget;}}
+
+// ── Add stop ──
+function openAddStop(){
+  document.getElementById('add-stop-screen').classList.add('show');
+  ['ns-name','ns-arrive','ns-depart','ns-note','ns-day','asp-inp'].forEach(function(id){
+    var e=document.getElementById(id);if(e)e.value='';
+  });
+  document.getElementById('asp-place-info').classList.remove('show');
+  S.aspLat=0;S.aspLng=0;
+  setTimeout(function(){
+    if(!aspMap){
+      aspMap=new google.maps.Map(document.getElementById('asp-gmap'),{
+        center:S.myLatLng||{lat:25.0,lng:121.5},zoom:12,
+        mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,
+        styles:[{featureType:'poi',elementType:'labels',stylers:[{visibility:'simplified'}]}]
+      });
+      aspAcSvc=new google.maps.places.AutocompleteService();
+      aspPlSvc=new google.maps.places.PlacesService(aspMap);
+      aspMap.addListener('click',function(e){
+        if(e.placeId){e.stop();aspSelectPid(e.placeId);}
+        else aspDropPin(e.latLng);
+      });
+      // Force multiple resize triggers for iOS
+      [100,300,600].forEach(function(ms){
+        setTimeout(function(){google.maps.event.trigger(aspMap,'resize');},ms);
+      });
+    } else {
+      [0,200].forEach(function(ms){
+        setTimeout(function(){
+          google.maps.event.trigger(aspMap,'resize');
+          if(S.myLatLng)aspMap.panTo(S.myLatLng);
+        },ms);
+      });
+    }
+  },150);
+}
+function closeAddStop(){
+  document.getElementById('add-stop-screen').classList.remove('show');
+}
+function onAspInput(val){
+  if(aspTimer)clearTimeout(aspTimer);
+  if(!val){
+    var dd=document.getElementById('asp-drop');
+    if(dd)dd.style.display='none';
+    return;
+  }
+  if(!aspAcSvc)return;
+  aspTimer=setTimeout(function(){
+    aspAcSvc.getPlacePredictions({input:val,language:'zh-TW'},function(preds,status){
+      var dd=document.getElementById('asp-drop');
+      if(!dd)return;
+      if(status!==google.maps.places.PlacesServiceStatus.OK||!preds){
+        dd.style.display='none';return;
+      }
+      var html='';
+      preds.slice(0,5).forEach(function(p){
+        html+='<div class="drop-item" style="background:#fff" data-pid="'+p.place_id+'" onclick="aspSelectPid(this.dataset.pid)">'+
+          '<div class="drop-ic"><i class="ti ti-map-pin"></i></div>'+
+          '<div><div class="drop-name">'+p.structured_formatting.main_text+'</div>'+
+          '<div class="drop-addr">'+(p.structured_formatting.secondary_text||'')+'</div></div></div>';
+      });
+      dd.innerHTML=html;
+      dd.style.display='block';
+    });
+  },350);
+}
+function aspSelectPid(pid){
+  if(!aspPlSvc)return;
+  // Hide dropdown
+  var dd=document.getElementById('asp-drop');
+  if(dd)dd.style.display='none';
+  aspPlSvc.getDetails({placeId:pid,fields:['name','geometry','formatted_address']},function(place,status){
+    if(status!==google.maps.places.PlacesServiceStatus.OK)return;
+    aspDropPin(place.geometry.location);
+    document.getElementById('ns-name').value=place.name||'';
+    document.getElementById('asp-inp').value=place.name||'';
+    document.getElementById('asp-pname').textContent=place.name||'';
+    document.getElementById('asp-paddr').textContent=place.formatted_address||'';
+    document.getElementById('asp-place-info').classList.add('show');
+    S.aspLat=place.geometry.location.lat();
+    S.aspLng=place.geometry.location.lng();
+  });
+}
+function aspDropPin(latLng){
+  if(aspMarker)aspMarker.setMap(null);
+  aspMarker=new google.maps.Marker({
+    position:latLng,map:aspMap,
+    icon:{path:google.maps.SymbolPath.CIRCLE,scale:10,fillColor:'#EA4335',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}
+  });
+  aspMap.panTo(latLng);aspMap.setZoom(15);
+}
+function saveStop(){
+  var name=document.getElementById('ns-name').value.trim();
+  if(!name){alert('請輸入景點名稱');return;}
+  var arrive=document.getElementById('ns-arrive').value.trim();
+  var depart=document.getElementById('ns-depart').value.trim();
+  var note=document.getElementById('ns-note').value.trim();
+  var day=document.getElementById('ns-day').value.trim();
+  window.FB.push(window.FB.gref('tripgo/groups/'+S.groupCode+'/stops'),{
+    name:name,arrive:arrive,depart:depart,note:note,day:day,
+    activities:[],notes:note?[note]:[],
+    lat:S.aspLat||0,lng:S.aspLng||0,
+    budget:'NT$ 0',createdAt:Date.now()
+  });
+  closeAddStop();
+}
+
+// ── Chat ──
+function appendMsg(uid,name,text,isSticker,time){
+  var me=uid===S.myUid;
+  var members=S.members;
+  var idx=members.findIndex(function(m){return m.id===uid;});
+  var avClass='av'+(idx>=0?idx%7:0);
+  var list=document.getElementById('msg-list');
+  var div=document.createElement('div');
+  div.className='msg'+(me?' me':'');
+  div.innerHTML='<div class="av '+avClass+'" style="width:22px;height:22px;font-size:8px;flex-shrink:0">'+(uid||'?').substring(0,2).toUpperCase()+'</div>'+
+    '<div>'+(me?'':'<div class="msg-nm">'+(name||uid)+'</div>')+
+    '<div class="bubble'+(isSticker?' sticker-bubble':'')+'">'+text+'</div></div>'+
+    '<span class="msg-t">'+(time||'')+'</span>';
+  list.appendChild(div);
+  document.getElementById('msg-scroll').scrollTop=9999;
+}
+function sendMsg(){
+  var inp=document.getElementById('chat-inp'),text=inp.value.trim();if(!text)return;
+  window.FB.push(window.FB.gref('tripgo/groups/'+S.groupCode+'/chat'),
+    {uid:S.myUid,name:S.myName,text:text,sticker:false,time:getTime()});
+  inp.value='';document.getElementById('sticker-tray').classList.remove('show');
+}
+function sendSticker(s){
+  window.FB.push(window.FB.gref('tripgo/groups/'+S.groupCode+'/chat'),
+    {uid:S.myUid,name:S.myName,text:s,sticker:true,time:getTime()});
+  document.getElementById('sticker-tray').classList.remove('show');
+}
+function toggleStickers(){document.getElementById('sticker-tray').classList.toggle('show');}
+
+// ── Expenses ──
+function renderExpenses(){
+  var list=document.getElementById('exp-list');list.innerHTML='';
+  var total=0;
+  Object.values(S.expenses).forEach(function(e){
+    total+=e.amt;
+    var card=document.createElement('div');card.className='exp-card';
+    card.innerHTML='<div class="exp-top"><span class="exp-nm">'+e.name+'</span><span class="exp-amt">NT$ '+e.amt.toLocaleString()+'</span></div>'+
+      '<div class="exp-meta">付款：'+e.payer+' · '+e.split+'人平攤 · 每人 NT$ '+e.per.toLocaleString()+'</div>';
+    list.appendChild(card);
+  });
+  var pct=Math.min(Math.round(total/200000*100),100);
+  document.getElementById('bud-pct').textContent=pct+'%';
+  document.getElementById('bud-fill').style.width=pct+'%';
+  document.getElementById('bud-used').textContent='NT$ '+total.toLocaleString();
+  calcSettle();
+}
+function calcSettle(){
+  var paid={},share={};
+  S.members.forEach(function(m){paid[m.name]=0;share[m.name]=0;});
+  Object.values(S.expenses).forEach(function(e){
+    paid[e.payer]=(paid[e.payer]||0)+e.amt;
+    Object.keys(share).slice(0,e.split).forEach(function(n){share[n]=(share[n]||0)+e.per;});
+  });
+  var balance={};Object.keys(paid).forEach(function(n){balance[n]=(paid[n]||0)-(share[n]||0);});
+  var cr=[],db=[];
+  Object.entries(balance).forEach(function(e){if(e[1]>10)cr.push({name:e[0],amt:e[1]});else if(e[1]<-10)db.push({name:e[0],amt:-e[1]});});
+  var html='';
+  db.forEach(function(d){cr.forEach(function(c){if(d.amt>0&&c.amt>0){var t=Math.min(d.amt,c.amt);html+='<div class="settle-row"><span>'+d.name+' → '+c.name+'</span><span class="settle-amt">NT$ '+Math.round(t).toLocaleString()+'</span></div>';d.amt-=t;c.amt-=t;}});});
+  document.getElementById('settle-rows').innerHTML=html||'<div style="font-size:11px;color:var(--gray)">目前無需結算 ✅</div>';
+}
+function confirmExpense(){
+  var name=document.getElementById('m-name').value.trim();
+  var amt=parseInt(document.getElementById('m-amt').value)||0;
+  var payer=document.getElementById('m-payer').value;
+  var sv=document.getElementById('m-split').value;
+  var sn=sv==='all'?S.members.length:parseInt(sv);
+  if(!name||!amt){alert('請填寫名稱和金額');return;}
+  window.FB.push(window.FB.gref('tripgo/groups/'+S.groupCode+'/expenses'),
+    {name:name,amt:amt,payer:payer,split:sn,per:Math.round(amt/sn),time:getTime()});
+  closeModal('M-expense');
+  document.getElementById('m-name').value='';document.getElementById('m-amt').value='';
+}
+function renderPayerSelect(){
+  var sel=document.getElementById('m-payer');sel.innerHTML='';
+  S.members.forEach(function(m){var o=document.createElement('option');o.value=m.name;o.textContent=m.name;sel.appendChild(o);});
+}
+
+// ── Members ──
+function renderAvatars(){
+  var row=document.getElementById('tb-avs');row.innerHTML='';
+  S.members.forEach(function(m,i){
+    var av=document.createElement('div');
+    av.className='av av'+(i%7);
+    if(i>0)av.style.marginLeft='-5px';
+    av.title=m.name;
+    av.textContent=m.name.substring(0,2).toUpperCase();
+    if(m.role==='organizer'){var c=document.createElement('span');c.className='av-crown';c.textContent='👑';av.appendChild(c);}
+    row.appendChild(av);
+  });
+  document.getElementById('map-members').textContent=S.members.length+'位成員';
+}
+function renderMembers(){
+  var el=document.getElementById('mem-list');
+  document.getElementById('mem-count').textContent=S.members.length+'位';
+  var html='';
+  S.members.forEach(function(m,i){
+    var isOrg=m.role==='organizer';
+    html+='<div class="mem-row">'+
+      '<div class="mem-av av'+(i%7)+'">'+m.name.substring(0,2).toUpperCase()+'</div>'+
+      '<div style="flex:1"><div class="mem-nm">'+(isOrg?'👑 ':'')+m.name+'</div><div class="mem-role">'+(isOrg?'組織者':'團員')+'</div></div>'+
+      '<div class="mem-acts">'+
+        '<button class="mem-org-btn'+(isOrg?' on':'')+'" data-mid="'+m.id+'" data-action="setorg">'+(isOrg?'✓ 組織者':'設組織者')+'</button>'+
+        '<button class="mem-del-btn" data-mid="'+m.id+'" data-action="delmember">移除</button>'+
+      '</div></div>';
+  });
+  el.innerHTML=html;
+  // Delegate member button clicks
+  el.querySelectorAll('[data-action]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var action=this.dataset.action, mid=this.dataset.mid;
+      if(action==='setorg') setOrg(mid);
+      else if(action==='delmember') delMember(mid);
+    });
+  });
+}
+function setOrg(id){
+  S.members.forEach(function(m){
+    window.FB.set(window.FB.gref('tripgo/groups/'+S.groupCode+'/members/'+m.id+'/role'),m.id===id?'organizer':'member');
+  });
+}
+function delMember(id){
+  if(!confirm('確定移除？'))return;
+  window.FB.remove(window.FB.gref('tripgo/groups/'+S.groupCode+'/members/'+id));
+}
+function addMember(){
+  var name=document.getElementById('new-mem-name').value.trim();if(!name)return;
+  var uid=name.toUpperCase().replace(/[^A-Z0-9]/g,'').substring(0,3)+Math.floor(Math.random()*99);
+  window.FB.set(window.FB.gref('tripgo/groups/'+S.groupCode+'/members/'+uid),{id:uid,name:name,role:'member',joinedAt:Date.now()});
+  document.getElementById('new-mem-name').value='';
+}
+
+// ── Locations tab ──
+function renderLocList(){
+  var el=document.getElementById('loc-list');
+  if(!el)return;
+  var html='';
+  S.members.forEach(function(m,i){
+    var loc=S.allLocs[m.id];
+    var ago='未分享';
+    if(loc&&loc.at){var s=Math.round((Date.now()-loc.at)/1000);ago=s<60?s+'秒前':Math.round(s/60)+'分前';}
+    html+='<div class="loc-row">'+
+      '<div class="loc-av av'+(i%7)+'">'+m.name.substring(0,2).toUpperCase()+'</div>'+
+      '<div style="flex:1"><div class="loc-nm">'+(m.role==='organizer'?'👑 ':'')+m.name+'</div><div class="loc-st">'+(loc?'📍 '+ago:'未分享位置')+'</div></div>'+
+      (loc?'<button class="loc-see" data-uid="'+m.id+'">查看</button>':'')+
+    '</div>';
+  });
+  el.innerHTML=html||'<div style="font-size:12px;color:var(--gray)">暫無成員位置</div>';
+  el.querySelectorAll('.loc-see').forEach(function(btn){
+    btn.addEventListener('click', function(){ focusMember(this.dataset.uid); });
+  });
+}
+function focusMember(uid){
+  var loc=S.allLocs[uid];if(!loc||!map)return;
+  showPane('itinerary',document.querySelector('.tab'));
+  map.panTo({lat:loc.lat,lng:loc.lng});map.setZoom(16);
+}
+
+// ── UI helpers ──
+function showPane(name, el) {
+  document.querySelectorAll('.pane').forEach(function(p){ p.classList.remove('on'); });
+  var pane = document.getElementById('pane-'+name);
+  if (pane) pane.classList.add('on');
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('on'); });
+  if (el) el.classList.add('on');
+  if (name==='locations') renderLocList();
+}
+function openModal(id){ document.getElementById(id).classList.add('show'); }
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+function copyCode(){
+  var code=S.groupCode||'—';
+  if(navigator.clipboard) navigator.clipboard.writeText(code).then(function(){showToast('已複製：'+code,1500);});
+  else alert('邀請碼：'+code);
+}
+function showToast(msg,dur){
+  var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},dur||2000);
+}
+
+// ── Join screen ──
+var _sub = 'join';
+function goSub(mode){
+  _sub=mode;
+  // Make sure join screen is visible
+  document.getElementById('S-join').classList.remove('hide');
+  document.getElementById('S-app').classList.remove('show');
+  document.getElementById('js-home').style.display='none';
+  document.getElementById('js-sub').style.display='block';
+  document.getElementById('js-biometric').style.display='none';
+  document.getElementById('js-err').textContent='';
+  if(mode==='join'){
+    document.getElementById('js-sub-title').textContent='加入群組';
+    document.getElementById('sub-join-fields').style.display='block';
+    document.getElementById('sub-create-fields').style.display='none';
+    document.getElementById('js-go-label').textContent='加入群組';
+    document.getElementById('js-go-icon').className='ti ti-login';
+    setTimeout(function(){document.getElementById('inp-join-name').focus();},100);
+  } else {
+    document.getElementById('js-sub-title').textContent='建立群組';
+    document.getElementById('sub-join-fields').style.display='none';
+    document.getElementById('sub-create-fields').style.display='block';
+    document.getElementById('js-go-label').textContent='建立群組';
+    document.getElementById('js-go-icon').className='ti ti-map-plus';
+    setTimeout(function(){document.getElementById('inp-create-name').focus();},100);
+  }
+}
+function goHome(){
+  // Make sure join screen is visible
+  document.getElementById('S-join').classList.remove('hide');
+  document.getElementById('S-app').classList.remove('show');
+  document.getElementById('js-home').style.display='flex';
+  document.getElementById('js-sub').style.display='none';
+  document.getElementById('js-err').textContent='';
+  if(localStorage.getItem('tg_code')) document.getElementById('js-biometric').style.display='flex';
+}
+function doAction(){
+  if(_sub==='join') doJoin(); else doCreate();
+}
+async function doJoin(){
+  var name=document.getElementById('inp-join-name').value.trim();
+  var code=document.getElementById('inp-invite').value.trim().toUpperCase();
+  var err=document.getElementById('js-err');
+  if(!name){err.textContent='請輸入你的名字';return;}
+  if(code.length<4){err.textContent='請輸入邀請碼';return;}
+  if(!window.FB||!window.FB.ready){
+    err.textContent='⏳ 連線中，2秒後自動重試…';
+    setTimeout(function(){ doJoin(); }, 2000);
+    return;
+  }
+  err.textContent='驗證中…';
+  try{
+    var snap=await window.FB.get(window.FB.gref('tripgo/groups/'+code));
+    if(!snap.exists()){err.textContent='❌ 邀請碼無效';return;}
+    var uid=name.toUpperCase().replace(/[^A-Z0-9]/g,'').substring(0,3)+Math.floor(Math.random()*99);
+    await window.FB.set(window.FB.gref('tripgo/groups/'+code+'/members/'+uid),
+      {id:uid,name:name,role:'member',joinedAt:Date.now()});
+    var gd=snap.val();
+    startApp(code,uid,name,gd.tripName||'旅遊群組',false);
+  }catch(e){err.textContent='❌ 連線錯誤，請重試';console.error(e);}
+}
+async function doCreate(){
+  var name=document.getElementById('inp-create-name').value.trim();
+  var tripName=document.getElementById('inp-trip-name').value.trim()||'旅遊群組';
+  var err=document.getElementById('js-err');
+  if(!name){err.textContent='請輸入你的名字';return;}
+  if(!window.FB||!window.FB.ready){
+    err.textContent='⏳ 連線中，2秒後自動重試…';
+    setTimeout(function(){ doCreate(); }, 2000);
+    return;
+  }
+  err.textContent='建立中…';
+  try{
+    var code='TRIP'+Math.random().toString(36).toUpperCase().substring(2,6);
+    var uid=name.toUpperCase().replace(/[^A-Z0-9]/g,'').substring(0,3)+'01';
+    await window.FB.set(window.FB.gref('tripgo/groups/'+code),{
+      tripName:tripName,createdAt:Date.now(),organizer:uid,
+      members:{[uid]:{id:uid,name:name,role:'organizer',joinedAt:Date.now()}}
+    });
+    startApp(code,uid,name,tripName,true);
+  }catch(e){err.textContent='❌ 建立失敗，請重試';console.error(e);}
+}
+
+// Gear menu
+function toggleGear(e){
+  e.stopPropagation();
+  document.getElementById('js-gear-menu').classList.toggle('show');
+}
+try { document.addEventListener('click',function(){ var g=document.getElementById('js-gear-menu');if(g)g.classList.remove('show'); }); } catch(e){}
+
+// Admin
+function openAdmin(){
+  document.getElementById('adm-err').textContent='';
+  document.getElementById('M-admin').classList.add('show');
+}
+function closeAdmin(){ document.getElementById('M-admin').classList.remove('show'); }
+function doAdmin(){
+  var e=document.getElementById('adm-email').value.trim();
+  var p=document.getElementById('adm-pw').value;
+  if(e!=='hau747@hotmail.com'||p!=='0937381897'){
+    document.getElementById('adm-err').textContent='帳號或密碼錯誤';return;
+  }
+  closeAdmin();
+  var code=prompt('輸入要管理的群組邀請碼：');
+  if(!code)return;
+  code=code.toUpperCase().trim();
+  window.FB.get(window.FB.gref('tripgo/groups/'+code)).then(function(snap){
+    if(!snap.exists()){
+      window.FB.set(window.FB.gref('tripgo/groups/'+code),{
+        tripName:'管理群組',createdAt:Date.now(),organizer:'ADMIN01',
+        members:{ADMIN01:{id:'ADMIN01',name:'管理員',role:'organizer'}}
+      });
+    }
+    window.FB.get(window.FB.gref('tripgo/groups/'+code)).then(function(gs){
+      startApp(code,'ADMIN01','管理員',gs.val().tripName||'TripGo',true);
+    });
+  });
+}
+
+// Clear session
+function clearSession(){
+  localStorage.removeItem('tg_code');
+  localStorage.removeItem('tg_uid');
+  localStorage.removeItem('tg_name');
+  document.getElementById('js-biometric').style.display='none';
+  goHome();
+  showToast('✅ 舊資料已清除',2000);
+}
+
+// Biometric
+function doBiometric(){
+  var code=localStorage.getItem('tg_code');
+  var uid=localStorage.getItem('tg_uid');
+  var name=localStorage.getItem('tg_name');
+  if(!code||!uid||!name){alert('請先登入一次再使用此功能');return;}
+  if(window.PublicKeyCredential){
+    navigator.credentials.get({publicKey:{
+      challenge:new Uint8Array(32),rpId:location.hostname,
+      userVerification:'preferred',timeout:30000
+    }}).then(function(){
+      autoLogin(code,uid,name);
+    }).catch(function(){ autoLogin(code,uid,name); });
+  } else { autoLogin(code,uid,name); }
+}
+function autoLogin(code,uid,name){
+  window.FB.get(window.FB.gref('tripgo/groups/'+code)).then(function(gs){
+    if(gs.exists()){
+      var isOrg=gs.val().organizer===uid;
+      startApp(code,uid,name,gs.val().tripName||'旅遊群組',isOrg);
+    }
+  });
+}
+
+// ── Init join screen ──
+window.addEventListener('load',function(){
+  // Show biometric if previous session
+  if(localStorage.getItem('tg_code')){
+    document.getElementById('js-biometric').style.display='flex';
+  }
+  // Default: show home
+  document.getElementById('js-home').style.display='flex';
+  document.getElementById('js-sub').style.display='none';
+  // Init listeners that need DOM ready
+  initDoubleTapListener();
+  // Warn if Firebase takes too long
+  setTimeout(function(){
+    if(!window._fbReady){
+      console.warn('[TripGo] Firebase not ready after 8s - possible network issue');
+      var err=document.getElementById('js-err');
+      if(err&&err.textContent.indexOf('連線中')>=0){
+        err.textContent='⚠️ 網路連線較慢，請確認網路後重整頁面';
+      }
+    }
+  }, 8000);
+  // Offline badge click
+  try {
+    document.getElementById('offline-badge').addEventListener('click', function(){
+      if(navigator.onLine) manualSync();
+      else alert('目前無網路連線，資料已儲存在本機，連線後自動同步');
+    });
+  } catch(err){}
+});
+
+// ── Utils ──
+function getTime(){var n=new Date();return n.getHours()+':'+(n.getMinutes()<10?'0':'')+n.getMinutes();}
+
+// ════════════════════════════════════════
+// ① TRIP SWITCHER
+// ════════════════════════════════════════
+
+// Stored trips in localStorage: [{code, uid, name, tripName, isOrg, lastAccess}]
+function getStoredTrips(){
+  try{ return JSON.parse(localStorage.getItem('tg_trips')||'[]'); }
+  catch(e){ return []; }
+}
+function saveStoredTrips(trips){
+  localStorage.setItem('tg_trips', JSON.stringify(trips));
+}
+function updateCurrentTrip(code, uid, name, tripName, isOrg){
+  var trips = getStoredTrips();
+  var idx = trips.findIndex(function(t){return t.code===code&&t.uid===uid;});
+  var entry = {code:code, uid:uid, name:name, tripName:tripName, isOrg:isOrg, lastAccess:Date.now()};
+  if(idx>=0) trips[idx]=entry;
+  else trips.unshift(entry);
+  // Keep max 10 trips
+  if(trips.length>10) trips=trips.slice(0,10);
+  saveStoredTrips(trips);
+}
+
+function openTripSwitcher(){
+  var trips = getStoredTrips();
+  var currentCode = S.groupCode;
+
+  // Current trip
+  var cur = trips.find(function(t){return t.code===currentCode;});
+  var curEl = document.getElementById('tsw-current');
+  if(cur){
+    curEl.innerHTML = '<div class="tsw-trip-card current">' +
+      '<div class="tsw-trip-ic"><i class="ti ti-map-2"></i></div>' +
+      '<div style="flex:1"><div class="tsw-trip-name">'+cur.tripName+'</div>' +
+      '<div class="tsw-trip-meta">邀請碼：'+cur.code+' · '+cur.name+'</div></div>' +
+      '<span style="font-size:11px;background:var(--blue);color:#fff;border-radius:8px;padding:2px 7px">目前</span>' +
+    '</div>';
+  } else { curEl.innerHTML=''; }
+
+  // Other trips
+  var others = trips.filter(function(t){return t.code!==currentCode;});
+  var othEl = document.getElementById('tsw-others');
+  if(others.length===0){
+    othEl.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.6);padding:4px 0">尚無其他旅程</div>';
+  } else {
+    othEl.innerHTML = others.map(function(t, idx){
+      return '<div class="tsw-trip-card" data-tidx="'+idx+'">' +
+        '<div class="tsw-trip-ic"><i class="ti ti-map-2"></i></div>' +
+        '<div style="flex:1"><div class="tsw-trip-name">'+t.tripName+'</div>' +
+        '<div class="tsw-trip-meta">邀請碼：'+t.code+' · '+t.name+'</div></div>' +
+        '<i class="ti ti-chevron-right tsw-trip-arr"></i>' +
+      '</div>';
+    }).join('');
+    // Attach click handlers safely (avoid inline onclick quote issues)
+    var cards = othEl.querySelectorAll('.tsw-trip-card');
+    cards.forEach(function(card, idx){
+      var t = others[idx];
+      card.addEventListener('click', function(){ switchTrip(t.code, t.uid, t.name, t.tripName, t.isOrg); });
+    });
+  }
+
+  document.getElementById('trip-switcher').classList.add('show');
+}
+
+function closeTripSwitcher(){
+  document.getElementById('trip-switcher').classList.remove('show');
+}
+
+function switchTrip(code, uid, name, tripName, isOrg){
+  closeTripSwitcher();
+  // Unsubscribe current listeners (simple approach: reload app state)
+  S.groupCode=null; S.stops=[]; S.members=[]; S.expenses={}; S.allLocs={};
+  // Update session
+  localStorage.setItem('tg_code', code);
+  localStorage.setItem('tg_uid', uid);
+  localStorage.setItem('tg_name', name);
+  // Re-init
+  startApp(code, uid, name, tripName, isOrg);
+}
+
+// ════════════════════════════════════════
+// ② FULLSCREEN (double-tap TripGo)
+// ════════════════════════════════════════
+var _fsMode = false;
+var _lastTap = 0;
+
+// Double-tap for mobile - wrapped in try/catch, inside function
+function initDoubleTapListener(){
+  try {
+    var logo = document.getElementById('tb-logo');
+    if(!logo) return;
+    logo.addEventListener('touchend', function(e){
+      var now = Date.now();
+      if(now - _lastTap < 300){
+        e.preventDefault();
+        toggleFullscreen();
+      }
+      _lastTap = now;
+    }, {passive:false});
+  } catch(err){ console.warn('doubletap init failed:', err); }
+}
+
+function toggleFullscreen(){
+  _fsMode = !_fsMode;
+  var app = document.getElementById('S-app');
+  var fsBtn = document.getElementById('fs-exit');
+  if(_fsMode){
+    // Try native fullscreen
+    var el = document.documentElement;
+    if(el.requestFullscreen) el.requestFullscreen();
+    else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    app.classList.add('fullscreen-mode');
+    fsBtn.classList.add('show');
+  } else {
+    if(document.exitFullscreen) document.exitFullscreen();
+    else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
+    app.classList.remove('fullscreen-mode');
+    fsBtn.classList.remove('show');
+  }
+  // Resize map
+  setTimeout(function(){
+    setMapHeight();
+    if(map) google.maps.event.trigger(map,'resize');
+  }, 300);
+}
+
+// Handle native fullscreen exit (ESC key or browser button)
+document.addEventListener('fullscreenchange', function(){
+  if(!document.fullscreenElement && _fsMode){
+    _fsMode = false;
+    document.getElementById('S-app').classList.remove('fullscreen-mode');
+    document.getElementById('fs-exit').classList.remove('show');
+    setTimeout(function(){ setMapHeight(); if(map) google.maps.event.trigger(map,'resize'); }, 300);
+  }
+});
+document.addEventListener('webkitfullscreenchange', function(){
+  if(!document.webkitFullscreenElement && _fsMode){
+    _fsMode = false;
+    document.getElementById('S-app').classList.remove('fullscreen-mode');
+    document.getElementById('fs-exit').classList.remove('show');
+    setTimeout(function(){ setMapHeight(); if(map) google.maps.event.trigger(map,'resize'); }, 300);
+  }
+});
+
+// ════════════════════════════════════════
+// ③ OFFLINE SYNC - Manual flush button
+// ════════════════════════════════════════
+function manualSync(){
+  if(window.FB && window.FB.flushQueue) window.FB.flushQueue();
+}
+
+// Click offline badge to sync - moved to window.load
+
+</script>
+
+<!-- Google Maps -->
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqSI4aArDEF-MliWpQTGqmXwsR4ZVEf1I&libraries=places&callback=initMap&language=zh-TW" async defer></script>
+
+<!-- ── Trip Switcher ── -->
+<div id="trip-switcher">
+  <div class="tsw-header">
+    <button class="tsw-back" onclick="closeTripSwitcher()"><i class="ti ti-x"></i></button>
+    <span class="tsw-title">🗺️ 我的旅程</span>
+  </div>
+  <div class="tsw-body">
+    <div class="tsw-section-title">目前旅程</div>
+    <div id="tsw-current"></div>
+    <div class="tsw-section-title">其他旅程</div>
+    <div id="tsw-others"></div>
+    <div class="tsw-section-title">新旅程</div>
+    <div class="tsw-new-btns">
+      <button class="tsw-new-btn primary" onclick="closeTripSwitcher();goSub('create')">
+        <div class="tsw-nb-ic blue"><i class="ti ti-map-plus" style="color:var(--blue);font-size:20px"></i></div>
+        <div>
+          <div class="tsw-nb-title">建立新群組</div>
+          <div class="tsw-nb-sub">建立新旅遊，邀請朋友加入</div>
+        </div>
+        <i class="ti ti-chevron-right tsw-nb-arr"></i>
+      </button>
+      <button class="tsw-new-btn outline" onclick="closeTripSwitcher();goSub('join')">
+        <div class="tsw-nb-ic wh"><i class="ti ti-login" style="color:#fff;font-size:20px"></i></div>
+        <div>
+          <div class="tsw-nb-title">加入群組</div>
+          <div class="tsw-nb-sub">輸入邀請碼加入旅遊</div>
+        </div>
+        <i class="ti ti-chevron-right tsw-nb-arr"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Fullscreen exit button -->
+<button id="fs-exit" onclick="toggleFullscreen()">
+  <i class="ti ti-minimize" style="font-size:14px"></i> 退出全螢幕
+</button>
+
+<!-- Offline badge -->
+<div id="offline-badge">
+  <i class="ti ti-wifi-off" style="font-size:14px"></i>
+  離線模式・<span id="pending-count">0</span> 筆待同步
+</div>
+</body>
+</html>
