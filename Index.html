@@ -695,9 +695,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
   <div class="js-title">TripGo</div>
   <div class="js-sub">團體旅遊管理 APP</div>
 
-  <button id="js-biometric" onclick="doBiometric()">
-    <i class="ti ti-fingerprint" style="font-size:18px"></i> Face ID / Touch ID 快速登入
-  </button>
+
 
   <div id="js-home" style="flex-direction:column;align-items:center;width:100%;max-width:320px;overflow-y:auto;max-height:70vh;padding-bottom:8px">
     <!-- ① 名字輸入 bar -->
@@ -2265,12 +2263,17 @@ function goHome(){
   document.getElementById('js-home').style.display='flex';
   document.getElementById('js-sub').style.display='none';
   document.getElementById('js-err').textContent='';
-  if(localStorage.getItem('tg_code')) document.getElementById('js-biometric').style.display='flex';
-  // Restore last name and show trips
+  // Restore last name
   var lastName = localStorage.getItem('tg_last_name') || '';
   var homeNameEl = document.getElementById('js-home-name');
-  if(homeNameEl && lastName) homeNameEl.value = lastName;
-  renderTripsPreview(lastName);
+  if(homeNameEl) homeNameEl.value = lastName;
+  // Show trips if name exists, otherwise hide
+  if(lastName){
+    renderTripsPreview(lastName);
+  } else {
+    var preview = document.getElementById('js-trips-preview');
+    if(preview) preview.style.display = 'none';
+  }
 }
 function doAction(){
   if(_sub==='join') doJoin(); else doCreate();
@@ -2370,35 +2373,10 @@ function clearSession(){
 }
 
 // Biometric
-function doBiometric(){
-  var code=localStorage.getItem('tg_code');
-  var uid=localStorage.getItem('tg_uid');
-  var name=localStorage.getItem('tg_name');
-  if(!code||!uid||!name){alert('請先登入一次再使用此功能');return;}
-  if(window.PublicKeyCredential){
-    navigator.credentials.get({publicKey:{
-      challenge:new Uint8Array(32),rpId:location.hostname,
-      userVerification:'preferred',timeout:30000
-    }}).then(function(){
-      autoLogin(code,uid,name);
-    }).catch(function(){ autoLogin(code,uid,name); });
-  } else { autoLogin(code,uid,name); }
-}
-function autoLogin(code,uid,name){
-  window.FB.get(window.FB.gref('tripgo/groups/'+code)).then(function(gs){
-    if(gs.exists()){
-      var isOrg=gs.val().organizer===uid;
-      startApp(code,uid,name,gs.val().tripName||'旅遊群組',isOrg);
-    }
-  });
-}
+
 
 // ── Init join screen ──
 window.addEventListener('load',function(){
-  // Show biometric if previous session
-  if(localStorage.getItem('tg_code')){
-    document.getElementById('js-biometric').style.display='flex';
-  }
   // Default: show home
   document.getElementById('js-home').style.display='flex';
   document.getElementById('js-sub').style.display='none';
@@ -2778,9 +2756,8 @@ function pcAddToItinerary(){
 
 // ── 首頁旅程預覽 ──
 function onHomeNameInput(val){
-  renderTripsPreview(val);
-  // Also pre-fill name in sub-panels when user later clicks join/create
   localStorage.setItem('tg_last_name', val.trim());
+  renderTripsPreview(val);
 }
 
 function renderTripsPreview(inputName){
@@ -2790,31 +2767,31 @@ function renderTripsPreview(inputName){
   var countEl = document.getElementById('jtp-count');
   if(!preview || !list) return;
 
-  var name = inputName ? inputName.trim().toLowerCase() : '';
+  var name = (inputName || '').trim();
+  var nameLower = name.toLowerCase();
 
-  if(trips.length === 0){
+  if(trips.length === 0 && !name){
     preview.style.display = 'none';
     return;
   }
 
-  // Show all trips if name is empty; filter if name entered
-  var matched = name
-    ? trips.filter(function(t){ return t.name.toLowerCase().indexOf(name) >= 0; })
+  // Filter stored trips by name
+  var matched = nameLower
+    ? trips.filter(function(t){ return t.name.toLowerCase().indexOf(nameLower) >= 0; })
     : trips;
 
-  if(matched.length === 0 && name){
-    // Name entered but no match - still hide (new user)
-    preview.style.display = 'none';
-    return;
-  }
-  if(matched.length === 0){
+  if(matched.length === 0 && !name){
     preview.style.display = 'none';
     return;
   }
 
   var built = matched.filter(function(t){ return t.isOrg; }).length;
   var joined = matched.filter(function(t){ return !t.isOrg; }).length;
-  countEl.textContent = matched.length + ' 個（建立 ' + built + ' · 加入 ' + joined + '）';
+  if(name){
+    countEl.textContent = '「'+name+'」建立 '+built+' 個 · 加入 '+joined+' 個';
+  } else {
+    countEl.textContent = '共 '+matched.length+' 個（建立 '+built+' · 加入 '+joined+'）';
+  }
 
   list.innerHTML = matched.slice(0, 4).map(function(t, i){
     return '<div class="jtp-card" data-tidx="'+i+'">' +
