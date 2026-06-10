@@ -699,6 +699,15 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
     <i class="ti ti-fingerprint" style="font-size:18px"></i> Face ID / Touch ID 快速登入
   </button>
 
+  <!-- 首頁旅程預覽（輸入名字後顯示） -->
+  <div id="js-trips-preview">
+    <div class="jtp-header">
+      <span>我的旅程</span>
+      <span class="jtp-count" id="jtp-count">0 個</span>
+    </div>
+    <div id="jtp-list"></div>
+  </div>
+
   <div id="js-home">
     <button class="js-big-btn primary" onclick="goSub('join')">
       <div class="jbb-ic blue"><i class="ti ti-login" style="color:var(--blue);font-size:22px"></i></div>
@@ -2213,6 +2222,8 @@ function goHome(){
   document.getElementById('js-sub').style.display='none';
   document.getElementById('js-err').textContent='';
   if(localStorage.getItem('tg_code')) document.getElementById('js-biometric').style.display='flex';
+  // Show trips preview on home (all trips, no name filter)
+  renderTripsPreview('');
 }
 function doAction(){
   if(_sub==='join') doJoin(); else doCreate();
@@ -2715,6 +2726,85 @@ function pcAddToItinerary(){
       if(pinfo) pinfo.classList.add('show');
     }
   }, 300);
+}
+
+
+// ── 首頁旅程預覽 ──
+function renderTripsPreview(inputName){
+  var trips = getStoredTrips();
+  var preview = document.getElementById('js-trips-preview');
+  var list = document.getElementById('jtp-list');
+  var countEl = document.getElementById('jtp-count');
+  if(!preview || !list) return;
+
+  if(trips.length === 0){
+    preview.style.display = 'none';
+    return;
+  }
+
+  // Filter by name match if name is provided
+  var name = inputName ? inputName.trim().toLowerCase() : '';
+  var matched = name
+    ? trips.filter(function(t){ return t.name.toLowerCase().indexOf(name) >= 0; })
+    : trips;
+
+  if(matched.length === 0){
+    preview.style.display = 'none';
+    return;
+  }
+
+  var built = matched.filter(function(t){ return t.isOrg; }).length;
+  var joined = matched.filter(function(t){ return !t.isOrg; }).length;
+  countEl.textContent = matched.length + ' 個（建立 ' + built + ' · 加入 ' + joined + '）';
+
+  list.innerHTML = matched.slice(0, 4).map(function(t, i){
+    return '<div class="jtp-card" data-tidx="'+i+'">' +
+      '<div>' +
+        '<div class="jtp-role">'+(t.isOrg ? '👑 建立者' : '👤 成員')+'</div>' +
+        '<div class="jtp-name">'+t.tripName+'</div>' +
+        '<div class="jtp-meta">邀請碼：'+t.code+'</div>' +
+      '</div>' +
+      '<i class="ti ti-chevron-right jtp-arr"></i>' +
+    '</div>';
+  }).join('') + (matched.length > 4 ? '<div style="font-size:11px;color:rgba(255,255,255,.7);text-align:center;padding:6px 0">還有 '+(matched.length-4)+' 個旅程…</div>' : '');
+
+  preview.style.display = 'flex';
+
+  // Attach click handlers
+  list.querySelectorAll('.jtp-card').forEach(function(card, i){
+    var t = matched[i];
+    card.addEventListener('click', function(){
+      // Auto-login to this trip
+      if(!window.FB || !window.FB.ready){ showToast('⏳ 連線中，請稍後', 1500); return; }
+      window.FB.get(window.FB.gref('tripgo/groups/'+t.code)).then(function(snap){
+        if(snap.exists()){
+          startApp(t.code, t.uid, t.name, t.tripName, t.isOrg);
+        } else {
+          // Trip no longer exists - remove from list
+          var remaining = getStoredTrips().filter(function(x){ return x.code !== t.code; });
+          saveStoredTrips(remaining);
+          renderTripsPreview(inputName);
+          showToast('⚠️ 此旅程已不存在', 2000);
+        }
+      });
+    });
+  });
+}
+
+// Hook name inputs to show trips preview
+function initNameInputListeners(){
+  // For join sub-panel
+  var joinName = document.getElementById('inp-join-name');
+  if(joinName){
+    joinName.addEventListener('input', function(){ renderTripsPreview(this.value); });
+    joinName.addEventListener('focus', function(){ renderTripsPreview(this.value); });
+  }
+  // For create sub-panel
+  var createName = document.getElementById('inp-create-name');
+  if(createName){
+    createName.addEventListener('input', function(){ renderTripsPreview(this.value); });
+    createName.addEventListener('focus', function(){ renderTripsPreview(this.value); });
+  }
 }
 
 </script>
