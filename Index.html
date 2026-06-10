@@ -60,16 +60,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 .jgm-item.red{color:var(--red)}
 .jgm-sep{height:1px;background:var(--border);margin:3px 0}
 
-/* Biometric */
-#js-biometric{
-  display:none;  /* HIDDEN BY DEFAULT */
-  align-items:center;justify-content:center;gap:8px;
-  width:100%;max-width:320px;
-  padding:12px;margin-bottom:16px;
-  border:1.5px solid rgba(255,255,255,.4);border-radius:12px;
-  background:rgba(255,255,255,.15);color:#fff;
-  font-size:13px;cursor:pointer;
-}
 
 /* Home panel */
 #js-home{
@@ -2232,7 +2222,6 @@ function goSub(mode){
   document.getElementById('S-app').classList.remove('show');
   document.getElementById('js-home').style.display='none';
   document.getElementById('js-sub').style.display='block';
-  document.getElementById('js-biometric').style.display='none';
   document.getElementById('js-err').textContent='';
   if(mode==='join'){
     document.getElementById('js-sub-title').textContent='加入群組';
@@ -2367,12 +2356,9 @@ function clearSession(){
   localStorage.removeItem('tg_code');
   localStorage.removeItem('tg_uid');
   localStorage.removeItem('tg_name');
-  document.getElementById('js-biometric').style.display='none';
   goHome();
   showToast('✅ 舊資料已清除',2000);
 }
-
-// Biometric
 
 
 // ── Init join screen ──
