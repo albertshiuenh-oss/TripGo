@@ -936,9 +936,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
     <div class="asp-search-wrap">
       <div class="asp-search-bar">
         <i class="ti ti-search" style="font-size:15px;color:var(--blue);flex-shrink:0"></i>
-        <input class="asp-search-inp" id="asp-inp" placeholder="搜尋景點名稱或地址…" 
-          oninput="onAspInput(this.value)" 
-          onblur="setTimeout(function(){var d=document.getElementById('asp-drop');if(d)d.style.display='none';},250)"/>
+        <input class="asp-search-inp" id="asp-inp" placeholder="搜尋景點名稱或地址…" autocomplete="off"/>
       </div>
       <div id="asp-drop" style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;
         background:#fff;border-radius:14px;box-shadow:0 4px 16px rgba(0,0,0,.18);
@@ -1809,77 +1807,86 @@ function editBudget(){var v=prompt('修改每人費用預估（NT$）：');if(!v
 // ── Add stop ──
 function openAddStop(){
   document.getElementById('add-stop-screen').classList.add('show');
-  ['ns-name','ns-arrive','ns-depart','ns-note','ns-day','asp-inp'].forEach(function(id){
+  ['ns-name','ns-arrive','ns-depart','ns-note','ns-day'].forEach(function(id){
     var e=document.getElementById(id);if(e)e.value='';
   });
+  var aspInp=document.getElementById('asp-inp');
+  if(aspInp) aspInp.value='';
   document.getElementById('asp-place-info').classList.remove('show');
+  var dd=document.getElementById('asp-drop');
+  if(dd) dd.style.display='none';
   S.aspLat=0;S.aspLng=0;
   setTimeout(function(){
+    // Init map
     if(!aspMap){
       aspMap=new google.maps.Map(document.getElementById('asp-gmap'),{
         center:S.myLatLng||{lat:25.0,lng:121.5},zoom:12,
         mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false,
         styles:[{featureType:'poi',elementType:'labels',stylers:[{visibility:'simplified'}]}]
       });
-      aspAcSvc=new google.maps.places.AutocompleteService();
       aspPlSvc=new google.maps.places.PlacesService(aspMap);
       aspMap.addListener('click',function(e){
         if(e.placeId){e.stop();aspSelectPid(e.placeId);}
         else aspDropPin(e.latLng);
       });
-      // Force multiple resize triggers for iOS
       [100,300,600].forEach(function(ms){
         setTimeout(function(){google.maps.event.trigger(aspMap,'resize');},ms);
       });
     } else {
-      [0,200].forEach(function(ms){
-        setTimeout(function(){
-          google.maps.event.trigger(aspMap,'resize');
-          if(S.myLatLng)aspMap.panTo(S.myLatLng);
-        },ms);
-      });
+      google.maps.event.trigger(aspMap,'resize');
+      if(S.myLatLng) aspMap.panTo(S.myLatLng);
     }
-  },150);
+    // ✅ Use official Google Autocomplete widget on the input
+    var inp=document.getElementById('asp-inp');
+    if(inp && !inp._autocomplete){
+      // Small delay to ensure the screen is fully visible before Autocomplete init
+      setTimeout(function(){
+        var ac=new google.maps.places.Autocomplete(inp,{
+          fields:['name','geometry','formatted_address','rating','types']
+        });
+        inp._autocomplete=ac;
+      ac.addListener('place_changed',function(){
+        var place=ac.getPlace();
+        if(!place||!place.geometry){return;}
+        aspDropPin(place.geometry.location);
+        document.getElementById('ns-name').value=place.name||'';
+        document.getElementById('asp-pname').textContent=place.name||'';
+        document.getElementById('asp-paddr').textContent=place.formatted_address||'';
+        document.getElementById('asp-place-info').classList.add('show');
+        S.aspLat=place.geometry.location.lat();
+        S.aspLng=place.geometry.location.lng();
+        // Show confirm bar
+        var dd2=document.getElementById('asp-drop');
+        if(dd2){
+          dd2.innerHTML=
+            '<div style="padding:10px 14px;border-bottom:1px solid var(--border)">' +
+              '<div style="font-size:13px;font-weight:700;color:var(--text)">'+place.name+'</div>' +
+              '<div style="font-size:11px;color:var(--gray);margin-top:2px">'+(place.formatted_address||'')+'</div>' +
+              (place.rating?'<div style="font-size:11px;color:#F9AB00;margin-top:2px">★ '+place.rating+'</div>':'') +
+            '</div>' +
+            '<div style="padding:10px 14px">' +
+              '<button id="asp-add-btn" style="width:100%;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">' +
+                '<i class="ti ti-map-pin-plus" style="font-size:16px"></i> 加入行程' +
+              '</button>' +
+            '</div>';
+          dd2.style.display='block';
+          var btn=document.getElementById('asp-add-btn');
+          if(btn) btn.addEventListener('click',function(){ dd2.style.display='none'; saveStop(); });
+        }
+        });
+      },100); // inner delay
+    }
+  },200); // outer delay - wait for screen to be visible
 }
 function closeAddStop(){
   document.getElementById('add-stop-screen').classList.remove('show');
 }
 function onAspInput(val){
-  if(aspTimer)clearTimeout(aspTimer);
+  // Handled by Google Autocomplete widget - this function kept for compatibility
   if(!val){
     var dd=document.getElementById('asp-drop');
-    if(dd)dd.style.display='none';
-    return;
+    if(dd) dd.style.display='none';
   }
-  // If aspAcSvc not ready yet, try to init
-  if(!aspAcSvc){
-    if(typeof google!=='undefined'&&google.maps&&google.maps.places){
-      aspAcSvc=new google.maps.places.AutocompleteService();
-      if(aspMap) aspPlSvc=new google.maps.places.PlacesService(aspMap);
-    } else { return; }
-  }
-  aspTimer=setTimeout(function(){
-    aspAcSvc.getPlacePredictions({input:val,language:'zh-TW'},function(preds,status){
-      var dd=document.getElementById('asp-drop');
-      if(!dd)return;
-      if(status!==google.maps.places.PlacesServiceStatus.OK||!preds){
-        dd.style.display='none';return;
-      }
-      var html='';
-      preds.slice(0,5).forEach(function(p){
-        html+='<div class="drop-item" style="background:#fff" data-pid="'+p.place_id+'">' +
-          '<div class="drop-ic"><i class="ti ti-map-pin"></i></div>'+
-          '<div><div class="drop-name">'+p.structured_formatting.main_text+'</div>'+
-          '<div class="drop-addr">'+(p.structured_formatting.secondary_text||'')+'</div></div></div>';
-      });
-      dd.innerHTML=html;
-      // Use event delegation - no inline onclick
-      dd.querySelectorAll('.drop-item').forEach(function(item){
-        item.addEventListener('click',function(){ aspSelectPid(this.dataset.pid); });
-      });
-      dd.style.display='block';
-    });
-  },350);
 }
 function aspSelectPid(pid){
   if(!aspPlSvc)return;
