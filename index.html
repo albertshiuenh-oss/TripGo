@@ -596,6 +596,20 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 .tsw-trip-name{font-size:14px;font-weight:700;color:var(--text)}
 .tsw-trip-meta{font-size:11px;color:var(--text2);margin-top:2px}
 .tsw-trip-arr{font-size:18px;color:var(--blue);opacity:.5}
+.tsw-count-badge{
+  font-size:11px;font-weight:700;
+  background:rgba(255,255,255,.25);color:#fff;
+  border-radius:20px;padding:3px 10px;
+  margin-bottom:12px;display:inline-block;
+}
+.tsw-trip-actions{display:flex;gap:6px;margin-top:6px}
+.tsw-action-btn{
+  font-size:11px;padding:4px 10px;border-radius:8px;
+  border:none;cursor:pointer;font-weight:600;
+  display:flex;align-items:center;gap:4px;
+}
+.tsw-action-btn.danger{background:#FCE8E6;color:var(--red)}
+.tsw-action-btn.leave{background:#FEF3E2;color:#E65100}
 .tsw-new-btns{display:flex;flex-direction:column;gap:10px;margin-top:4px}
 .tsw-new-btn{
   width:100%;padding:15px;border-radius:14px;border:none;cursor:pointer;
@@ -805,6 +819,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
           <button class="pca" onclick="pcCall()"><div class="pca-ic"><i class="ti ti-phone"></i></div><span>電話</span></button>
           <button class="pca" onclick="pcWeb()"><div class="pca-ic"><i class="ti ti-world"></i></div><span>網站</span></button>
           <button class="pca" onclick="pcShare()"><div class="pca-ic"><i class="ti ti-share"></i></div><span>分享</span></button>
+          <button class="pca" onclick="pcAddToItinerary()"><div class="pca-ic" style="background:#E6F4EA"><i class="ti ti-map-pin-plus" style="color:#34A853"></i></div><span>加景點</span></button>
         </div>
         <div id="pc-info"></div>
       </div>
@@ -889,8 +904,40 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
           <button class="det-back" onclick="closeDetail()"><i class="ti ti-arrow-left"></i></button>
           <span class="det-title" id="det-title"></span>
           <span class="det-time" id="det-time"></span>
+          <button id="det-edit-btn" onclick="toggleEditMode()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:11px;color:var(--blue);cursor:pointer;margin-left:4px">編輯</button>
         </div>
         <div class="det-body">
+          <!-- 編輯模式欄位 (預設隱藏) -->
+          <div id="det-edit-fields" style="display:none">
+            <div class="sec">
+              <div class="sec-t"><i class="ti ti-pencil"></i>編輯景點資訊</div>
+              <div style="margin-bottom:8px">
+                <label style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">景點名稱</label>
+                <input class="add-inp" id="det-edit-name" style="width:100%;font-size:13px;padding:8px 12px;border-radius:10px"/>
+              </div>
+              <div style="display:flex;gap:8px;margin-bottom:8px">
+                <div style="flex:1">
+                  <label style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">抵達時間</label>
+                  <input class="add-inp" id="det-edit-arrive" placeholder="09:00" style="width:100%;font-size:13px;padding:8px 12px;border-radius:10px"/>
+                </div>
+                <div style="flex:1">
+                  <label style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">離開時間</label>
+                  <input class="add-inp" id="det-edit-depart" placeholder="12:00" style="width:100%;font-size:13px;padding:8px 12px;border-radius:10px"/>
+                </div>
+              </div>
+              <div style="margin-bottom:8px">
+                <label style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">天數標籤</label>
+                <input class="add-inp" id="det-edit-day" placeholder="Day 1" style="width:100%;font-size:13px;padding:8px 12px;border-radius:10px"/>
+              </div>
+              <div style="margin-bottom:8px">
+                <label style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">備註</label>
+                <input class="add-inp" id="det-edit-note" placeholder="備註（選填）" style="width:100%;font-size:13px;padding:8px 12px;border-radius:10px"/>
+              </div>
+              <button onclick="saveEditStop()" style="width:100%;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px">
+                <i class="ti ti-check" style="font-size:15px"></i> 儲存修改
+              </button>
+            </div>
+          </div>
           <div class="sec">
             <div class="sec-t"><i class="ti ti-checkbox"></i>活動清單</div>
             <div id="act-list"></div>
@@ -2347,42 +2394,150 @@ function updateCurrentTrip(code, uid, name, tripName, isOrg){
 function openTripSwitcher(){
   var trips = getStoredTrips();
   var currentCode = S.groupCode;
+  var total = trips.length;
 
-  // Current trip
+  // ── 頂部計數說明 ──
+  var tsw = document.getElementById('trip-switcher');
+  // Insert count badge after header if not already there
+  var existBadge = tsw.querySelector('.tsw-count-badge');
+  if(existBadge) existBadge.remove();
+  var badge = document.createElement('div');
+  badge.className = 'tsw-count-badge';
+  badge.style.margin = '0 16px 4px';
+  badge.textContent = '共 '+total+' 個旅程（建立 '+trips.filter(function(t){return t.isOrg;}).length+' 個 · 加入 '+trips.filter(function(t){return !t.isOrg;}).length+' 個）';
+  tsw.querySelector('.tsw-body').prepend(badge);
+
+  // ── 目前旅程 ──
   var cur = trips.find(function(t){return t.code===currentCode;});
   var curEl = document.getElementById('tsw-current');
   if(cur){
-    curEl.innerHTML = '<div class="tsw-trip-card current">' +
-      '<div class="tsw-trip-ic"><i class="ti ti-map-2"></i></div>' +
-      '<div style="flex:1"><div class="tsw-trip-name">'+cur.tripName+'</div>' +
-      '<div class="tsw-trip-meta">邀請碼：'+cur.code+' · '+cur.name+'</div></div>' +
-      '<span style="font-size:11px;background:var(--blue);color:#fff;border-radius:8px;padding:2px 7px">目前</span>' +
-    '</div>';
+    var isOrg = cur.isOrg;
+    curEl.innerHTML =
+      '<div class="tsw-trip-card current">' +
+        '<div class="tsw-trip-ic"><i class="ti ti-map-2"></i></div>' +
+        '<div style="flex:1">' +
+          '<div class="tsw-trip-name">'+cur.tripName+'</div>' +
+          '<div class="tsw-trip-meta">'+( isOrg?'👑 建立者':'👤 成員')+' · '+cur.name+' · 邀請碼 '+cur.code+'</div>' +
+          '<div class="tsw-trip-actions">' +
+            (isOrg
+              ? '<button class="tsw-action-btn danger" data-action="delete" data-code="'+cur.code+'"><i class="ti ti-trash" style="font-size:12px"></i>刪除旅程</button>'
+              : '<button class="tsw-action-btn leave" data-action="leave" data-code="'+cur.code+'"><i class="ti ti-logout" style="font-size:12px"></i>離開旅程</button>'
+            ) +
+          '</div>' +
+        '</div>' +
+        '<span style="font-size:11px;background:var(--blue);color:#fff;border-radius:8px;padding:2px 7px;flex-shrink:0">目前</span>' +
+      '</div>';
+    // Attach action button
+    var actBtn = curEl.querySelector('[data-action]');
+    if(actBtn){
+      actBtn.addEventListener('click', function(e){
+        e.stopPropagation();
+        var action = this.dataset.action;
+        var code = this.dataset.code;
+        if(action==='delete') confirmDeleteTrip(code);
+        else if(action==='leave') confirmLeaveTrip(code);
+      });
+    }
   } else { curEl.innerHTML=''; }
 
-  // Other trips
+  // ── 其他旅程 ──
   var others = trips.filter(function(t){return t.code!==currentCode;});
   var othEl = document.getElementById('tsw-others');
   if(others.length===0){
     othEl.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.6);padding:4px 0">尚無其他旅程</div>';
   } else {
     othEl.innerHTML = others.map(function(t, idx){
+      var isOrg = t.isOrg;
       return '<div class="tsw-trip-card" data-tidx="'+idx+'">' +
         '<div class="tsw-trip-ic"><i class="ti ti-map-2"></i></div>' +
-        '<div style="flex:1"><div class="tsw-trip-name">'+t.tripName+'</div>' +
-        '<div class="tsw-trip-meta">邀請碼：'+t.code+' · '+t.name+'</div></div>' +
-        '<i class="ti ti-chevron-right tsw-trip-arr"></i>' +
+        '<div style="flex:1">' +
+          '<div class="tsw-trip-name">'+t.tripName+'</div>' +
+          '<div class="tsw-trip-meta">'+(isOrg?'👑 建立者':'👤 成員')+' · '+t.name+'</div>' +
+          '<div class="tsw-trip-actions">' +
+            (isOrg
+              ? '<button class="tsw-action-btn danger" data-action="delete" data-code="'+t.code+'"><i class="ti ti-trash" style="font-size:12px"></i>刪除旅程</button>'
+              : '<button class="tsw-action-btn leave" data-action="leave" data-code="'+t.code+'"><i class="ti ti-logout" style="font-size:12px"></i>離開旅程</button>'
+            ) +
+          '</div>' +
+        '</div>' +
+        '<i class="ti ti-chevron-right tsw-trip-arr" style="align-self:center"></i>' +
       '</div>';
     }).join('');
-    // Attach click handlers safely (avoid inline onclick quote issues)
-    var cards = othEl.querySelectorAll('.tsw-trip-card');
-    cards.forEach(function(card, idx){
+
+    // Attach click (switch) and action button handlers
+    othEl.querySelectorAll('.tsw-trip-card').forEach(function(card, idx){
       var t = others[idx];
-      card.addEventListener('click', function(){ switchTrip(t.code, t.uid, t.name, t.tripName, t.isOrg); });
+      // Click card body to switch
+      card.addEventListener('click', function(e){
+        if(e.target.closest('[data-action]')) return; // ignore action btn clicks
+        switchTrip(t.code, t.uid, t.name, t.tripName, t.isOrg);
+      });
+      // Action button
+      var actBtn = card.querySelector('[data-action]');
+      if(actBtn){
+        actBtn.addEventListener('click', function(e){
+          e.stopPropagation();
+          var action = this.dataset.action;
+          var code = this.dataset.code;
+          if(action==='delete') confirmDeleteTrip(code);
+          else if(action==='leave') confirmLeaveTrip(code);
+        });
+      }
     });
   }
 
   document.getElementById('trip-switcher').classList.add('show');
+}
+
+function confirmDeleteTrip(code){
+  showCustomConfirm('🗑️','刪除旅程？',
+    '刪除後所有成員、行程、聊天紀錄都會消失，<b>無法復原</b>。',
+    '確定刪除',
+    function(){
+      var FB = window.FB;
+      FB.remove(FB.gref('tripgo/groups/'+code));
+      // Remove from local storage
+      var trips = getStoredTrips().filter(function(t){return t.code!==code;});
+      saveStoredTrips(trips);
+      closeTripSwitcher();
+      // If deleted current trip, go back to join screen
+      if(code === S.groupCode){
+        localStorage.removeItem('tg_code');
+        localStorage.removeItem('tg_uid');
+        localStorage.removeItem('tg_name');
+        document.getElementById('S-app').classList.remove('show');
+        document.getElementById('S-join').classList.remove('hide');
+        showJoinHome();
+      }
+      showToast('✅ 旅程已刪除', 2000);
+    }
+  );
+}
+
+function confirmLeaveTrip(code){
+  var myUid = S.myUid || localStorage.getItem('tg_uid');
+  showCustomConfirm('👋','離開旅程？',
+    '你將從這個旅程的成員名單中移除。',
+    '確定離開',
+    function(){
+      var FB = window.FB;
+      FB.remove(FB.gref('tripgo/groups/'+code+'/members/'+myUid));
+      // Remove from local storage
+      var trips = getStoredTrips().filter(function(t){return t.code!==code;});
+      saveStoredTrips(trips);
+      closeTripSwitcher();
+      // If left current trip, go back to join screen
+      if(code === S.groupCode){
+        localStorage.removeItem('tg_code');
+        localStorage.removeItem('tg_uid');
+        localStorage.removeItem('tg_name');
+        document.getElementById('S-app').classList.remove('show');
+        document.getElementById('S-join').classList.remove('hide');
+        showJoinHome();
+      }
+      showToast('✅ 已離開旅程', 2000);
+    }
+  );
 }
 
 function closeTripSwitcher(){
@@ -2473,6 +2628,94 @@ function manualSync(){
 }
 
 // Click offline badge to sync - moved to window.load
+
+
+// ── 景點編輯模式 ──
+var _editMode = false;
+
+function toggleEditMode(){
+  _editMode = !_editMode;
+  var fields = document.getElementById('det-edit-fields');
+  var btn = document.getElementById('det-edit-btn');
+  var s = S.stops[S.currentStop];
+  if(_editMode){
+    // Fill edit fields with current values
+    if(s){
+      document.getElementById('det-edit-name').value = s.name || '';
+      document.getElementById('det-edit-arrive').value = s.arrive || '';
+      document.getElementById('det-edit-depart').value = s.depart || '';
+      document.getElementById('det-edit-day').value = s.day || '';
+      document.getElementById('det-edit-note').value = s.note || '';
+    }
+    fields.style.display = 'block';
+    btn.textContent = '取消';
+    btn.style.color = 'var(--red)';
+    btn.style.borderColor = 'var(--red)';
+  } else {
+    fields.style.display = 'none';
+    btn.textContent = '編輯';
+    btn.style.color = 'var(--blue)';
+    btn.style.borderColor = 'var(--border)';
+  }
+}
+
+function saveEditStop(){
+  var s = S.stops[S.currentStop];
+  if(!s || !s._key) return;
+  var name   = document.getElementById('det-edit-name').value.trim();
+  var arrive = document.getElementById('det-edit-arrive').value.trim();
+  var depart = document.getElementById('det-edit-depart').value.trim();
+  var day    = document.getElementById('det-edit-day').value.trim();
+  var note   = document.getElementById('det-edit-note').value.trim();
+  if(!name){ alert('請輸入景點名稱'); return; }
+
+  var FB = window.FB;
+  var path = 'tripgo/groups/'+S.groupCode+'/stops/'+s._key;
+  FB.set(FB.gref(path+'/name'),   name);
+  FB.set(FB.gref(path+'/arrive'), arrive);
+  FB.set(FB.gref(path+'/depart'), depart);
+  FB.set(FB.gref(path+'/day'),    day);
+  FB.set(FB.gref(path+'/note'),   note);
+
+  // Update local display
+  document.getElementById('det-title').textContent = name;
+  document.getElementById('det-time').textContent = arrive + (depart ? ' → '+depart : '');
+
+  // Exit edit mode
+  toggleEditMode();
+  showToast('✅ 已儲存', 1500);
+}
+
+// ── 從地圖地點卡直接新增景點 ──
+function pcAddToItinerary(){
+  var place = S.currentPlace;
+  if(!place) return;
+  closePc();
+  openAddStop();
+  // Pre-fill fields after the screen opens
+  setTimeout(function(){
+    var nameEl = document.getElementById('ns-name');
+    if(nameEl) nameEl.value = place.name || '';
+    // If place has geometry, pre-fill coordinates
+    if(place.geometry && place.geometry.location){
+      S.aspLat = place.geometry.location.lat();
+      S.aspLng = place.geometry.location.lng();
+      // Move asp map to the location
+      if(aspMap){
+        aspMap.panTo(place.geometry.location);
+        aspMap.setZoom(15);
+        aspDropPin(place.geometry.location);
+      }
+      // Show place info
+      var pname = document.getElementById('asp-pname');
+      var paddr = document.getElementById('asp-paddr');
+      var pinfo = document.getElementById('asp-place-info');
+      if(pname) pname.textContent = place.name || '';
+      if(paddr) paddr.textContent = place.formatted_address || '';
+      if(pinfo) pinfo.classList.add('show');
+    }
+  }, 300);
+}
 
 </script>
 
