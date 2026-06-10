@@ -781,7 +781,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 <!-- ========== MAIN APP ========== -->
 <div id="S-app">
   <div class="topbar">
-    <span class="tb-logo" id="tb-logo" ondblclick="toggleFullscreen()"><i class="ti ti-map-2"></i> TripGo</span>
+    <span class="tb-logo" id="tb-logo" ondblclick="toggleFullscreen()" onclick="goToHome()" title="回到首頁" style="cursor:pointer"><i class="ti ti-map-2"></i> TripGo</span>
     <span class="tb-trip" id="tb-trip" onclick="openTripSwitcher()" title="點擊切換旅程">旅遊群組</span>
     <span id="net-status" class="online"><i class="ti ti-wifi" style="font-size:11px"></i><span id="net-label">線上</span></span>
     <div class="tb-avs" id="tb-avs"></div>
@@ -2818,6 +2818,49 @@ function initNameInputListeners(){
   if(createName){
     createName.addEventListener('input', function(){ renderTripsPreview(this.value); });
     createName.addEventListener('focus', function(){ renderTripsPreview(this.value); });
+  }
+}
+
+
+// ── 自訂確認對話框 ──
+function showCustomConfirm(icon, title, msg, okText, onOk){
+  var dialog = document.getElementById('confirm-dialog');
+  document.getElementById('cd-icon').textContent = icon;
+  document.getElementById('cd-title').textContent = title;
+  document.getElementById('cd-msg').innerHTML = msg;
+  document.getElementById('cd-yes').textContent = okText;
+  dialog.classList.add('show');
+  var yes = document.getElementById('cd-yes');
+  var no  = document.getElementById('cd-no');
+  // Clone to remove old listeners
+  var yes2 = yes.cloneNode(true); yes.parentNode.replaceChild(yes2, yes);
+  var no2  = no.cloneNode(true);  no.parentNode.replaceChild(no2, no);
+  yes2.addEventListener('click', function(){
+    dialog.classList.remove('show');
+    if(onOk) onOk();
+  });
+  no2.addEventListener('click', function(){
+    dialog.classList.remove('show');
+  });
+}
+
+
+// 點 TripGo logo 回到首頁
+function goToHome(){
+  // Show confirmation if in a group
+  if(S.groupCode){
+    showCustomConfirm('🏠','回到首頁？','你可以隨時用名字找回這個旅程。','回到首頁',function(){
+      document.getElementById('S-app').classList.remove('show');
+      document.getElementById('S-join').classList.remove('hide');
+      // Restore last name
+      var ln = localStorage.getItem('tg_last_name') || '';
+      var hne = document.getElementById('js-home-name');
+      if(hne) hne.value = ln;
+      document.getElementById('js-home').style.display = 'flex';
+      document.getElementById('js-sub').style.display = 'none';
+      // Show matching trips
+      if(ln) renderTripsPreview(ln);
+    });
   }
 }
 
