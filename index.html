@@ -671,6 +671,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
     <button class="jgm-item red" onclick="clearSession()">
       <i class="ti ti-trash"></i> 清除舊資料
     </button>
+    <div class="jgm-sep"></div>
+    <button class="jgm-item" onclick="hardReload()">
+      <i class="ti ti-refresh" style="color:var(--blue)"></i> 強制重新整理
+    </button>
   </div>
 
   <div class="js-logo">🗺️</div>
@@ -2247,6 +2251,10 @@ function doAdmin(){
 }
 
 // Clear session
+function hardReload(){
+  closeSettingsMenu();
+  location.reload(true);
+}
 function clearSession(){
   localStorage.removeItem('tg_code');
   localStorage.removeItem('tg_uid');
