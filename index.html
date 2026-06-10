@@ -781,7 +781,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 <!-- ========== MAIN APP ========== -->
 <div id="S-app">
   <div class="topbar">
-    <span class="tb-logo" id="tb-logo" ondblclick="toggleFullscreen()"><i class="ti ti-map-2"></i> TripGo</span>
+    <span class="tb-logo" id="tb-logo" ondblclick="toggleFullscreen()" onclick="goToHome()" title="回到首頁" style="cursor:pointer"><i class="ti ti-map-2"></i> TripGo</span>
     <span class="tb-trip" id="tb-trip" onclick="openTripSwitcher()" title="點擊切換旅程">旅遊群組</span>
     <span id="net-status" class="online"><i class="ti ti-wifi" style="font-size:11px"></i><span id="net-label">線上</span></span>
     <div class="tb-avs" id="tb-avs"></div>
@@ -2571,10 +2571,15 @@ function initDoubleTapListener(){
     logo.addEventListener('touchend', function(e){
       var now = Date.now();
       if(now - _lastTap < 300){
+        // Double tap = fullscreen (preventDefault to stop goToHome firing twice)
         e.preventDefault();
+        e.stopPropagation();
         toggleFullscreen();
+        _lastTap = 0; // reset so next tap starts fresh
+      } else {
+        _lastTap = now;
+        // Single tap will be handled by onclick="goToHome()"
       }
-      _lastTap = now;
     }, {passive:false});
   } catch(err){ console.warn('doubletap init failed:', err); }
 }
@@ -2726,90 +2731,92 @@ function onHomeNameInput(val){
 }
 
 function renderTripsPreview(inputName){
-  var trips = getStoredTrips();
   var preview = document.getElementById('js-trips-preview');
-  var list = document.getElementById('jtp-list');
+  var list    = document.getElementById('jtp-list');
   var countEl = document.getElementById('jtp-count');
-  if(!preview || !list) return;
+  if(!preview || !list || !countEl) return;
 
   var name = (inputName || '').trim();
+
+  // Only show trips when name is entered
+  if(!name){
+    preview.style.display = 'none';
+    list.innerHTML = '';
+    countEl.textContent = '';
+    return;
+  }
+
+  var trips = getStoredTrips();
   var nameLower = name.toLowerCase();
+  var matched = trips.filter(function(t){
+    return t.name.toLowerCase().indexOf(nameLower) >= 0;
+  });
 
-  if(trips.length === 0 && !name){
-    preview.style.display = 'none';
+  if(matched.length === 0){
+    preview.style.display = 'flex';
+    list.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,.6);padding:4px 0">找不到「'+name+'」的旅程紀錄</div>';
+    countEl.textContent = '';
     return;
   }
 
-  // Filter stored trips by name
-  var matched = nameLower
-    ? trips.filter(function(t){ return t.name.toLowerCase().indexOf(nameLower) >= 0; })
-    : trips;
-
-  if(matched.length === 0 && !name){
-    preview.style.display = 'none';
-    return;
-  }
-
-  var built = matched.filter(function(t){ return t.isOrg; }).length;
+  var built  = matched.filter(function(t){ return  t.isOrg; }).length;
   var joined = matched.filter(function(t){ return !t.isOrg; }).length;
-  if(name){
-    countEl.textContent = '「'+name+'」建立 '+built+' 個 · 加入 '+joined+' 個';
-  } else {
-    countEl.textContent = '共 '+matched.length+' 個（建立 '+built+' · 加入 '+joined+'）';
-  }
+  countEl.textContent = '「'+name+'」建立 '+built+' 個 · 加入 '+joined+' 個';
 
-  list.innerHTML = matched.slice(0, 4).map(function(t, i){
-    return '<div class="jtp-card" data-tidx="'+i+'" style="display:flex;align-items:center;gap:8px;background:#fff;border-radius:12px;padding:10px 14px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.1);overflow:hidden">' +
-      '<span style="font-size:13px;margin-right:4px">'+(t.isOrg?'👑':'👤')+'</span>' +
-      '<div style="flex:1;min-width:0;overflow:hidden">' +
-        '<span style="font-size:13px;font-weight:600;color:var(--text)">'+t.tripName+'</span>' +
-        '<span style="font-size:11px;color:var(--text2);margin-left:6px">'+t.code+'</span>' +
+  list.innerHTML = matched.slice(0, 5).map(function(t, i){
+    return '<div class="jtp-card" data-tidx="'+i+'" style="display:flex;align-items:center;gap:8px;background:#fff;border-radius:12px;padding:10px 14px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.1)">' +
+      '<span>'+(t.isOrg?'👑':'👤')+'</span>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+t.tripName+'</div>' +
+        '<div style="font-size:10px;color:var(--text2)">'+t.code+'</div>' +
       '</div>' +
-      (t.isOrg
-        ? '<button class="jtp-del" data-code="'+t.code+'" style="background:#FCE8E6;border:none;border-radius:8px;padding:4px 8px;cursor:pointer;font-size:11px;color:var(--red);flex-shrink:0;margin-left:4px">🗑</button>'
-        : '') +
-      '<i class="ti ti-chevron-right" style="font-size:14px;color:var(--blue);opacity:.5;flex-shrink:0;margin-left:4px"></i>' +
+      (t.isOrg ? '<button class="jtp-del" data-code="'+t.code+'" style="background:#FCE8E6;border:none;border-radius:8px;padding:4px 8px;cursor:pointer;font-size:12px;color:var(--red);flex-shrink:0">🗑</button>' : '') +
+      '<i class="ti ti-chevron-right" style="font-size:14px;color:var(--blue);opacity:.5;flex-shrink:0"></i>' +
     '</div>';
-  }).join('') + (matched.length > 4 ? '<div style="font-size:11px;color:rgba(255,255,255,.7);text-align:center;padding:6px 0">還有 '+(matched.length-4)+' 個旅程…</div>' : '');
+  }).join('') + (matched.length > 5 ? '<div style="font-size:11px;color:rgba(255,255,255,.7);text-align:center;padding:4px">還有 '+(matched.length-5)+' 個旅程…</div>' : '');
 
   preview.style.display = 'flex';
 
-  // Attach click handlers
+  // Event handlers
   list.querySelectorAll('.jtp-card').forEach(function(card, i){
     var t = matched[i];
-    // Delete button for organizers
     var delBtn = card.querySelector('.jtp-del');
+    var _delClicked = false;
     if(delBtn){
+      delBtn.addEventListener('touchstart', function(e){ e.stopPropagation(); }, {passive:false});
       delBtn.addEventListener('click', function(e){
         e.stopPropagation();
+        e.stopImmediatePropagation();
+        _delClicked = true;
         var code = this.dataset.code;
         showCustomConfirm('🗑️','刪除旅程？','刪除後所有資料都會消失，<b>無法復原</b>。','確定刪除',function(){
           window.FB.remove(window.FB.gref('tripgo/groups/'+code));
-          var trips = getStoredTrips().filter(function(x){return x.code!==code;});
-          saveStoredTrips(trips);
-          renderTripsPreview(inputName);
+          var trips2 = getStoredTrips().filter(function(x){return x.code!==code;});
+          saveStoredTrips(trips2);
+          renderTripsPreview(name);
           showToast('✅ 旅程已刪除',2000);
         });
+        setTimeout(function(){ _delClicked = false; }, 500);
       });
     }
-    // Click card to enter trip
     card.addEventListener('click', function(){
-      if(!window.FB || !window.FB.ready){ showToast('⏳ 連線中，請稍後', 1500); return; }
+      if(_delClicked) return; // Blocked by delete button
+      if(!window.FB||!window.FB.ready){ showToast('⏳ 連線中，請稍後',1500); return; }
       window.FB.get(window.FB.gref('tripgo/groups/'+t.code)).then(function(snap){
         if(snap.exists()){
           startApp(t.code, t.uid, t.name, t.tripName, t.isOrg);
         } else {
-          var remaining = getStoredTrips().filter(function(x){ return x.code !== t.code; });
+          var remaining = getStoredTrips().filter(function(x){return x.code!==t.code;});
           saveStoredTrips(remaining);
-          renderTripsPreview(inputName);
-          showToast('⚠️ 此旅程已不存在', 2000);
+          renderTripsPreview(name);
+          showToast('⚠️ 此旅程已不存在',2000);
         }
       });
     });
   });
 }
 
-// Hook name inputs to show trips preview
+
 function initNameInputListeners(){
   // For join sub-panel
   var joinName = document.getElementById('inp-join-name');
@@ -2823,6 +2830,49 @@ function initNameInputListeners(){
     createName.addEventListener('input', function(){ renderTripsPreview(this.value); });
     createName.addEventListener('focus', function(){ renderTripsPreview(this.value); });
   }
+}
+
+
+// ── 自訂確認對話框 ──
+function showCustomConfirm(icon, title, msg, okText, onOk){
+  var dialog = document.getElementById('confirm-dialog');
+  document.getElementById('cd-icon').textContent = icon;
+  document.getElementById('cd-title').textContent = title;
+  document.getElementById('cd-msg').innerHTML = msg;
+  document.getElementById('cd-yes').textContent = okText;
+  dialog.classList.add('show');
+  var yes = document.getElementById('cd-yes');
+  var no  = document.getElementById('cd-no');
+  // Clone to remove old listeners
+  var yes2 = yes.cloneNode(true); yes.parentNode.replaceChild(yes2, yes);
+  var no2  = no.cloneNode(true);  no.parentNode.replaceChild(no2, no);
+  yes2.addEventListener('click', function(){
+    dialog.classList.remove('show');
+    if(onOk) onOk();
+  });
+  no2.addEventListener('click', function(){
+    dialog.classList.remove('show');
+  });
+}
+
+
+// 點 TripGo logo 回到首頁
+function goToHome(){
+  if(!S.groupCode) return; // Already on home screen
+  showCustomConfirm('🏠','回到首頁？','你可以隨時用名字找回這個旅程。','回到首頁',function(){
+    // Hide app, show join screen
+    document.getElementById('S-app').classList.remove('show');
+    document.getElementById('S-join').classList.remove('hide');
+    // Show home panel (not sub panel)
+    document.getElementById('js-home').style.display = 'flex';
+    document.getElementById('js-sub').style.display = 'none';
+    document.getElementById('js-err').textContent = '';
+    // Restore last name and trips
+    var ln = localStorage.getItem('tg_last_name') || S.myName || '';
+    var hne = document.getElementById('js-home-name');
+    if(hne) hne.value = ln;
+    if(ln) renderTripsPreview(ln);
+  });
 }
 
 </script>
