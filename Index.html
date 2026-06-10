@@ -1671,7 +1671,7 @@ function renderStops() {
         '</div>' +
         (MS_MODE?'':(
           '<button class="stop-nav" onclick="navStop('+i+',event)"><i class="ti ti-navigation" style="font-size:11px"></i> 導航</button>' +
-          '<i class="ti ti-chevron-right stop-arr" onclick="tapStop('+i+')"></i>'
+          '<i class="ti ti-chevron-right stop-arr" onclick="openStopDetail('+i+')" style="cursor:pointer;padding:4px"></i>'
         )) +
       '</div>' +
     '</div>';
@@ -1726,17 +1726,11 @@ function attachLongpress(i){
 }
 
 function tapStop(i){
+  // A. 點景點名稱：只移動地圖 + 顯示資訊卡，不開 detail panel
   if(MS_MODE){toggleSel(i);return;}
   var s=S.stops[i];
   if(!s)return;
-  // Open detail panel
   S.currentStop=i;
-  document.getElementById('det-title').textContent=s.name;
-  document.getElementById('det-time').textContent=(s.arrive||'')+(s.depart?' → '+s.depart:'');
-  document.getElementById('det-bud').textContent=s.budget||'NT$ 0';
-  renderActs(s);renderNotes(s);
-  document.getElementById('detail').classList.add('show');
-  // Move map + show place card
   var hasCoords = s.lat && s.lng && parseFloat(s.lat)!==0 && parseFloat(s.lng)!==0;
   if(map && hasCoords){
     var lat=parseFloat(s.lat),lng=parseFloat(s.lng);
@@ -1749,17 +1743,36 @@ function tapStop(i){
       });
     }
   } else if(map&&plSvc){
-    // Try name directly first, then with region hint
     plSvc.textSearch({query:s.name},function(results,status){
       if(status===google.maps.places.PlacesServiceStatus.OK&&results&&results.length>0){
         map.panTo(results[0].geometry.location);map.setZoom(15);
         showPlaceCard(results[0].place_id);
       } else {
-        // Fallback: show simple card with no map move
         showSimplePc(s);
       }
     });
   }
+}
+
+// B. 開啟景點細節 panel（點箭頭才觸發）
+function openStopDetail(i){
+  if(MS_MODE){toggleSel(i);return;}
+  var s=S.stops[i];
+  if(!s)return;
+  S.currentStop=i;
+  document.getElementById('det-title').textContent=s.name;
+  document.getElementById('det-time').textContent=(s.arrive||'')+(s.depart?' → '+s.depart:'');
+  document.getElementById('det-bud').textContent=s.budget||'NT$ 0';
+  // Reset edit mode
+  _editMode=false;
+  var ef=document.getElementById('det-edit-fields');
+  if(ef) ef.style.display='none';
+  var eb=document.getElementById('det-edit-btn');
+  if(eb){eb.textContent='編輯';eb.style.color='var(--blue)';eb.style.borderColor='var(--border)';}
+  renderActs(s);renderNotes(s);
+  document.getElementById('detail').classList.add('show');
+  // Also move map to location
+  tapStop(i);
 }
 
 function showSimplePc(s){
