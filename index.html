@@ -930,6 +930,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
             <span class="det-title" id="det-title"></span>
             <span class="det-time" id="det-time"></span>
             <button class="det-edit-btn" id="det-edit-btn">編輯</button>
+            <button id="det-del-btn" style="background:#FCE8E6;border:none;border-radius:8px;padding:4px 10px;font-size:11px;color:var(--red);cursor:pointer;flex-shrink:0">刪除</button>
           </div>
           <div class="det-body">
             <div id="det-edit-fields">
@@ -1839,11 +1840,13 @@ function renderNotes(s){
     el.addEventListener('click',function(){ dNote(parseInt(this.dataset.i)); });
   });
 }
-function tAct(i){ var s=S.stops[S.currentStop];if(!s||!s.activities)return;s.activities[i].done=!s.activities[i].done;renderActs(s); }
-function dAct(i){ var s=S.stops[S.currentStop];if(!s||!s.activities)return;s.activities.splice(i,1);renderActs(s); }
-function addAct(){ var inp=document.getElementById('act-inp'),v=inp.value.trim();if(!v)return;var s=S.stops[S.currentStop];if(!s)return;if(!s.activities)s.activities=[];s.activities.push({label:v,done:false});inp.value='';renderActs(s); }
-function dNote(i){ var s=S.stops[S.currentStop];if(!s||!s.notes)return;s.notes.splice(i,1);renderNotes(s); }
-function addNote(){ var inp=document.getElementById('note-inp'),v=inp.value.trim();if(!v)return;var s=S.stops[S.currentStop];if(!s)return;if(!s.notes)s.notes=[];s.notes.push(v);inp.value='';renderNotes(s); }
+function saveActs(s){ if(!s||!s._key)return; window.FB.set('tripgo/groups/'+S.groupCode+'/stops/'+s._key+'/activities',s.activities||[]); }
+function saveNotes(s){ if(!s||!s._key)return; window.FB.set('tripgo/groups/'+S.groupCode+'/stops/'+s._key+'/notes',s.notes||[]); }
+function tAct(i){ var s=S.stops[S.currentStop];if(!s||!s.activities)return;s.activities[i].done=!s.activities[i].done;renderActs(s);saveActs(s); }
+function dAct(i){ var s=S.stops[S.currentStop];if(!s||!s.activities)return;s.activities.splice(i,1);renderActs(s);saveActs(s); }
+function addAct(){ var inp=document.getElementById('act-inp'),v=inp.value.trim();if(!v)return;var s=S.stops[S.currentStop];if(!s)return;if(!s.activities)s.activities=[];s.activities.push({label:v,done:false});inp.value='';renderActs(s);saveActs(s); }
+function dNote(i){ var s=S.stops[S.currentStop];if(!s||!s.notes)return;s.notes.splice(i,1);renderNotes(s);saveNotes(s); }
+function addNote(){ var inp=document.getElementById('note-inp'),v=inp.value.trim();if(!v)return;var s=S.stops[S.currentStop];if(!s)return;if(!s.notes)s.notes=[];s.notes.push(v);inp.value='';renderNotes(s);saveNotes(s); }
 function editBudget(){
   var v=prompt('修改每人費用預估（NT$）：');
   if(!v) return;
@@ -2526,6 +2529,14 @@ window.addEventListener('load',function(){
   document.getElementById('btn-asp-save').addEventListener('click',saveStop);
   document.getElementById('btn-det-back').addEventListener('click',closeDetail);
   document.getElementById('det-edit-btn').addEventListener('click',toggleEditMode);
+  document.getElementById('det-del-btn').addEventListener('click',function(){
+    var s=S.stops[S.currentStop]; if(!s) return;
+    showCustomConfirm('🗑️','刪除景點？','「'+s.name+'」將從行程中移除。','確定刪除',function(){
+      window.FB.remove('tripgo/groups/'+S.groupCode+'/stops/'+s._key);
+      closeDetail();
+      if(stopMarker){stopMarker.setMap(null);stopMarker=null;}
+    });
+  });
   document.getElementById('btn-det-save').addEventListener('click',saveEditStop);
   document.getElementById('btn-add-act').addEventListener('click',addAct);
   document.getElementById('btn-add-note').addEventListener('click',addNote);
