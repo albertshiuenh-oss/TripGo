@@ -375,6 +375,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 .stop-txt{flex:1;cursor:pointer;min-width:0}
 .stop-name{font-size:13px;font-weight:600;color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stop-txt.active .stop-name{color:var(--blue);font-weight:700}
 .stop-time{font-size:11px;color:var(--text2);margin-top:2px}
 .stop-nav{
   font-size:10px;padding:4px 8px;border-radius:8px;
@@ -385,6 +386,29 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 .stop-arr{
   font-size:18px;color:var(--blue);opacity:.4;
   flex-shrink:0;padding:4px;cursor:pointer;
+}
+.stop-expand{
+  display:none;background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  padding:12px 14px;
+}
+.stop-expand.open{display:block}
+.exp-section{margin-bottom:10px}
+.exp-sec-title{font-size:10px;font-weight:700;color:var(--text2);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;
+  display:flex;align-items:center;gap:6px;}
+.exp-act-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px}
+.exp-chk{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.exp-chk.done{background:var(--green);border-color:var(--green);}
+.exp-chk.done::after{content:'✓';color:#fff;font-size:9px;}
+.exp-lbl{flex:1;color:var(--text);}
+.exp-lbl.done{text-decoration:line-through;color:var(--text2);}
+.exp-note-row{display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;font-size:12px;color:var(--text2);}
+.exp-dot{width:5px;height:5px;border-radius:50%;background:var(--blue);margin-top:5px;flex-shrink:0;}
+.exp-edit-btn{
+  font-size:11px;padding:5px 12px;border-radius:8px;border:1px solid var(--blue);
+  background:#fff;color:var(--blue);cursor:pointer;margin-top:4px;
 }
 .add-stop-btn{
   display:flex;align-items:center;justify-content:center;gap:6px;
@@ -1550,6 +1574,21 @@ function renderStops(){
   S.stops.forEach(function(s,i){
     if(s.day&&s.day!==lastDay){ lastDay=s.day; html+='<div class="day-hdr">'+s.day+'</div>'; }
     var sel=MS_SET.has(i);
+    // Build activities preview
+    var actsHtml='';
+    if(s.activities&&s.activities.length){
+      s.activities.forEach(function(a,ai){
+        actsHtml+='<div class="exp-act-row">'+
+          '<div class="exp-chk'+(a.done?' done':'')+'" data-i="'+i+'" data-ai="'+ai+'" data-type="act"></div>'+
+          '<span class="exp-lbl'+(a.done?' done':'')+'">'+a.label+'</span></div>';
+      });
+    }
+    var notesHtml='';
+    if(s.notes&&s.notes.length){
+      s.notes.forEach(function(n){
+        notesHtml+='<div class="exp-note-row"><div class="exp-dot"></div><span>'+n+'</span></div>';
+      });
+    }
     html+='<div class="stop-wrap" id="sw-'+i+'">' +
       '<div class="stop-del-bg" data-key="'+s._key+'"><i class="ti ti-trash" style="font-size:20px"></i></div>' +
       '<div class="stop-row" id="sr-'+i+'">' +
@@ -1562,6 +1601,11 @@ function renderStops(){
           '<button class="stop-nav" id="sn-'+i+'"><i class="ti ti-navigation" style="font-size:11px"></i> 導航</button>' +
           '<i class="ti ti-chevron-right stop-arr" id="sa-'+i+'"></i>'
         ) +
+      '</div>' +
+      '<div class="stop-expand" id="se-'+i+'">' +
+        (actsHtml?'<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-checkbox" aria-hidden="true"></i>活動清單</div>'+actsHtml+'</div>':'') +
+        (notesHtml?'<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-alert-triangle" aria-hidden="true"></i>注意事項</div>'+notesHtml+'</div>':'') +
+        '<button class="exp-edit-btn" data-i="'+i+'"><i class="ti ti-pencil" aria-hidden="true"></i> 編輯細節</button>' +
       '</div>' +
     '</div>';
   });
@@ -1598,11 +1642,49 @@ function onStopListClick(e){
   // Stop text -> map + pin
   var txt=e.target.closest('.stop-txt');
   if(txt){ var i=parseInt(txt.id.replace('st-','')); tapStop(i); return; }
+
+  // Inline activity checkbox toggle
+  var chk=e.target.closest('.exp-chk[data-type="act"]');
+  if(chk){
+    var si=parseInt(chk.dataset.i), ai=parseInt(chk.dataset.ai);
+    S.currentStop=si;
+    tAct(ai); return;
+  }
+
+  // Edit detail button
+  var editBtn=e.target.closest('.exp-edit-btn');
+  if(editBtn){
+    var si=parseInt(editBtn.dataset.i);
+    openStopDetail(si); return;
+  }
 }
 
 function tapStop(i){
   if(MS_MODE){ toggleSel(i); return; }
   var s=S.stops[i]; if(!s) return;
+
+  // Toggle expand/collapse inline detail
+  var expPanel=document.getElementById('se-'+i);
+  var isOpen=expPanel&&expPanel.classList.contains('open');
+
+  // Collapse all other panels
+  document.querySelectorAll('.stop-expand.open').forEach(function(p){ p.classList.remove('open'); });
+  document.querySelectorAll('.stop-txt.active').forEach(function(el){ el.classList.remove('active'); });
+  document.querySelectorAll('.stop-arr').forEach(function(el){ el.style.transform=''; });
+
+  if(isOpen){
+    // Was open - just collapse, clear marker
+    if(stopMarker){stopMarker.setMap(null);stopMarker=null;}
+    return;
+  }
+
+  // Open this panel
+  if(expPanel) expPanel.classList.add('open');
+  var activeTxt=document.getElementById('st-'+i);
+  if(activeTxt) activeTxt.classList.add('active');
+  var arrEl=document.getElementById('sa-'+i);
+  if(arrEl) arrEl.style.transform='rotate(90deg)';
+
   S.currentStop=i;
   var hasCoords=s.lat&&s.lng&&parseFloat(s.lat)!==0;
 
@@ -1613,15 +1695,17 @@ function tapStop(i){
     var lat=parseFloat(s.lat), lng=parseFloat(s.lng);
     map.panTo({lat:lat,lng:lng}); map.setZoom(15);
     // Drop a red pin at the exact location
+    // Teardrop SVG pin - semi-transparent, elongated tip
+    var pinSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="40" viewBox="0 0 28 40">' +
+      '<path d="M14 0 C6.27 0 0 6.27 0 14 C0 24.5 14 40 14 40 C14 40 28 24.5 28 14 C28 6.27 21.73 0 14 0 Z"' +
+      ' fill="rgba(26,115,232,0.72)" stroke="rgba(255,255,255,0.9)" stroke-width="1.5"/>' +
+      '<circle cx="14" cy="13" r="5" fill="rgba(255,255,255,0.9)"/>' +
+      '</svg>';
+    var pinUrl = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(pinSvg);
     stopMarker=new google.maps.Marker({
       position:{lat:lat,lng:lng}, map:map,
       animation:google.maps.Animation.DROP,
-      icon:{
-        path:google.maps.SymbolPath.CIRCLE,
-        scale:12,
-        fillColor:'#EA4335',fillOpacity:1,
-        strokeColor:'#fff',strokeWeight:2.5
-      },
+      icon:{url:pinUrl, scaledSize:new google.maps.Size(28,40), anchor:new google.maps.Point(14,40)},
       title:s.name
     });
     // Also try to show place card
@@ -1637,10 +1721,15 @@ function tapStop(i){
       if(status===google.maps.places.PlacesServiceStatus.OK&&results&&results.length>0){
         var loc=results[0].geometry.location;
         map.panTo(loc); map.setZoom(15);
+        var pinSvg2 = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="40" viewBox="0 0 28 40">' +
+          '<path d="M14 0 C6.27 0 0 6.27 0 14 C0 24.5 14 40 14 40 C14 40 28 24.5 28 14 C28 6.27 21.73 0 14 0 Z"' +
+          ' fill="rgba(26,115,232,0.72)" stroke="rgba(255,255,255,0.9)" stroke-width="1.5"/>' +
+          '<circle cx="14" cy="13" r="5" fill="rgba(255,255,255,0.9)"/>' +
+          '</svg>';
+        var pinUrl2 = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(pinSvg2);
         stopMarker=new google.maps.Marker({
           position:loc, map:map, animation:google.maps.Animation.DROP,
-          icon:{path:google.maps.SymbolPath.CIRCLE,scale:12,
-            fillColor:'#EA4335',fillOpacity:1,strokeColor:'#fff',strokeWeight:2.5},
+          icon:{url:pinUrl2, scaledSize:new google.maps.Size(28,40), anchor:new google.maps.Point(14,40)},
           title:s.name
         });
         showPlaceCard(results[0].place_id);
@@ -1659,7 +1748,8 @@ function openStopDetail(i){
   exitEditMode();
   renderActs(s); renderNotes(s);
   document.getElementById('detail').classList.add('show');
-  tapStop(i); // Also move map
+  // Move map if not already there
+  if(S.currentStop!==i) tapStop(i);
 }
 
 function showSimplePc(s){
