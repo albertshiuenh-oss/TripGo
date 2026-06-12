@@ -401,11 +401,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 .stop-name{font-size:13px;font-weight:600;color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stop-txt.active .stop-name{color:var(--blue);font-weight:700}
-.stop-time{font-size:11px;color:var(--text2);margin-top:2px}
+.stop-time{font-size:12px;color:var(--amber);font-weight:600;margin-top:2px}
 .stop-nav{
   font-size:10px;padding:4px 8px;border-radius:8px;
   border:1px solid var(--border);background:#fff;
-  cursor:pointer;color:var(--blue);flex-shrink:0;
+  cursor:pointer;color:var(--text);flex-shrink:0;
   display:flex;align-items:center;gap:3px;
 }
 .stop-arr{
@@ -918,6 +918,15 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
     </button>
     <div id="adm-trip-status" style="font-size:12px;color:var(--text2);margin-bottom:8px"></div>
     <div id="adm-trip-list"></div>
+
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🔑 修改管理員密碼</div>
+      <div class="adm-field"><label class="adm-label">目前密碼</label><input class="adm-input" id="adm-cur-pw" type="password" placeholder="輸入目前密碼"/></div>
+      <div class="adm-field"><label class="adm-label">新密碼</label><input class="adm-input" id="adm-new-pw" type="password" placeholder="輸入新密碼（至少6字元）"/></div>
+      <div class="adm-field"><label class="adm-label">確認新密碼</label><input class="adm-input" id="adm-new-pw2" type="password" placeholder="再輸入一次新密碼"/></div>
+      <div class="adm-err" id="adm-pw-err"></div>
+      <button id="btn-change-pw" style="width:100%;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">更新密碼</button>
+    </div>
   </div>
 </div>
 
@@ -1118,7 +1127,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 
 <div class="modal" id="M-members"><div class="modal-box">
   <div class="m-handle"></div>
-  <div class="m-title">👥 成員管理 <span style="font-size:11px;color:var(--text2)" id="mem-count"></span></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div class="m-title" style="margin-bottom:0">👥 成員管理 <span style="font-size:11px;color:var(--text2)" id="mem-count"></span></div>
+    <button id="btn-members-close" style="background:var(--bg2);border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:14px;color:var(--gray)"><i class="ti ti-x"></i></button>
+  </div>
   <div id="mem-list"></div>
   <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
     <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">手動新增成員</div>
@@ -1424,10 +1436,16 @@ function setTM(mode, btn){
   S.travelMode = mode;
   document.querySelectorAll('.tt').forEach(function(b){ b.classList.remove('on'); });
   if(btn) btn.classList.add('on');
+  // Recalculate active route with new travel mode
+  if(_lastRouteDest && document.getElementById('route-bar').classList.contains('show')){
+    navTo(_lastRouteDest, _lastRouteLabel);
+  }
 }
 
 // ── Route ──
+var _lastRouteDest=null, _lastRouteLabel=null;
 function navTo(dest, label){
+  _lastRouteDest=dest; _lastRouteLabel=label;
   var origin = {lat:S.myLat, lng:S.myLng};
   dsvc.route({origin:origin, destination:dest,
     travelMode:google.maps.TravelMode[S.travelMode]},
@@ -1438,12 +1456,18 @@ function navTo(dest, label){
         document.getElementById('route-txt').textContent=
           label+' · '+leg.distance.text+' · '+leg.duration.text;
         document.getElementById('route-bar').classList.add('show');
+      } else {
+        document.getElementById('route-txt').textContent=
+          label+' · 此交通方式無可用路線';
+        document.getElementById('route-bar').classList.add('show');
+        drend.setDirections({routes:[]});
       }
     });
 }
 function clearRoute(){
   drend.setDirections({routes:[]});
   document.getElementById('route-bar').classList.remove('show');
+  _lastRouteDest=null; _lastRouteLabel=null;
 }
 
 // ── Map Search ──
@@ -2356,20 +2380,50 @@ function toggleGear(e){
 }
 function openAdmin(){ document.getElementById('js-gear-menu').classList.remove('show'); document.getElementById('M-admin').classList.add('show'); }
 function closeAdmin(){ document.getElementById('M-admin').classList.remove('show'); }
+var DEFAULT_ADMIN_EMAIL='hau747@hotmail.com', DEFAULT_ADMIN_PW='0937381897';
+function getAdminPw(cb){
+  if(!window.FB||!window.FB.ready){ cb(DEFAULT_ADMIN_PW); return; }
+  window.FB.get('tripgo/admin/password').then(function(snap){
+    cb(snap.exists()?snap.val():DEFAULT_ADMIN_PW);
+  }).catch(function(){ cb(DEFAULT_ADMIN_PW); });
+}
 function doAdmin(){
   var email=document.getElementById('adm-email').value.trim();
   var pw=document.getElementById('adm-pw').value;
   var err=document.getElementById('adm-err');
-  if(email==='hau747@hotmail.com'&&pw==='0937381897'){
-    err.textContent=''; closeAdmin();
-    openAdminPanel();
-  } else { err.textContent='Email 或密碼錯誤'; }
+  if(email!==DEFAULT_ADMIN_EMAIL){ err.textContent='Email 或密碼錯誤'; return; }
+  err.textContent='驗證中…';
+  getAdminPw(function(correctPw){
+    if(pw===correctPw){
+      err.textContent=''; closeAdmin();
+      openAdminPanel();
+    } else { err.textContent='Email 或密碼錯誤'; }
+  });
 }
 function openAdminPanel(){
   document.getElementById('M-admin-panel').classList.add('show');
   loadAllTrips();
 }
 function closeAdminPanel(){ document.getElementById('M-admin-panel').classList.remove('show'); }
+function changeAdminPassword(){
+  var cur=document.getElementById('adm-cur-pw').value;
+  var n1=document.getElementById('adm-new-pw').value;
+  var n2=document.getElementById('adm-new-pw2').value;
+  var err=document.getElementById('adm-pw-err');
+  err.textContent='';
+  if(n1.length<6){ err.textContent='新密碼至少需要 6 個字元'; return; }
+  if(n1!==n2){ err.textContent='兩次輸入的新密碼不一致'; return; }
+  if(!window.FB||!window.FB.ready){ err.textContent='⏳ 連線中，請稍後'; return; }
+  getAdminPw(function(correctPw){
+    if(cur!==correctPw){ err.textContent='目前密碼錯誤'; return; }
+    window.FB.set('tripgo/admin/password', n1).then(function(){
+      document.getElementById('adm-cur-pw').value='';
+      document.getElementById('adm-new-pw').value='';
+      document.getElementById('adm-new-pw2').value='';
+      showToast('✅ 密碼已更新',2000);
+    });
+  });
+}
 function loadAllTrips(){
   var status=document.getElementById('adm-trip-status');
   var list=document.getElementById('adm-trip-list');
@@ -2732,7 +2786,12 @@ window.addEventListener('load',function(){
   document.getElementById('btn-copy-code').addEventListener('click',copyCode);
   document.getElementById('btn-add-member').addEventListener('click',addMember);
   document.getElementById('btn-admin-close').addEventListener('click',closeAdminPanel);
+  document.getElementById('btn-members-close').addEventListener('click',function(){closeModal('M-members');});
+  ['M-members','M-invite','M-expense','M-seg-expense'].forEach(function(id){
+    document.getElementById(id).addEventListener('click',function(e){ if(e.target===this) closeModal(id); });
+  });
   document.getElementById('btn-admin-refresh').addEventListener('click',loadAllTrips);
+  document.getElementById('btn-change-pw').addEventListener('click',changeAdminPassword);
   document.getElementById('M-admin-panel').addEventListener('click',function(e){if(e.target===this)closeAdminPanel();});
   document.getElementById('btn-seg-close').addEventListener('click',function(){closeModal('M-seg-expense');});
 
