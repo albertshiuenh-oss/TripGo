@@ -858,6 +858,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:9px;color:rgba(255,255,255,.35);z-index:1">build 2026-06-15-A</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -935,8 +936,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
     <span class="tb-logo" id="tb-logo"><i class="ti ti-map-2"></i> TripGo</span>
     <span class="tb-trip" id="tb-trip">旅遊群組</span>
     <span id="net-status" class="online"><i class="ti ti-wifi" style="font-size:11px"></i><span id="net-label">線上</span></span>
-    <div class="tb-avs" id="tb-avs"></div>
-    <span class="tb-org" id="tb-org" style="display:none">👑 組織者</span>
+
   </div>
   <div class="main">
     <div id="map-wrap">
@@ -1606,7 +1606,6 @@ function startApp(code, uid, name, tripName, isOrg){
   document.getElementById('invite-code-show').textContent=code;
   document.getElementById('invite-url-show').textContent=getInviteUrl();
   document.getElementById('tb-trip').textContent=tripName;
-  document.getElementById('tb-org').style.display=isOrg?'inline':'none';
   document.getElementById('S-join').classList.add('hide');
   document.getElementById('S-app').classList.add('show');
 
@@ -2204,15 +2203,8 @@ function renderPayerSelect(){
 // MEMBERS
 // ════════════════════════════════
 function renderAvatars(){
-  var row=document.getElementById('tb-avs'); row.innerHTML='';
-  S.members.forEach(function(m,i){
-    var av=document.createElement('div'); av.className='av av'+(i%7);
-    if(i>0) av.style.marginLeft='-5px'; av.title=m.name;
-    av.textContent=m.name.substring(0,2).toUpperCase();
-    if(m.role==='organizer'){var c=document.createElement('span');c.className='av-crown';c.textContent='👑';av.appendChild(c);}
-    row.appendChild(av);
-  });
-  document.getElementById('map-members').textContent=S.members.length+'位成員';
+  var el=document.getElementById('map-members');
+  if(el) el.textContent=S.members.length+'位成員';
 }
 function renderMembers(){
   var el=document.getElementById('mem-list');
