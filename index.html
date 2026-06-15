@@ -1427,11 +1427,11 @@ function updateMemberMarkers(){
     if(!loc||uid===S.myUid||!map) return;
     memberMarkers[uid]=new google.maps.Marker({
       position:{lat:loc.lat,lng:loc.lng},map:map,
-      icon:{path:google.maps.SymbolPath.CIRCLE,scale:8,
-        fillColor:'#F9AB00',fillOpacity:0.45,
-        strokeColor:'#F9AB00',strokeOpacity:0.45,strokeWeight:2,
-        labelOrigin:new google.maps.Point(17,0)},
-      label:{text:getInitials(loc.name),color:'rgba(249,171,0,0.85)',fontSize:'11px',fontWeight:'700'},
+      icon:{path:google.maps.SymbolPath.CIRCLE,scale:12,
+        fillColor:'#F9AB00',fillOpacity:1,
+        strokeColor:'#fff',strokeOpacity:1,strokeWeight:2,
+        labelOrigin:new google.maps.Point(0,0)},
+      label:{text:getInitials(loc.name),color:'#fff',fontSize:'10px',fontWeight:'700'},
       title:loc.name
     });
     memberMarkers[uid].addListener('click',function(){
