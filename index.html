@@ -370,6 +370,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 }
 .pane{display:none;flex:1;overflow-y:auto;padding-bottom:80px}
 .pane.on{display:block}
+#pane-itinerary{position:relative}
 
 /* ── Itinerary ── */
 .stop-empty{
@@ -1017,8 +1018,25 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
           </div>
           <div class="det-body">
             <div id="det-edit-fields">
+              <!-- Edit map panel (shown when tapping 景點名稱) -->
+              <div id="det-map-panel" style="display:none;margin-bottom:10px;border-radius:12px;overflow:hidden;position:relative;height:180px">
+                <div id="det-gmap" style="width:100%;height:100%"></div>
+                <div style="position:absolute;top:6px;left:6px;right:6px;z-index:5">
+                  <div style="display:flex;align-items:center;gap:8px;padding:0 10px;height:36px;background:#fff;border-radius:18px;box-shadow:0 2px 8px rgba(0,0,0,.2)">
+                    <i class="ti ti-search" style="font-size:14px;color:var(--blue);flex-shrink:0"></i>
+                    <input id="det-map-inp" placeholder="搜尋地點…" autocomplete="off" style="flex:1;border:none;outline:none;font-size:13px"/>
+                    <button id="det-map-close" style="background:none;border:none;cursor:pointer;font-size:14px;color:var(--gray);flex-shrink:0"><i class="ti ti-x"></i></button>
+                  </div>
+                </div>
+                <div style="position:absolute;bottom:6px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#fff;font-size:10px;padding:3px 8px;border-radius:8px;pointer-events:none" id="det-map-hint">點地圖選定位置</div>
+              </div>
+              <input type="hidden" id="det-e-lat" value="0"/>
+              <input type="hidden" id="det-e-lng" value="0"/>
               <div class="det-edit-fields-inner">
-                <div class="edit-field"><label class="edit-label">景點名稱</label><input class="edit-input" id="det-e-name"/></div>
+                <div class="edit-field">
+                  <label class="edit-label">景點名稱 <span id="det-loc-badge" style="display:none;font-size:9px;background:#E6F4EA;color:#1E7A3C;border-radius:4px;padding:1px 5px;margin-left:4px">✓ 已選定位置</span></label>
+                  <input class="edit-input" id="det-e-name" placeholder="點此搜尋或點地圖選取"/>
+                </div>
                 <div class="edit-row">
                   <div class="edit-field"><label class="edit-label">抵達時間</label><input class="edit-input" id="det-e-arrive" placeholder="09:00"/></div>
                   <div class="edit-field"><label class="edit-label">離開時間</label><input class="edit-input" id="det-e-depart" placeholder="12:00"/></div>
@@ -1026,7 +1044,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
                 <div class="edit-field"><label class="edit-label">天數標籤</label><input class="edit-input" id="det-e-day" placeholder="Day 1"/></div>
                 <div class="edit-field"><label class="edit-label">備註</label><input class="edit-input" id="det-e-note" placeholder="（選填）"/></div>
                 <button class="save-btn" id="btn-det-save"><i class="ti ti-check"></i> 儲存修改</button>
-              </div>
+              </div><!-- /det-edit-fields-inner -->
             </div>
             <div class="sec"><div class="sec-t"><i class="ti ti-checkbox"></i>活動清單</div><div id="act-list"></div><div class="add-row"><input class="add-inp" id="act-inp" placeholder="新增活動…"/><button class="add-ok" id="btn-add-act"><i class="ti ti-plus"></i></button></div></div>
             <div class="sec"><div class="sec-t"><i class="ti ti-alert-triangle" style="color:#F9AB00"></i>注意事項</div><div id="note-list"></div><div class="add-row"><input class="add-inp" id="note-inp" placeholder="新增注意事項…"/><button class="add-ok" id="btn-add-note"><i class="ti ti-plus"></i></button></div></div>
@@ -1644,6 +1662,11 @@ function startApp(code, uid, name, tripName, isOrg){
   setMapHeight();
   setTimeout(function(){ if(map) google.maps.event.trigger(map,'resize'); },300);
 
+  // Reset UI state for new trip
+  document.getElementById('detail').classList.remove('show');
+  if(stopMarker){stopMarker.setMap(null);stopMarker=null;}
+  document.querySelectorAll('.stop-expand.open').forEach(function(p){p.classList.remove('open');});
+  document.querySelectorAll('.stop-txt.active').forEach(function(e){e.classList.remove('active');});
   // Clear old listeners before subscribing new ones
   window.FB.clearListeners();
 
@@ -1769,26 +1792,45 @@ function onStopListClick(e){
   }
 }
 
+var _tapToken=0; // increments each tap; callbacks check before acting
+
+function makePinUrl(){
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="22.4" height="40" viewBox="0 0 22.4 40">'+
+    '<path d="M11.2 0 C5.02 0 0 5.02 0 11.2 C0 19.6 11.2 40 11.2 40 C11.2 40 22.4 19.6 22.4 11.2 C22.4 5.02 17.38 0 11.2 0 Z"'+
+    ' fill="rgba(26,115,232,0.72)" stroke="rgba(255,255,255,0.9)" stroke-width="1.5"/>'+
+    '<circle cx="11.2" cy="11.5" r="4" fill="rgba(255,255,255,0.9)"/>'+
+    '</svg>';
+  return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg);
+}
+
+function dropStopPin(pos, title){
+  if(stopMarker){ stopMarker.setMap(null); stopMarker=null; }
+  stopMarker=new google.maps.Marker({
+    position:pos, map:map,
+    animation:google.maps.Animation.DROP,
+    icon:{url:makePinUrl(), scaledSize:new google.maps.Size(22,40), anchor:new google.maps.Point(11,40)},
+    title:title
+  });
+}
+
 function tapStop(i){
   if(MS_MODE){ toggleSel(i); return; }
   var s=S.stops[i]; if(!s) return;
 
-  // Toggle expand/collapse inline detail
   var expPanel=document.getElementById('se-'+i);
   var isOpen=expPanel&&expPanel.classList.contains('open');
 
-  // Collapse all other panels
+  // Collapse all panels & highlights
   document.querySelectorAll('.stop-expand.open').forEach(function(p){ p.classList.remove('open'); });
   document.querySelectorAll('.stop-txt.active').forEach(function(el){ el.classList.remove('active'); });
   document.querySelectorAll('.stop-arr').forEach(function(el){ el.style.transform=''; });
 
   if(isOpen){
-    // Was open - just collapse, clear marker
     if(stopMarker){stopMarker.setMap(null);stopMarker=null;}
+    closePc();
     return;
   }
 
-  // Open this panel
   if(expPanel) expPanel.classList.add('open');
   var activeTxt=document.getElementById('st-'+i);
   if(activeTxt) activeTxt.classList.add('active');
@@ -1796,53 +1838,34 @@ function tapStop(i){
   if(arrEl) arrEl.style.transform='rotate(90deg)';
 
   S.currentStop=i;
-  var hasCoords=s.lat&&s.lng&&parseFloat(s.lat)!==0;
 
-  // ── NEW: Place absolute marker pin on map ──
-  if(stopMarker){ stopMarker.setMap(null); stopMarker=null; }
+  // ── Request token: any stale async callback will be ignored ──
+  var token=++_tapToken;
+
+  var hasCoords=s.lat&&s.lng&&parseFloat(s.lat)!==0;
 
   if(map && hasCoords){
     var lat=parseFloat(s.lat), lng=parseFloat(s.lng);
     map.panTo({lat:lat,lng:lng}); map.setZoom(15);
-    // Drop a red pin at the exact location
-    // Teardrop SVG pin - semi-transparent, elongated tip
-    var pinSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="22.4" height="40" viewBox="0 0 22.4 40">' +
-      '<path d="M11.2 0 C5.02 0 0 5.02 0 11.2 C0 19.6 11.2 40 11.2 40 C11.2 40 22.4 19.6 22.4 11.2 C22.4 5.02 17.38 0 11.2 0 Z"' +
-      ' fill="rgba(26,115,232,0.72)" stroke="rgba(255,255,255,0.9)" stroke-width="1.5"/>' +
-      '<circle cx="11.2" cy="11.5" r="4" fill="rgba(255,255,255,0.9)"/>' +
-      '</svg>';
-    var pinUrl = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(pinSvg);
-    stopMarker=new google.maps.Marker({
-      position:{lat:lat,lng:lng}, map:map,
-      animation:google.maps.Animation.DROP,
-      icon:{url:pinUrl, scaledSize:new google.maps.Size(22,40), anchor:new google.maps.Point(11,40)},
-      title:s.name
-    });
-    // Show place card info WITHOUT moving the map (pin already at correct location)
+    dropStopPin({lat:lat,lng:lng}, s.name);
     if(plSvc){
       plSvc.textSearch({query:s.name,location:{lat:lat,lng:lng},radius:500},function(results,status){
+        if(_tapToken!==token) return; // stale callback - a newer tap happened, ignore
         if(status===google.maps.places.PlacesServiceStatus.OK&&results&&results.length>0)
           showPlaceCardFixed(results[0].place_id);
         else showSimplePc(s);
       });
     }
   } else if(map&&plSvc){
-    plSvc.textSearch({query:s.name},function(results,status){
+    var center=getGroupCenter();
+    var searchOpts=center?{query:s.name,location:center,radius:100000}:{query:s.name};
+    plSvc.textSearch(searchOpts,function(results,status){
+      if(_tapToken!==token) return; // stale - ignore
       if(status===google.maps.places.PlacesServiceStatus.OK&&results&&results.length>0){
         var loc=results[0].geometry.location;
         map.panTo(loc); map.setZoom(15);
-        var pinSvg2 = '<svg xmlns="http://www.w3.org/2000/svg" width="22.4" height="40" viewBox="0 0 22.4 40">' +
-          '<path d="M11.2 0 C5.02 0 0 5.02 0 11.2 C0 19.6 11.2 40 11.2 40 C11.2 40 22.4 19.6 22.4 11.2 C22.4 5.02 17.38 0 11.2 0 Z"' +
-          ' fill="rgba(26,115,232,0.72)" stroke="rgba(255,255,255,0.9)" stroke-width="1.5"/>' +
-          '<circle cx="11.2" cy="11.5" r="4" fill="rgba(255,255,255,0.9)"/>' +
-          '</svg>';
-        var pinUrl2 = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(pinSvg2);
-        stopMarker=new google.maps.Marker({
-          position:loc, map:map, animation:google.maps.Animation.DROP,
-          icon:{url:pinUrl2, scaledSize:new google.maps.Size(22,40), anchor:new google.maps.Point(11,40)},
-          title:s.name
-        });
-        showPlaceCard(results[0].place_id);
+        dropStopPin(loc, s.name);
+        showPlaceCardFixed(results[0].place_id);
       } else showSimplePc(s);
     });
   }
@@ -1857,13 +1880,44 @@ function openStopDetail(i){
   document.getElementById('det-bud').textContent=s.budget||'NT$ 0';
   renderActs(s); renderNotes(s);
   document.getElementById('detail').classList.add('show');
+  // Move map to this stop (always, since opening detail = user wants to see it)
+  moveMapToStop(i);
   if(S.isOrg){
-    // Organizer → directly enter full edit mode
-    _editMode=false; // force re-enter
+    _editMode=false;
     toggleEditMode();
   } else {
-    // Member → view mode only
     exitEditMode();
+  }
+}
+
+// Move map to stop without toggling expand panel (used by detail panel)
+function moveMapToStop(i){
+  var s=S.stops[i]; if(!s||!map) return;
+  var hasCoords=s.lat&&s.lng&&parseFloat(s.lat)!==0;
+  if(stopMarker){ stopMarker.setMap(null); stopMarker=null; }
+  var pinSvgM='<svg xmlns="http://www.w3.org/2000/svg" width="22.4" height="40" viewBox="0 0 22.4 40">'+
+    '<path d="M11.2 0 C5.02 0 0 5.02 0 11.2 C0 19.6 11.2 40 11.2 40 C11.2 40 22.4 19.6 22.4 11.2 C22.4 5.02 17.38 0 11.2 0 Z" fill="rgba(26,115,232,0.72)" stroke="rgba(255,255,255,0.9)" stroke-width="1.5"/>'+
+    '<circle cx="11.2" cy="11.5" r="4" fill="rgba(255,255,255,0.9)"/></svg>';
+  var pinIconM={url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(pinSvgM),
+    scaledSize:new google.maps.Size(22,40),anchor:new google.maps.Point(11,40)};
+  if(hasCoords){
+    var lat=parseFloat(s.lat), lng=parseFloat(s.lng);
+    map.panTo({lat:lat,lng:lng}); map.setZoom(15);
+    stopMarker=new google.maps.Marker({position:{lat:lat,lng:lng},map:map,
+      animation:google.maps.Animation.DROP,icon:pinIconM,title:s.name});
+    if(plSvc) plSvc.textSearch({query:s.name,location:{lat:lat,lng:lng},radius:500},function(r,st){
+      if(st===google.maps.places.PlacesServiceStatus.OK&&r&&r.length) showPlaceCardFixed(r[0].place_id);
+    });
+  } else if(plSvc){
+    plSvc.textSearch({query:s.name},function(r,st){
+      if(st===google.maps.places.PlacesServiceStatus.OK&&r&&r.length){
+        var loc=r[0].geometry.location;
+        map.panTo(loc); map.setZoom(15);
+        stopMarker=new google.maps.Marker({position:loc,map:map,
+          animation:google.maps.Animation.DROP,icon:pinIconM,title:s.name});
+        showPlaceCardFixed(r[0].place_id);
+      }
+    });
   }
 }
 
@@ -2003,24 +2057,59 @@ function toggleEditMode(){
     document.getElementById('det-e-depart').value=s.depart||'';
     document.getElementById('det-e-day').value=s.day||'';
     document.getElementById('det-e-note').value=s.note||'';
+    // Init stored coords
+    _detLat=parseFloat(s.lat)||0;
+    _detLng=parseFloat(s.lng)||0;
+    _detFromMap=false;
+    document.getElementById('det-e-lat').value=_detLat;
+    document.getElementById('det-e-lng').value=_detLng;
+    var badge=document.getElementById('det-loc-badge');
+    if(badge) badge.style.display=(_detLat!==0?'inline':'none');
     document.getElementById('det-edit-fields').style.display='block';
     document.getElementById('det-edit-btn').textContent='取消';
     document.getElementById('det-edit-btn').style.color='var(--red)';
-  } else exitEditMode();
+    closeDetMap();
+  } else { exitEditMode(); closeDetMap(); }
 }
 function saveEditStop(){
   var s=S.stops[S.currentStop]; if(!s||!s._key) return;
   var name=document.getElementById('det-e-name').value.trim();
   if(!name){ showToast('請輸入景點名稱',1500); return; }
   var path='tripgo/groups/'+S.groupCode+'/stops/'+s._key;
-  window.FB.set(path+'/name', name);
-  window.FB.set(path+'/arrive', document.getElementById('det-e-arrive').value.trim());
-  window.FB.set(path+'/depart', document.getElementById('det-e-depart').value.trim());
-  window.FB.set(path+'/day',    document.getElementById('det-e-day').value.trim());
-  window.FB.set(path+'/note',   document.getElementById('det-e-note').value.trim());
-  document.getElementById('det-title').textContent=name;
-  exitEditMode();
-  showToast('✅ 已儲存',1500);
+  var newLat=parseFloat(document.getElementById('det-e-lat').value)||0;
+  var newLng=parseFloat(document.getElementById('det-e-lng').value)||0;
+
+  function doSave(lat,lng){
+    window.FB.set(path+'/name',   name);
+    window.FB.set(path+'/arrive', document.getElementById('det-e-arrive').value.trim());
+    window.FB.set(path+'/depart', document.getElementById('det-e-depart').value.trim());
+    window.FB.set(path+'/day',    document.getElementById('det-e-day').value.trim());
+    window.FB.set(path+'/note',   document.getElementById('det-e-note').value.trim());
+    if(lat&&lat!==0){ window.FB.set(path+'/lat',lat); window.FB.set(path+'/lng',lng); }
+    document.getElementById('det-title').textContent=name;
+    closeDetMap(); exitEditMode();
+    showToast('✅ 已儲存',1500);
+  }
+
+  if(_detFromMap && newLat!==0){
+    // User picked from map - use exact coords
+    doSave(newLat,newLng);
+  } else if(newLat!==0){
+    // Kept original coords
+    doSave(newLat,newLng);
+  } else {
+    // No coords - text search with location bias
+    var center=getGroupCenter();
+    if(plSvc && center){
+      plSvc.textSearch({query:name,location:center,radius:100000},function(results,status){
+        if(status===google.maps.places.PlacesServiceStatus.OK&&results&&results.length>0){
+          var loc=results[0].geometry.location;
+          doSave(loc.lat(),loc.lng());
+          showToast('✅ 已儲存，位置已自動定位',2000);
+        } else { doSave(0,0); }
+      });
+    } else { doSave(0,0); }
+  }
 }
 function renderActs(s){
   var acts=(s&&s.activities)||[], html='';
@@ -2804,6 +2893,98 @@ function initDivider(){
 // ════════════════════════════════
 // WIRE UP ALL BUTTONS
 // ════════════════════════════════
+
+// ── Det-map for editing stop location ──
+var detMap=null, detMarker=null, detAc=null;
+var _detLat=0, _detLng=0, _detFromMap=false;
+
+function getGroupCenter(){
+  var coords=S.stops.filter(function(s){return s.lat&&s.lng&&parseFloat(s.lat)!==0;})
+    .map(function(s){return{lat:parseFloat(s.lat),lng:parseFloat(s.lng)};});
+  if(!coords.length) return null;
+  var lat=coords.reduce(function(a,b){return a+b.lat;},0)/coords.length;
+  var lng=coords.reduce(function(a,b){return a+b.lng;},0)/coords.length;
+  return {lat:lat,lng:lng};
+}
+
+function openDetMap(){
+  var panel=document.getElementById('det-map-panel');
+  if(!panel) return;
+  panel.style.display='block';
+  var s=S.stops[S.currentStop];
+  var center=(_detLat&&_detLat!==0)?{lat:_detLat,lng:_detLng}:
+             (getGroupCenter()||{lat:S.myLat,lng:S.myLng});
+  setTimeout(function(){
+    if(!detMap){
+      detMap=new google.maps.Map(document.getElementById('det-gmap'),{
+        center:center,zoom:14,
+        mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false
+      });
+      detMap.addListener('click',function(e){
+        if(e.placeId){
+          e.stop();
+          // Get place details
+          var ps=new google.maps.places.PlacesService(detMap);
+          ps.getDetails({placeId:e.placeId,fields:['name','geometry','formatted_address']},function(place,status){
+            if(status!==google.maps.places.PlacesServiceStatus.OK) return;
+            setDetLocation(place.geometry.location.lat(),place.geometry.location.lng(),place.name||'');
+          });
+        } else {
+          setDetLocation(e.latLng.lat(),e.latLng.lng(),'');
+        }
+      });
+      // Autocomplete
+      var inp=document.getElementById('det-map-inp');
+      if(inp&&!inp._ac){
+        var center2=getGroupCenter();
+        var ac=new google.maps.places.Autocomplete(inp,{
+          fields:['name','geometry','formatted_address'],
+          locationBias:center2?new google.maps.Circle({center:center2,radius:50000}):undefined
+        });
+        inp._ac=ac;
+        ac.addListener('place_changed',function(){
+          var place=ac.getPlace();
+          if(!place||!place.geometry) return;
+          setDetLocation(place.geometry.location.lat(),place.geometry.location.lng(),place.name||inp.value);
+          document.getElementById('det-gmap') && detMap.panTo(place.geometry.location);
+        });
+      }
+    } else {
+      detMap.panTo(center);
+      google.maps.event.trigger(detMap,'resize');
+    }
+    // Drop existing pin if we have coords
+    if(_detLat&&_detLat!==0) dropDetPin({lat:_detLat,lng:_detLng});
+  },100);
+}
+
+function closeDetMap(){
+  var panel=document.getElementById('det-map-panel');
+  if(panel) panel.style.display='none';
+}
+
+function setDetLocation(lat,lng,name){
+  _detLat=lat; _detLng=lng; _detFromMap=true;
+  document.getElementById('det-e-lat').value=lat;
+  document.getElementById('det-e-lng').value=lng;
+  if(name) document.getElementById('det-e-name').value=name;
+  var badge=document.getElementById('det-loc-badge');
+  if(badge) badge.style.display='inline';
+  var hint=document.getElementById('det-map-hint');
+  if(hint) hint.textContent='✓ 已選定';
+  dropDetPin({lat:lat,lng:lng});
+  if(detMap) detMap.panTo({lat:lat,lng:lng});
+}
+
+function dropDetPin(pos){
+  if(detMarker) detMarker.setMap(null);
+  detMarker=new google.maps.Marker({position:pos,map:detMap,
+    animation:google.maps.Animation.DROP,
+    icon:{path:google.maps.SymbolPath.CIRCLE,scale:10,
+      fillColor:'#EA4335',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}
+  });
+}
+
 window.addEventListener('load',function(){
   // Join screen
   document.getElementById('btn-join').addEventListener('click',function(){goSub('join');});
@@ -2856,6 +3037,10 @@ window.addEventListener('load',function(){
   document.getElementById('btn-asp-save').addEventListener('click',saveStop);
   document.getElementById('btn-det-back').addEventListener('click',closeDetail);
   document.getElementById('det-edit-btn').addEventListener('click',toggleEditMode);
+  document.getElementById('det-e-name').addEventListener('focus',function(){
+    if(_editMode) openDetMap();
+  });
+  document.getElementById('det-map-close').addEventListener('click',closeDetMap);
   document.getElementById('det-del-btn').addEventListener('click',function(){
     var s=S.stops[S.currentStop]; if(!s) return;
     showCustomConfirm('🗑️','刪除景點？','「'+s.name+'」將從行程中移除。','確定刪除',function(){
