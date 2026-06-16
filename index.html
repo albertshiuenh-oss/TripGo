@@ -346,23 +346,42 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 .pcac.green{background:#E6F4EA;color:#34A853}
 
 /* ── Divider ── */
+/* ── Divider ── */
 .divider{
-  height:10px;background:var(--bg2);
-  cursor:row-resize;flex-shrink:0;
+  position:relative;
+  flex-shrink:0;
   display:flex;align-items:center;justify-content:center;
-  transition:height .15s;
+  /* Portrait: horizontal bar */
+  height:14px;
+  background:var(--border);
+  cursor:row-resize;
+  z-index:3;
 }
-.divider:hover,.divider.active{height:20px}
 @media(orientation:landscape){
-  .divider{width:10px;height:auto;cursor:col-resize}
-  .divider:hover,.divider.active{width:20px;height:auto}
+  .divider{
+    width:14px;height:auto;
+    background:var(--border);
+    cursor:col-resize;
+  }
 }
+/* The pill handle */
 .divider-dot{
-  width:28px;height:3px;background:var(--border);border-radius:2px;
-  transition:width .15s,height .15s;
+  background:#fff;
+  border-radius:99px;
+  box-shadow:0 1px 4px rgba(0,0,0,.18);
+  transition:transform .15s;
+  /* Portrait: wide pill */
+  width:40px;height:5px;
 }
-.divider:hover .divider-dot,.divider.active .divider-dot{
-  width:56px;height:6px;
+@media(orientation:landscape){
+  .divider-dot{
+    /* Landscape: tall pill */
+    width:5px;height:40px;
+  }
+}
+.divider:hover .divider-dot,
+.divider.active .divider-dot{
+  transform:scale(1.5);
 }
 
 /* ── Right Panel ── */
@@ -3003,19 +3022,52 @@ function initDivider(){
   var div=document.getElementById('divider'); if(!div) return;
   var dragging=false, startPos=0, startSize=0;
   var portrait=function(){return window.innerHeight>window.innerWidth;};
-  function onStart(pos){ dragging=true; startPos=pos; var mw=document.getElementById('map-wrap'); startSize=portrait()?mw.offsetHeight:mw.offsetWidth; }
-  function onMove(pos){ if(!dragging)return; var delta=pos-startPos; var mw=document.getElementById('map-wrap'); var top=(document.querySelector('.topbar')||{}).offsetHeight||44;
-    if(portrait()){ var h=Math.max(80,Math.min(startSize+delta,window.innerHeight-top-80)); mw.style.height=h+'px'; }
-    else { var w=Math.max(100,Math.min(startSize+delta,window.innerWidth-100)); mw.style.width=w+'px'; }
+
+  function onStart(e){
+    dragging=true;
+    var touch=e.touches?e.touches[0]:e;
+    startPos=portrait()?touch.clientY:touch.clientX;
+    var mw=document.getElementById('map-wrap');
+    startSize=portrait()?mw.offsetHeight:mw.offsetWidth;
+    div.classList.add('active');
+    e.preventDefault(); // 阻止頁面滾動
+  }
+
+  function onMove(e){
+    if(!dragging) return;
+    e.preventDefault(); // 阻止頁面滾動
+    var touch=e.touches?e.touches[0]:e;
+    var pos=portrait()?touch.clientY:touch.clientX;
+    var delta=pos-startPos;
+    var mw=document.getElementById('map-wrap');
+    var top=(document.querySelector('.topbar')||{}).offsetHeight||44;
+    if(portrait()){
+      var h=Math.max(100,Math.min(startSize+delta,window.innerHeight-top-120));
+      mw.style.height=h+'px';
+    } else {
+      var w=Math.max(150,Math.min(startSize+delta,window.innerWidth-150));
+      mw.style.width=w+'px';
+    }
     if(map) google.maps.event.trigger(map,'resize');
   }
-  function onEnd(){ dragging=false; }
-  div.addEventListener('mousedown',function(e){onStart(portrait()?e.clientY:e.clientX);});
-  document.addEventListener('mousemove',function(e){onMove(portrait()?e.clientY:e.clientX);});
-  document.addEventListener('mouseup',onEnd);
-  div.addEventListener('touchstart',function(e){div.classList.add('active');onStart(portrait()?e.touches[0].clientY:e.touches[0].clientX);},{passive:true});
-  document.addEventListener('touchmove',function(e){onMove(portrait()?e.touches[0].clientY:e.touches[0].clientX);},{passive:true});
-  document.addEventListener('touchend',function(){div.classList.remove('active');onEnd();});
+
+  function onEnd(){
+    dragging=false;
+    div.classList.remove('active');
+  }
+
+  // Mouse (desktop)
+  div.addEventListener('mousedown', onStart);
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onEnd);
+
+  // Touch (mobile) - passive:false so we can preventDefault
+  div.addEventListener('touchstart', onStart, {passive:false});
+  document.addEventListener('touchmove', function(e){
+    if(dragging) onMove(e);
+  }, {passive:false});
+  document.addEventListener('touchend', onEnd);
+  document.addEventListener('touchcancel', onEnd);
 }
 
 // ════════════════════════════════
@@ -3384,6 +3436,8 @@ window.addEventListener('load',function(){
   document.getElementById('btn-copy-code').addEventListener('click',copyCode);
   document.getElementById('btn-add-member').addEventListener('click',addMember);
   document.getElementById('btn-admin-close').addEventListener('click',closeAdminPanel);
+  document.getElementById('btn-admin-trips').addEventListener('click',loadAllTrips);
+  document.getElementById('btn-admin-trash').addEventListener('click',loadTrashBin);
   document.getElementById('btn-members-close').addEventListener('click',function(){closeModal('M-members');});
   document.getElementById('btn-rename-ok').addEventListener('click',function(){
     var v=document.getElementById('rename-inp').value.trim();
@@ -3397,7 +3451,6 @@ window.addEventListener('load',function(){
   ['M-members','M-invite','M-expense','M-seg-expense'].forEach(function(id){
     document.getElementById(id).addEventListener('click',function(e){ if(e.target===this) closeModal(id); });
   });
-  document.getElementById('btn-admin-refresh').addEventListener('click',loadAllTrips);
   document.getElementById('fs-exit').addEventListener('click',toggleFullscreen);
   document.getElementById('btn-change-pw').addEventListener('click',changeAdminPassword);
   document.getElementById('M-admin-panel').addEventListener('click',function(e){if(e.target===this)closeAdminPanel();});
