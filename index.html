@@ -3281,7 +3281,49 @@ function onHomeNameInput(val){
   localStorage.setItem('tg_last_name',val.trim());
   renderTripsPreview(val);
 }
-function renderTripsPreview(inputName){
+// ── Fallback: scan Firebase for groups where this name is a member ──
+// (covers the case where localStorage doesn't have this trip yet -
+//  e.g. different browser/device, or local storage was cleared)
+var _allGroupsCache=null, _allGroupsCacheTime=0, _fbNameSearchTimer=null;
+
+function searchFirebaseForName(name, nl, localMatched){
+  clearTimeout(_fbNameSearchTimer);
+  _fbNameSearchTimer=setTimeout(function(){
+    if(!window.FB||!window.FB.ready) return;
+    var now=Date.now();
+    if(_allGroupsCache && (now-_allGroupsCacheTime)<60000){
+      applyFirebaseNameMatches(name, nl, localMatched, _allGroupsCache);
+      return;
+    }
+    window.FB.get('tripgo/groups').then(function(snap){
+      _allGroupsCache=snap.val()||{};
+      _allGroupsCacheTime=Date.now();
+      applyFirebaseNameMatches(name, nl, localMatched, _allGroupsCache);
+    });
+  },400);
+}
+
+function applyFirebaseNameMatches(name, nl, localMatched, data){
+  var existingCodes={};
+  localMatched.forEach(function(t){ existingCodes[t.code]=true; });
+  var foundNew=false;
+  Object.keys(data).forEach(function(code){
+    var g=data[code]; if(!g.members||existingCodes[code]) return;
+    Object.values(g.members).forEach(function(m){
+      if(m.name && m.name.toLowerCase().indexOf(nl)>=0 && !existingCodes[code]){
+        existingCodes[code]=true; foundNew=true;
+        updateStoredTrip(code, m.id, m.name, g.tripName||'(未命名)', m.role==='organizer');
+      }
+    });
+  });
+  // Re-render either way, so the "搜尋雲端中…" placeholder always resolves to a final state.
+  // Only re-render if the name field still matches this search (avoid clobbering newer input).
+  // Pass _skipFbSearch=true to prevent this from re-triggering another search (would loop forever otherwise).
+  var curVal=(document.getElementById('js-home-name')||{}).value||'';
+  if(curVal.trim()===name) renderTripsPreview(name, true);
+}
+
+function renderTripsPreview(inputName, _skipFbSearch){
   var preview=document.getElementById('js-trips-preview');
   var list=document.getElementById('jtp-list');
   var countEl=document.getElementById('jtp-count');
@@ -3291,9 +3333,10 @@ function renderTripsPreview(inputName){
   var trips=getStoredTrips();
   var nl=name.toLowerCase();
   var matched=trips.filter(function(t){return t.name.toLowerCase().indexOf(nl)>=0;});
+  if(!_skipFbSearch) searchFirebaseForName(name, nl, matched); // fire-and-forget fallback, debounced+cached; skip on the result-render to avoid loops
   if(!matched.length){
     preview.style.display='flex';
-    list.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.6)">找不到「'+name+'」的旅程</div>';
+    list.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.6)">找不到「'+name+'」的旅程，搜尋雲端中…</div>';
     countEl.textContent=''; return;
   }
   var built=matched.filter(function(t){return t.isOrg;}).length;
