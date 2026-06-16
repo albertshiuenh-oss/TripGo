@@ -1645,18 +1645,76 @@ function selectPlace(pid,name){
 
 // ── Place Card ──
 var _pcData={};
+// Type ID -> Chinese label map
+var PLACE_TYPE_ZH={
+  'restaurant':'餐廳','food':'餐廳','cafe':'咖啡廳','bar':'酒吧','bakery':'烘焙坊',
+  'lodging':'住宿','hotel':'飯店',
+  'tourist_attraction':'觀光景點','museum':'博物館','art_gallery':'美術館',
+  'park':'公園','natural_feature':'自然景觀',
+  'castle':'城堡','church':'教堂','hindu_temple':'寺廟','mosque':'清真寺','synagogue':'猶太教堂',
+  'airport':'機場','train_station':'火車站','subway_station':'地鐵站','bus_station':'巴士站',
+  'shopping_mall':'購物中心','store':'商店','supermarket':'超市','convenience_store':'便利商店',
+  'hospital':'醫院','pharmacy':'藥局','bank':'銀行','atm':'ATM',
+  'gas_station':'加油站','parking':'停車場',
+  'amusement_park':'遊樂園','aquarium':'水族館','zoo':'動物園',
+  'spa':'水療','gym':'健身房',
+  'car_rental':'租車','travel_agency':'旅行社',
+  'establishment':'商家','point_of_interest':'景點'
+};
+function placeTypeZh(types){
+  if(!types||!types.length) return '';
+  for(var i=0;i<types.length;i++){
+    var t=types[i];
+    if(PLACE_TYPE_ZH[t]&&t!=='establishment'&&t!=='point_of_interest') return PLACE_TYPE_ZH[t];
+  }
+  return PLACE_TYPE_ZH[types[0]]||(types[0]||'').replace(/_/g,' ');
+}
+
+function isOpenNow(place){
+  if(place.opening_hours&&typeof place.opening_hours.isOpen==='function'){
+    try{
+      if(place.utc_offset_minutes!=null){
+        var nowUtc=new Date();
+        var localMs=nowUtc.getTime()+(place.utc_offset_minutes*60000)+nowUtc.getTimezoneOffset()*60000;
+        var local=new Date(localMs);
+        var day=local.getUTCDay();
+        var mins=local.getUTCHours()*60+local.getUTCMinutes();
+        var periods=place.opening_hours.periods||[];
+        if(!periods.length) return place.opening_hours.isOpen();
+        for(var i=0;i<periods.length;i++){
+          var p=periods[i];
+          if(!p.open) continue;
+          var openDay=p.open.day, openMin=p.open.hours*60+p.open.minutes;
+          var closeDay=p.close?p.close.day:openDay;
+          var closeMin=p.close?p.close.hours*60+p.close.minutes:1440;
+          if(openDay===closeDay){
+            if(day===openDay&&mins>=openMin&&mins<closeMin) return true;
+          } else {
+            if(day===openDay&&mins>=openMin) return true;
+            if(day===closeDay&&mins<closeMin) return true;
+          }
+        }
+        return false;
+      }
+      return place.opening_hours.isOpen();
+    }catch(e){ return null; }
+  }
+  return null;
+}
+
 function _applyPlaceCard(place){
   S.currentPlace=place;
   _pcData={phone:place.formatted_phone_number||'',website:place.website||''};
   document.getElementById('pc-name').textContent=place.name||'';
-  document.getElementById('pc-type').textContent=place.types?(place.types[0]||'').replace(/_/g,' '):'';
+  document.getElementById('pc-type').textContent=placeTypeZh(place.types);
   var ratingHtml='';
   if(place.rating){
     ratingHtml='★ '+place.rating;
-    if(place.opening_hours){
-      var open=place.opening_hours.isOpen();
-      ratingHtml+=' · <span style="color:'+(open?'var(--green)':'var(--red)')+'">'+( open?'營業中':'休息中')+'</span>';
-    }
+    if(place.user_ratings_total)
+      ratingHtml+=' <span style="font-size:10px;color:var(--text2)">('+place.user_ratings_total.toLocaleString()+')</span>';
+    var openStatus=isOpenNow(place);
+    if(openStatus!==null)
+      ratingHtml+=' · <span style="color:'+(openStatus?'var(--green)':'var(--red)')+'">'+(openStatus?'營業中':'休息中')+'</span>';
   }
   document.getElementById('pc-rating').innerHTML=ratingHtml;
   var info='';
