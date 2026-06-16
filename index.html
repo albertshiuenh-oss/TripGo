@@ -161,6 +161,22 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
   background:#fff;border:1px solid var(--border);border-radius:6px;
   padding:2px 8px;font-size:10px;cursor:pointer;color:var(--blue);
 }
+.adm-trip-del{
+  background:#FCE8E6;border:none;border-radius:6px;
+  padding:2px 8px;font-size:10px;cursor:pointer;color:var(--red);
+}
+.adm-trash-card{
+  background:#FFF8F8;border:1px dashed #F5C6C0;
+  border-radius:12px;padding:12px 14px;margin-bottom:8px;
+}
+.adm-trash-name{font-size:13px;font-weight:700;color:var(--text)}
+.adm-trash-meta{font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5}
+.adm-trash-expire{font-size:10px;color:var(--red);font-weight:700;margin-top:4px}
+.adm-trash-actions{display:flex;gap:6px;margin-top:8px}
+.adm-restore-btn{padding:4px 10px;border-radius:6px;border:1px solid var(--green);
+  background:#E6F4EA;color:#1E7A3C;font-size:11px;cursor:pointer;font-weight:600}
+.adm-perm-del-btn{padding:4px 10px;border-radius:6px;border:none;
+  background:#FCE8E6;color:var(--red);font-size:11px;cursor:pointer;font-weight:600}
 .adm-trip-enter{
   width:100%;margin-top:8px;padding:8px;border:none;border-radius:8px;
   background:var(--blue);color:#fff;font-size:12px;font-weight:700;cursor:pointer;
@@ -914,11 +930,17 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
       <div class="adm-title" style="margin-bottom:0">🛡 管理員面板</div>
       <button id="btn-admin-close" style="background:var(--bg2);border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:14px;color:var(--gray)"><i class="ti ti-x"></i></button>
     </div>
-    <button id="btn-admin-refresh" style="width:100%;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px">
-      <i class="ti ti-refresh"></i> 重新整理旅程列表
-    </button>
+    <div style="display:flex;gap:6px;margin-bottom:12px">
+      <button id="btn-admin-trips" style="flex:1;padding:9px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+        <i class="ti ti-map-2"></i> 所有旅程
+      </button>
+      <button id="btn-admin-trash" style="flex:1;padding:9px;background:#FCE8E6;color:var(--red);border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+        <i class="ti ti-trash"></i> 垃圾桶
+      </button>
+    </div>
     <div id="adm-trip-status" style="font-size:12px;color:var(--text2);margin-bottom:8px"></div>
     <div id="adm-trip-list"></div>
+    <div id="adm-trash-list" style="display:none"></div>
 
     <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
       <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🔑 修改管理員密碼</div>
@@ -2525,6 +2547,7 @@ function doAdmin(){
 }
 function openAdminPanel(){
   document.getElementById('M-admin-panel').classList.add('show');
+  autoPurgeTrash(); // clean up items older than 7 days
   loadAllTrips();
 }
 function closeAdminPanel(){ document.getElementById('M-admin-panel').classList.remove('show'); }
@@ -2547,14 +2570,108 @@ function changeAdminPassword(){
     });
   });
 }
+// ── Admin: soft-delete trip to trash ──
+function adminTrashTrip(code){
+  showCustomConfirm('🗑️','移至垃圾桶？','旅程將放入垃圾桶，<b>7天後自動永久刪除</b>。','確定移除',function(){
+    if(!window.FB||!window.FB.ready){showToast('⏳ 連線中',1500);return;}
+    window.FB.get('tripgo/groups/'+code).then(function(snap){
+      if(!snap.exists()){showToast('❌ 找不到旅程',1500);return;}
+      var data=snap.val();
+      data._trashedAt=Date.now();
+      window.FB.set('tripgo/trash/'+code,data).then(function(){
+        window.FB.remove('tripgo/groups/'+code);
+        showToast('✅ 已移至垃圾桶',2000);
+        loadAllTrips();
+      });
+    });
+  });
+}
+
+// ── Admin: permanently delete from trash ──
+function adminPermDelete(code){
+  showCustomConfirm('💀','永久刪除？','此操作<b>無法復原</b>，所有資料將永遠消失。','確定永久刪除',function(){
+    window.FB.remove('tripgo/trash/'+code);
+    showToast('✅ 已永久刪除',2000);
+    loadTrashBin();
+  });
+}
+
+// ── Admin: restore from trash ──
+function adminRestore(code){
+  if(!window.FB||!window.FB.ready){showToast('⏳ 連線中',1500);return;}
+  window.FB.get('tripgo/trash/'+code).then(function(snap){
+    if(!snap.exists()){showToast('❌ 找不到旅程',1500);return;}
+    var data=snap.val();
+    delete data._trashedAt;
+    window.FB.set('tripgo/groups/'+code,data).then(function(){
+      window.FB.remove('tripgo/trash/'+code);
+      showToast('✅ 已還原旅程 '+code,2000);
+      loadTrashBin();
+    });
+  });
+}
+
+// ── Admin: auto-purge trash items older than 7 days ──
+function autoPurgeTrash(){
+  if(!window.FB||!window.FB.ready) return;
+  window.FB.get('tripgo/trash').then(function(snap){
+    if(!snap.exists()) return;
+    var now=Date.now(), sevenDays=7*24*60*60*1000;
+    Object.entries(snap.val()||{}).forEach(function(e){
+      var code=e[0],item=e[1];
+      if(item._trashedAt&&(now-item._trashedAt)>sevenDays) window.FB.remove('tripgo/trash/'+code);
+    });
+  });
+}
+
+function daysDiff(ts){ return Math.max(0,7-Math.floor((Date.now()-ts)/(24*60*60*1000))); }
+
+function loadTrashBin(){
+  var status=document.getElementById('adm-trip-status');
+  var trashEl=document.getElementById('adm-trash-list');
+  var listEl=document.getElementById('adm-trip-list');
+  listEl.style.display='none'; trashEl.style.display='block';
+  status.textContent='載入垃圾桶…';
+  if(!window.FB||!window.FB.ready){status.textContent='⏳ 連線中';return;}
+  window.FB.get('tripgo/trash').then(function(snap){
+    if(!snap.exists()||!snap.val()){status.textContent='垃圾桶是空的 🎉';trashEl.innerHTML='';return;}
+    var items=snap.val(), codes=Object.keys(items);
+    status.textContent='垃圾桶：'+codes.length+' 個旅程';
+    var html='';
+    codes.forEach(function(code){
+      var g=items[code];
+      var memberCount=g.members?Object.keys(g.members).length:0;
+      var stopCount=g.stops?Object.keys(g.stops).length:0;
+      var daysLeft=g._trashedAt?daysDiff(g._trashedAt):'?';
+      html+='<div class="adm-trash-card">'+
+        '<div class="adm-trash-name">'+(g.tripName||'(未命名)')+'</div>'+
+        '<div class="adm-trash-meta">邀請碼：'+code+' · '+memberCount+'人 · '+stopCount+'個景點</div>'+
+        '<div class="adm-trash-expire">⏰ 還有 '+daysLeft+' 天永久刪除</div>'+
+        '<div class="adm-trash-actions">'+
+          '<button class="adm-restore-btn" data-code="'+code+'"><i class="ti ti-arrow-back-up"></i> 還原</button>'+
+          '<button class="adm-perm-del-btn" data-code="'+code+'"><i class="ti ti-trash-x"></i> 永久刪除</button>'+
+        '</div></div>';
+    });
+    trashEl.innerHTML=html;
+    trashEl.querySelectorAll('.adm-restore-btn').forEach(function(btn){
+      btn.addEventListener('click',function(){adminRestore(this.dataset.code);});
+    });
+    trashEl.querySelectorAll('.adm-perm-del-btn').forEach(function(btn){
+      btn.addEventListener('click',function(){adminPermDelete(this.dataset.code);});
+    });
+  }).catch(function(err){status.textContent='❌ '+err.message;});
+}
+
 function loadAllTrips(){
   var status=document.getElementById('adm-trip-status');
   var list=document.getElementById('adm-trip-list');
+  var trashEl=document.getElementById('adm-trash-list');
+  list.style.display='block'; if(trashEl) trashEl.style.display='none';
   status.textContent='載入中…'; list.innerHTML='';
-  if(!window.FB||!window.FB.ready){ status.textContent='⏳ 連線中，請稍後再試'; return; }
+  if(!window.FB||!window.FB.ready){status.textContent='⏳ 連線中，請稍後再試';return;}
   window.FB.get('tripgo/groups').then(function(snap){
     var data=snap.val();
-    if(!data){ status.textContent='❌ 沒有任何旅程資料'; return; }
+    if(!data){status.textContent='❌ 沒有任何旅程資料';return;}
     var codes=Object.keys(data);
     status.textContent='共找到 '+codes.length+' 個旅程';
     var html='';
@@ -2563,19 +2680,14 @@ function loadAllTrips(){
       var memberCount=g.members?Object.keys(g.members).length:0;
       var stopCount=g.stops?Object.keys(g.stops).length:0;
       var members=g.members?Object.values(g.members).map(function(m){return m.name;}).join('、'):'';
-      var orgUid=g.organizer;
-      var orgMember=(orgUid && g.members && g.members[orgUid])?g.members[orgUid]:null;
-      if(!orgMember && g.members){
-        orgMember=Object.values(g.members).find(function(m){return m.role==='organizer';})||Object.values(g.members)[0];
-        orgUid=orgMember?orgMember.id:orgUid;
-      }
-      var orgName=orgMember?orgMember.name:'管理員';
       html+='<div class="adm-trip-card">'+
         '<div class="adm-trip-name">'+(g.tripName||'(未命名)')+'</div>'+
-        '<div class="adm-trip-meta">成員：'+(members||'無')+' ('+memberCount+'人) · 景點數：'+stopCount+' · 建立者：'+orgName+'</div>'+
-        '<div class="adm-trip-code">'+code+'<button class="adm-trip-copy" data-code="'+code+'">複製</button></div>'+
-        '<button class="adm-trip-enter" data-code="'+code+'" data-uid="'+(orgUid||'')+'" data-name="'+orgName+'" data-tripname="'+(g.tripName||'旅遊群組')+'"><i class="ti ti-login" style="font-size:12px;margin-right:4px"></i>以建立者身分進入</button>'+
-      '</div>';
+        '<div class="adm-trip-meta">成員：'+(members||'無')+' ('+memberCount+'人) · 景點：'+stopCount+'個</div>'+
+        '<div style="display:flex;align-items:center;gap:6px;margin-top:6px">'+
+          '<div class="adm-trip-code" style="flex:1">'+code+'</div>'+
+          '<button class="adm-trip-copy" data-code="'+code+'">複製</button>'+
+          '<button class="adm-trip-del" data-code="'+code+'"><i class="ti ti-trash"></i> 刪除</button>'+
+        '</div></div>';
     });
     list.innerHTML=html;
     list.querySelectorAll('.adm-trip-copy').forEach(function(btn){
@@ -2585,20 +2697,10 @@ function loadAllTrips(){
         else{var t=document.createElement('textarea');t.value=code;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);showToast('已複製：'+code,1500);}
       });
     });
-    list.querySelectorAll('.adm-trip-enter').forEach(function(btn){
-      btn.addEventListener('click',function(){
-        var code=this.dataset.code, uid=this.dataset.uid, name=this.dataset.name, tripName=this.dataset.tripname;
-        if(!uid){ showToast('⚠️ 找不到建立者資料',2000); return; }
-        closeAdminPanel();
-        window.FB.clearListeners();
-        S.groupCode=null; S.stops=[]; S.members=[]; S.expenses={}; S.allLocs={};
-        localStorage.setItem('tg_code',code);
-        localStorage.setItem('tg_uid',uid);
-        localStorage.setItem('tg_name',name);
-        startApp(code,uid,name,tripName,true);
-      });
+    list.querySelectorAll('.adm-trip-del').forEach(function(btn){
+      btn.addEventListener('click',function(){adminTrashTrip(this.dataset.code);});
     });
-  }).catch(function(err){ status.textContent='❌ 讀取失敗：'+err.message; });
+  }).catch(function(err){status.textContent='❌ 讀取失敗：'+err.message;});
 }
 function clearSession(){
   showCustomConfirm('🗑️','清除舊資料？','將清除本機的登入記錄，不影響 Firebase 資料。','確定清除',function(){
