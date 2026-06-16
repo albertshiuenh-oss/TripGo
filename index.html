@@ -2732,9 +2732,10 @@ function loadAllTrips(){
       html+='<div class="adm-trip-card">'+
         '<div class="adm-trip-name">'+(g.tripName||'(未命名)')+'</div>'+
         '<div class="adm-trip-meta">成員：'+(members||'無')+' ('+memberCount+'人) · 景點：'+stopCount+'個</div>'+
-        '<div style="display:flex;align-items:center;gap:6px;margin-top:6px">'+
+        '<div style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap">'+
           '<div class="adm-trip-code" style="flex:1">'+code+'</div>'+
           '<button class="adm-trip-copy" data-code="'+code+'">複製</button>'+
+          '<button class="adm-trip-join" data-code="'+code+'" data-name="'+(g.tripName||'旅遊群組')+'" style="padding:2px 8px;border-radius:6px;border:none;background:#E8F0FE;color:var(--blue);font-size:10px;cursor:pointer;font-weight:600"><i class="ti ti-login" style="font-size:10px"></i> 以管理員加入</button>'+
           '<button class="adm-trip-del" data-code="'+code+'"><i class="ti ti-trash"></i> 刪除</button>'+
         '</div></div>';
     });
@@ -2748,6 +2749,21 @@ function loadAllTrips(){
     });
     list.querySelectorAll('.adm-trip-del').forEach(function(btn){
       btn.addEventListener('click',function(){adminTrashTrip(this.dataset.code);});
+    });
+    list.querySelectorAll('.adm-trip-join').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var code=this.dataset.code;
+        var tripName=this.dataset.name;
+        closeAdminPanel();
+        // Join as admin (organizer role)
+        var uid='ADMIN'+Math.floor(Math.random()*9999);
+        window.FB.set('tripgo/groups/'+code+'/members/'+uid,{
+          id:uid,name:'管理員',role:'organizer',joinedAt:Date.now()
+        }).then(function(){
+          startApp(code,uid,'管理員',tripName,true);
+          showToast('✅ 以管理員身分加入 '+code,2000);
+        });
+      });
     });
   }).catch(function(err){status.textContent='❌ 讀取失敗：'+err.message;});
 }
