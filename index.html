@@ -14,16 +14,16 @@
   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   -webkit-tap-highlight-color:transparent}
 :root{
-  --blue:#1A73E8;--green:#34A853;--red:#EA4335;--yellow:#F9AB00;
+  --blue:#2B5F8E;--green:#34A853;--red:#EA4335;--yellow:#F9AB00;
   --gray:#5F6368;--bg:#fff;--bg2:#F8F9FA;--border:#DADCE0;
   --text:#202124;--text2:#5F6368;
 }
-html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
+html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 
 /* ── Join Screen ── */
 #S-join{
   position:fixed;inset:0;z-index:100;
-  background:linear-gradient(160deg,#1565C0,#1A73E8 50%,#1976D2);
+  background:linear-gradient(160deg,#1A3F61,#2B5F8E 50%,#22527D);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:32px 24px;
 }
@@ -702,7 +702,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 /* ── Add Stop Screen ── */
 #add-stop-screen{
   display:none;
-  position:fixed;inset:0;z-index:20;
+  position:fixed;inset:0;z-index:200;
   background:#fff;flex-direction:column;
 }
 #add-stop-screen.show{display:flex}
@@ -791,7 +791,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 /* ── Trip Switcher ── */
 #trip-switcher{
   display:none;position:fixed;inset:0;z-index:9500;
-  background:linear-gradient(160deg,#1565C0,#1A73E8 50%,#1976D2);
+  background:linear-gradient(160deg,#1A3F61,#2B5F8E 50%,#22527D);
   flex-direction:column;overflow-y:auto;
 }
 #trip-switcher.show{display:flex}
@@ -1460,7 +1460,7 @@ window.initMap = function(){
   });
   dsvc  = new google.maps.DirectionsService();
   drend = new google.maps.DirectionsRenderer({map:map, suppressMarkers:true,
-    polylineOptions:{strokeColor:'#1A73E8',strokeWeight:4}});
+    polylineOptions:{strokeColor:'#2B5F8E',strokeWeight:4}});
   acSvc = new google.maps.places.AutocompleteService();
   plSvc = new google.maps.places.PlacesService(map);
   map.addListener('click', function(e){
@@ -1511,10 +1511,10 @@ function getMyLoc(){
     if(myCircle) myCircle.setMap(null);
     myMarker = new google.maps.Marker({position:ll,map:map,
       icon:{path:google.maps.SymbolPath.CIRCLE,scale:7,
-        fillColor:'#4285F4',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}});
+        fillColor:'#2B5F8E',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}});
     myCircle = new google.maps.Circle({center:ll,radius:pos.coords.accuracy,
-      map:map,strokeColor:'#4285F4',strokeOpacity:.3,strokeWeight:1,
-      fillColor:'#4285F4',fillOpacity:.08});
+      map:map,strokeColor:'#2B5F8E',strokeOpacity:.3,strokeWeight:1,
+      fillColor:'#2B5F8E',fillOpacity:.08});
   },null,{enableHighAccuracy:true,timeout:10000});
 }
 function goToMe(){ getMyLoc(); }
@@ -1877,7 +1877,7 @@ var _tapToken=0; // increments each tap; callbacks check before acting
 function makePinUrl(){
   var svg='<svg xmlns="http://www.w3.org/2000/svg" width="22.4" height="40" viewBox="0 0 22.4 40">'+
     '<path d="M11.2 0 C5.02 0 0 5.02 0 11.2 C0 19.6 11.2 40 11.2 40 C11.2 40 22.4 19.6 22.4 11.2 C22.4 5.02 17.38 0 11.2 0 Z"'+
-    ' fill="rgba(26,115,232,0.72)" stroke="rgba(255,255,255,0.9)" stroke-width="1.5"/>'+
+    ' fill="rgba(43,95,142,0.82)" stroke="rgba(255,255,255,0.9)" stroke-width="1.5"/>'+
     '<circle cx="11.2" cy="11.5" r="4" fill="rgba(255,255,255,0.9)"/>'+
     '</svg>';
   return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg);
