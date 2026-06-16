@@ -1671,7 +1671,7 @@ function showPlaceCard(pid){
   if(!plSvc) return;
   S.currentPlaceId=pid;
   plSvc.getDetails({placeId:pid,
-    fields:['name','geometry','rating','formatted_phone_number','website','types','opening_hours','formatted_address']},
+    fields:['name','geometry','rating','user_ratings_total','formatted_phone_number','website','types','opening_hours','formatted_address','utc_offset_minutes']},
     function(place,status){
       if(status!==google.maps.places.PlacesServiceStatus.OK) return;
       _applyPlaceCard(place);
@@ -1686,7 +1686,7 @@ function showPlaceCardFixed(pid){
   if(!plSvc) return;
   S.currentPlaceId=pid;
   plSvc.getDetails({placeId:pid,
-    fields:['name','geometry','rating','formatted_phone_number','website','types','opening_hours','formatted_address']},
+    fields:['name','geometry','rating','user_ratings_total','formatted_phone_number','website','types','opening_hours','formatted_address','utc_offset_minutes']},
     function(place,status){
       if(status!==google.maps.places.PlacesServiceStatus.OK) return;
       _applyPlaceCard(place); // No map.panTo - position already set by tapStop
