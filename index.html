@@ -207,7 +207,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 }
 #net-status.online{background:#E6F4EA;color:#1E7A3C}
 #net-status.offline{background:#FCE8E6;color:var(--red)}
-.tb-avs{display:flex;align-items:center;flex-shrink:0}
+
 .tb-btn{
   width:32px;height:32px;border-radius:8px;border:none;
   background:var(--bg2);cursor:pointer;
@@ -220,7 +220,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
   background:var(--blue);color:#fff;cursor:pointer;
   font-size:11px;font-weight:700;flex-shrink:0;
 }
-.tb-org{font-size:11px;color:var(--yellow);font-weight:700;flex-shrink:0}
+
 
 /* ── Layout ── */
 .main{
@@ -608,15 +608,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 .seg-sub{font-size:10px;color:var(--text2)}
 
 /* ── Members / Locations ── */
-.av{
-  width:26px;height:26px;border-radius:50%;
-  font-size:9px;font-weight:700;color:#fff;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;
-  position:relative;
-}
-.av0{background:#1A73E8}.av1{background:#34A853}.av2{background:#EA4335}
-.av3{background:#F9AB00;color:#333}.av4{background:#7C4DFF}.av5{background:#00BCD4}.av6{background:#FF6D00}
-.av-crown{position:absolute;top:-6px;left:50%;transform:translateX(-50%);font-size:10px}
+
 .mem-row{
   display:flex;align-items:center;gap:10px;
   padding:10px 14px;border-bottom:1px solid var(--bg2);
@@ -1633,8 +1625,8 @@ function pcAddToItinerary(){
   setTimeout(function(){
     if(place.name) document.getElementById('ns-name').value=place.name;
     if(place.geometry){
-      S.aspLat=place.geometry.location.lat();
-      S.aspLng=place.geometry.location.lng();
+      S_aspLat=place.geometry.location.lat();
+      S_aspLng=place.geometry.location.lng();
       if(aspMap){ aspMap.panTo(place.geometry.location); aspMap.setZoom(15); aspDropPin(place.geometry.location); }
       document.getElementById('asp-pname').textContent=place.name||'';
       document.getElementById('asp-paddr').textContent=(place.formatted_address||'');
@@ -1740,10 +1732,8 @@ function renderStops(){
       '<div class="stop-expand" id="se-'+i+'">' +
         '<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-checkbox" aria-hidden="true"></i>活動清單<button class="exp-edit-btn" data-i="'+i+'" style="margin-left:auto"><i class="ti ti-pencil" aria-hidden="true"></i> 編輯細節</button></div>'+(actsHtml||'<div style="font-size:11px;color:var(--text2);padding:2px 0">（尚無活動）</div>')+'</div>' +
         (notesHtml?'<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-alert-triangle" style="color:#F9AB00" aria-hidden="true"></i>注意事項</div>'+notesHtml+'</div>':'') +
-      '' +  // note shown inline in stop-time
 
-        '' +  // edit button moved to act-section header
-      '</div>' +
+        '</div>' +
     '</div>';
   });
   el.innerHTML=html;
@@ -1881,7 +1871,7 @@ function openStopDetail(i){
   renderActs(s); renderNotes(s);
   document.getElementById('detail').classList.add('show');
   // Move map to this stop (always, since opening detail = user wants to see it)
-  moveMapToStop(i);
+  tapStop(i);
   if(S.isOrg){
     _editMode=false;
     toggleEditMode();
@@ -1891,35 +1881,7 @@ function openStopDetail(i){
 }
 
 // Move map to stop without toggling expand panel (used by detail panel)
-function moveMapToStop(i){
-  var s=S.stops[i]; if(!s||!map) return;
-  var hasCoords=s.lat&&s.lng&&parseFloat(s.lat)!==0;
-  if(stopMarker){ stopMarker.setMap(null); stopMarker=null; }
-  var pinSvgM='<svg xmlns="http://www.w3.org/2000/svg" width="22.4" height="40" viewBox="0 0 22.4 40">'+
-    '<path d="M11.2 0 C5.02 0 0 5.02 0 11.2 C0 19.6 11.2 40 11.2 40 C11.2 40 22.4 19.6 22.4 11.2 C22.4 5.02 17.38 0 11.2 0 Z" fill="rgba(26,115,232,0.72)" stroke="rgba(255,255,255,0.9)" stroke-width="1.5"/>'+
-    '<circle cx="11.2" cy="11.5" r="4" fill="rgba(255,255,255,0.9)"/></svg>';
-  var pinIconM={url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(pinSvgM),
-    scaledSize:new google.maps.Size(22,40),anchor:new google.maps.Point(11,40)};
-  if(hasCoords){
-    var lat=parseFloat(s.lat), lng=parseFloat(s.lng);
-    map.panTo({lat:lat,lng:lng}); map.setZoom(15);
-    stopMarker=new google.maps.Marker({position:{lat:lat,lng:lng},map:map,
-      animation:google.maps.Animation.DROP,icon:pinIconM,title:s.name});
-    if(plSvc) plSvc.textSearch({query:s.name,location:{lat:lat,lng:lng},radius:500},function(r,st){
-      if(st===google.maps.places.PlacesServiceStatus.OK&&r&&r.length) showPlaceCardFixed(r[0].place_id);
-    });
-  } else if(plSvc){
-    plSvc.textSearch({query:s.name},function(r,st){
-      if(st===google.maps.places.PlacesServiceStatus.OK&&r&&r.length){
-        var loc=r[0].geometry.location;
-        map.panTo(loc); map.setZoom(15);
-        stopMarker=new google.maps.Marker({position:loc,map:map,
-          animation:google.maps.Animation.DROP,icon:pinIconM,title:s.name});
-        showPlaceCardFixed(r[0].place_id);
-      }
-    });
-  }
-}
+
 
 function showSimplePc(s){
   S.currentPlace={name:s.name,geometry:null};
@@ -2748,7 +2710,6 @@ function openTripSwitcher(){
     }).join('');
     othEl.querySelectorAll('.tsw-trip-card').forEach(function(card,i){
       var t=others[i];
-      // action buttons handled by querySelectorAll below
       card.addEventListener('click',function(e){
         if(e.target.closest('.tsw-action-btn')) return;
         closeTripSwitcher();
