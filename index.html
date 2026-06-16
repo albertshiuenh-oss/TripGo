@@ -454,8 +454,30 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 .exp-dot{width:5px;height:5px;border-radius:50%;background:var(--blue);margin-top:5px;flex-shrink:0;}
 .exp-edit-btn{
   font-size:11px;padding:5px 12px;border-radius:8px;border:1px solid var(--blue);
-  background:#fff;color:var(--blue);cursor:pointer;margin-top:4px;
+  background:#fff;color:var(--blue);cursor:pointer;
 }
+.exp-edit-form{background:#fff;border-radius:10px;padding:12px;border:1px solid var(--border);margin-top:8px}
+.exp-ef-label{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px}
+.exp-ef-inp{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;outline:none;margin-bottom:8px}
+.exp-ef-inp:focus{border-color:var(--blue)}
+.exp-ef-row{display:flex;gap:6px}
+.exp-ef-row .exp-ef-field{flex:1}
+.exp-ef-save{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-right:6px}
+.exp-ef-cancel{background:var(--bg2);color:var(--text2);border:none;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer}
+.exp-ef-locbtn{width:100%;padding:8px;background:#E8F0FE;border:1.5px dashed var(--blue);border-radius:8px;
+  color:var(--blue);font-size:12px;font-weight:600;cursor:pointer;margin-bottom:8px;
+  display:flex;align-items:center;justify-content:center;gap:6px}
+.exp-ef-locbtn.picked{background:#E6F4EA;border-color:var(--green);color:var(--green)}
+/* Map pick mode banner */
+#map-pick-banner{
+  display:none;position:absolute;bottom:0;left:0;right:0;z-index:10;
+  background:rgba(26,115,232,.92);color:#fff;
+  padding:9px 14px;font-size:12px;font-weight:700;
+  display:none;align-items:center;justify-content:space-between;
+}
+#map-pick-banner.show{display:flex}
+#map-pick-cancel{background:rgba(255,255,255,.25);border:none;border-radius:6px;
+  padding:4px 10px;color:#fff;font-size:11px;cursor:pointer}
 .add-stop-btn{
   display:flex;align-items:center;justify-content:center;gap:6px;
   margin:12px 14px;padding:12px;
@@ -1003,6 +1025,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
         <div id="pc-info"></div>
       </div>
       <span id="map-members" style="position:absolute;bottom:8px;left:8px;font-size:10px;color:#fff;background:rgba(0,0,0,.4);border-radius:10px;padding:2px 8px"></span>
+      <div id="map-pick-banner">
+        <span>📍 點選地圖景點，或用搜尋欄輸入地名</span>
+        <button id="map-pick-cancel">取消</button>
+      </div>
     </div>
     <div class="divider" id="divider"><div class="divider-dot"></div></div>
     <div id="right-panel">
@@ -1419,6 +1445,20 @@ window.initMap = function(){
   acSvc = new google.maps.places.AutocompleteService();
   plSvc = new google.maps.places.PlacesService(map);
   map.addListener('click', function(e){
+    if(_mapPickStopIdx>=0){
+      // MAP PICK MODE: capture location for inline edit
+      if(e.placeId){
+        e.stop();
+        plSvc.getDetails({placeId:e.placeId,fields:['name','geometry']},function(place,status){
+          if(status===google.maps.places.PlacesServiceStatus.OK){
+            applyMapPickResult(place.geometry.location.lat(),place.geometry.location.lng(),place.name||'');
+          }
+        });
+      } else {
+        applyMapPickResult(e.latLng.lat(),e.latLng.lng(),'');
+      }
+      return;
+    }
     if(e.placeId){ e.stop(); showPlaceCard(e.placeId); }
     else closePc();
   });
@@ -1573,6 +1613,15 @@ function selectPlace(pid,name){
   document.getElementById('search-inp').value=name||'';
   document.getElementById('search-clear').style.display='block';
   document.getElementById('search-drop').classList.remove('show');
+  if(_mapPickStopIdx>=0){
+    // In pick mode: resolve coordinates and apply
+    plSvc.getDetails({placeId:pid,fields:['name','geometry']},function(place,status){
+      if(status===google.maps.places.PlacesServiceStatus.OK){
+        applyMapPickResult(place.geometry.location.lat(),place.geometry.location.lng(),place.name||name||'');
+      }
+    });
+    return;
+  }
   if(plSvc) showPlaceCard(pid);
 }
 
@@ -1796,11 +1845,11 @@ function onStopListClick(e){
     tAct(ai); return;
   }
 
-  // Edit detail button
+  // Edit detail button → open inline edit (not overlay)
   var editBtn=e.target.closest('.exp-edit-btn');
   if(editBtn){
     var si=parseInt(editBtn.dataset.i);
-    openStopDetail(si); return;
+    openInlineEdit(si); return;
   }
 }
 
@@ -3048,7 +3097,186 @@ function dropDetPin(pos){
   });
 }
 
+
+// ════════════════════════════════
+// INLINE EDIT + MAP PICK MODE
+// ════════════════════════════════
+var _mapPickStopIdx=-1, _inlineEditIdx=-1;
+
+function openInlineEdit(i){
+  var s=S.stops[i]; if(!s) return;
+  _inlineEditIdx=i;
+  S.currentStop=i;
+  var expPanel=document.getElementById('se-'+i);
+  if(!expPanel) return;
+
+  // Ensure stop panel is open
+  if(!expPanel.classList.contains('open')){
+    tapStop(i);
+    setTimeout(function(){ renderInlineEditForm(i); },100);
+  } else {
+    renderInlineEditForm(i);
+  }
+}
+
+function renderInlineEditForm(i){
+  var s=S.stops[i]; if(!s) return;
+  var expPanel=document.getElementById('se-'+i);
+  if(!expPanel) return;
+
+  var locPicked=s.lat&&parseFloat(s.lat)!==0;
+
+  expPanel.innerHTML=
+    '<div class="exp-edit-form">'+
+      '<label class="exp-ef-label">景點名稱</label>'+
+      '<input class="exp-ef-inp" id="ief-name" value="'+escHtml(s.name||'')+'"/>'+
+      '<button class="exp-ef-locbtn'+(locPicked?' picked':'')+'" id="ief-locbtn">'+
+        '<i class="ti ti-map-pin'+(locPicked?'-check':'')+'"></i>'+
+        (locPicked?'✓ 已有座標，點此重新選取':'📍 在地圖選取精確位置')+
+      '</button>'+
+      '<input type="hidden" id="ief-lat" value="'+(s.lat||0)+'"/>'+
+      '<input type="hidden" id="ief-lng" value="'+(s.lng||0)+'"/>'+
+      '<div class="exp-ef-row">'+
+        '<div class="exp-ef-field"><label class="exp-ef-label">抵達時間</label><input class="exp-ef-inp" id="ief-arrive" value="'+escHtml(s.arrive||'')+'" placeholder="09:00"/></div>'+
+        '<div class="exp-ef-field"><label class="exp-ef-label">離開時間</label><input class="exp-ef-inp" id="ief-depart" value="'+escHtml(s.depart||'')+'" placeholder="12:00"/></div>'+
+      '</div>'+
+      '<label class="exp-ef-label">天數標籤</label>'+
+      '<input class="exp-ef-inp" id="ief-day" value="'+escHtml(s.day||'')+'" placeholder="Day 1"/>'+
+      '<label class="exp-ef-label">備註</label>'+
+      '<input class="exp-ef-inp" id="ief-note" value="'+escHtml(s.note||'')+'" placeholder="（選填）"/>'+
+      '<div>'+
+        '<button class="exp-ef-save" id="ief-save">✓ 儲存</button>'+
+        '<button class="exp-ef-cancel" id="ief-cancel">取消</button>'+
+      '</div>'+
+    '</div>';
+
+  document.getElementById('ief-locbtn').addEventListener('click',function(){
+    startMapPick(i);
+  });
+  document.getElementById('ief-save').addEventListener('click',function(){ saveInlineEdit(i); });
+  document.getElementById('ief-cancel').addEventListener('click',function(){ closeInlineEdit(i); });
+}
+
+function escHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function closeInlineEdit(i){
+  _inlineEditIdx=-1;
+  cancelMapPick();
+  // Re-render the stop expand panel with view content
+  var s=S.stops[i];
+  if(!s) return;
+  var expPanel=document.getElementById('se-'+i);
+  if(!expPanel) return;
+  // Rebuild view content
+  var actsHtml='';
+  if(s.activities&&s.activities.length){
+    s.activities.forEach(function(a,ai){
+      actsHtml+='<div class="exp-act-row">'+
+        '<div class="exp-chk'+(a.done?' done':'')+'" data-i="'+i+'" data-ai="'+ai+'" data-type="act"></div>'+
+        '<span class="exp-lbl'+(a.done?' done':'')+'">'+a.label+'</span></div>';
+    });
+  }
+  var notesHtml='';
+  if(s.notes&&s.notes.length){
+    s.notes.forEach(function(n){
+      notesHtml+='<div class="exp-note-row"><div class="exp-dot"></div><span>'+n+'</span></div>';
+    });
+  }
+  expPanel.innerHTML=
+    '<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-checkbox"></i>活動清單'+
+      '<button class="exp-edit-btn" data-i="'+i+'" style="margin-left:auto"><i class="ti ti-pencil"></i> 編輯細節</button>'+
+    '</div>'+(actsHtml||'<div style="font-size:11px;color:var(--text2);padding:2px 0">（尚無活動）</div>')+'</div>'+
+    (notesHtml?'<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-alert-triangle" style="color:#F9AB00"></i>注意事項</div>'+notesHtml+'</div>':'');
+  // Re-attach checkbox listeners
+  expPanel.querySelectorAll('.exp-chk[data-type="act"]').forEach(function(el){
+    el.addEventListener('click',function(){
+      S.currentStop=parseInt(this.dataset.i);
+      tAct(parseInt(this.dataset.ai));
+    });
+  });
+}
+
+function saveInlineEdit(i){
+  var s=S.stops[i]; if(!s||!s._key) return;
+  var name=(document.getElementById('ief-name')||{}).value;
+  if(!name||!name.trim()){showToast('請輸入景點名稱',1500);return;}
+  name=name.trim();
+  var arrive=(document.getElementById('ief-arrive')||{}).value||'';
+  var depart=(document.getElementById('ief-depart')||{}).value||'';
+  var day=(document.getElementById('ief-day')||{}).value||'';
+  var note=(document.getElementById('ief-note')||{}).value||'';
+  var newLat=parseFloat((document.getElementById('ief-lat')||{}).value)||0;
+  var newLng=parseFloat((document.getElementById('ief-lng')||{}).value)||0;
+
+  function doSaveInline(lat,lng){
+    var path='tripgo/groups/'+S.groupCode+'/stops/'+s._key;
+    window.FB.set(path+'/name',name);
+    window.FB.set(path+'/arrive',arrive.trim());
+    window.FB.set(path+'/depart',depart.trim());
+    window.FB.set(path+'/day',day.trim());
+    window.FB.set(path+'/note',note.trim());
+    if(lat&&lat!==0){window.FB.set(path+'/lat',lat);window.FB.set(path+'/lng',lng);}
+    cancelMapPick();
+    showToast('✅ 已儲存',1500);
+    // Let Firebase onValue re-render stops automatically
+  }
+
+  cancelMapPick();
+  if(newLat!==0){
+    doSaveInline(newLat,newLng);
+  } else {
+    // Auto-locate with group center bias
+    var center=getGroupCenter();
+    if(plSvc&&center){
+      plSvc.textSearch({query:name,location:center,radius:100000},function(results,status){
+        if(status===google.maps.places.PlacesServiceStatus.OK&&results&&results.length>0){
+          var loc=results[0].geometry.location;
+          doSaveInline(loc.lat(),loc.lng());
+          showToast('✅ 已儲存，位置已自動定位',2000);
+        } else doSaveInline(0,0);
+      });
+    } else doSaveInline(0,0);
+  }
+}
+
+// ── Map Pick Mode ──
+function startMapPick(stopIdx){
+  _mapPickStopIdx=stopIdx;
+  document.getElementById('map-pick-banner').classList.add('show');
+  // Scroll map into view
+  var mw=document.getElementById('map-wrap');
+  if(mw) mw.scrollIntoView({behavior:'smooth',block:'start'});
+  // Show pick cursor on map
+  if(map) map.setOptions({draggableCursor:'crosshair'});
+  showToast('點選地圖上的景點或搜尋地名',2500);
+}
+
+function cancelMapPick(){
+  _mapPickStopIdx=-1;
+  document.getElementById('map-pick-banner').classList.remove('show');
+  if(map) map.setOptions({draggableCursor:''});
+}
+
+function applyMapPickResult(lat,lng,name){
+  if(_mapPickStopIdx<0) return;
+  var latInp=document.getElementById('ief-lat');
+  var lngInp=document.getElementById('ief-lng');
+  var nameInp=document.getElementById('ief-name');
+  var btn=document.getElementById('ief-locbtn');
+  if(latInp) latInp.value=lat;
+  if(lngInp) lngInp.value=lng;
+  if(name&&nameInp&&!nameInp.value.trim()) nameInp.value=name;
+  if(btn){ btn.className='exp-ef-locbtn picked'; btn.innerHTML='<i class="ti ti-map-pin-check"></i>✓ 已選定位置'; }
+  cancelMapPick();
+  // Drop preview pin
+  dropStopPin({lat:lat,lng:lng}, name||'選定位置');
+  map.panTo({lat:lat,lng:lng}); map.setZoom(16);
+}
+
 window.addEventListener('load',function(){
+
   // Join screen
   document.getElementById('btn-join').addEventListener('click',function(){goSub('join');});
   document.getElementById('btn-create').addEventListener('click',function(){goSub('create');});
@@ -3075,6 +3303,7 @@ window.addEventListener('load',function(){
 
   // Map controls
   document.getElementById('btn-locate').addEventListener('click',goToMe);
+  document.getElementById('map-pick-cancel').addEventListener('click',cancelMapPick);
   document.getElementById('btn-clear-route').addEventListener('click',clearRoute);
   document.getElementById('btn-pc-close').addEventListener('click',closePc);
   document.getElementById('pca-nav').addEventListener('click',pcNav);
