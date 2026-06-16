@@ -494,6 +494,20 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 #map-pick-banner.show{display:flex}
 #map-pick-cancel{background:rgba(255,255,255,.25);border:none;border-radius:6px;
   padding:4px 10px;color:#fff;font-size:11px;cursor:pointer}
+.stop-arr{touch-action:none;cursor:grab}
+.stop-wrap.dragging{
+  position:relative;z-index:30;
+  box-shadow:0 8px 20px rgba(0,0,0,.22);
+  border-radius:10px;background:#fff;
+  transition:box-shadow .15s;
+}
+.stop-wrap.drop-above{box-shadow:inset 0 3px 0 0 var(--blue);}
+.stop-wrap.drop-below{box-shadow:inset 0 -3px 0 0 var(--blue);}
+@keyframes stopFlash{
+  0%{background:#E8F0FE;}
+  100%{background:#fff;}
+}
+.stop-flash .stop-row{animation:stopFlash 1.6s ease-out;}
 .add-stop-btn{
   display:flex;align-items:center;justify-content:center;gap:6px;
   margin:12px 14px;padding:12px;
@@ -1058,6 +1072,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <div class="pane on" id="pane-itinerary">
         <div id="stop-list"></div>
         <button class="add-stop-btn" id="btn-add-stop"><i class="ti ti-plus"></i> 新增景點</button>
+        <div id="new-stop-panel" style="display:none;margin:0 14px 12px"></div>
         <div class="bud-bar">
           <div class="bud-top"><span>預算使用</span><span id="bud-pct">0%</span></div>
           <div class="bud-track"><div class="bud-fill" id="bud-fill" style="width:0%"></div></div>
@@ -1461,7 +1476,7 @@ window.initMap = function(){
   acSvc = new google.maps.places.AutocompleteService();
   plSvc = new google.maps.places.PlacesService(map);
   map.addListener('click', function(e){
-    if(_mapPickStopIdx>=0){
+    if(_mapPickActive){
       // MAP PICK MODE: capture location for inline edit + also show place info
       if(e.placeId){
         e.stop();
@@ -1630,7 +1645,7 @@ function selectPlace(pid,name){
   document.getElementById('search-inp').value=name||'';
   document.getElementById('search-clear').style.display='block';
   document.getElementById('search-drop').classList.remove('show');
-  if(_mapPickStopIdx>=0){
+  if(_mapPickActive){
     // In pick mode: show place info card AND resolve coordinates to apply
     showPlaceCard(pid);
     plSvc.getDetails({placeId:pid,fields:['name','geometry']},function(place,status){
@@ -1768,18 +1783,12 @@ function pcAddToItinerary(){
   if(!S.currentPlace) return;
   var place=S.currentPlace;
   closePc();
-  openAddStop();
-  setTimeout(function(){
-    if(place.name) document.getElementById('ns-name').value=place.name;
-    if(place.geometry){
-      S_aspLat=place.geometry.location.lat();
-      S_aspLng=place.geometry.location.lng();
-      if(aspMap){ aspMap.panTo(place.geometry.location); aspMap.setZoom(15); aspDropPin(place.geometry.location); }
-      document.getElementById('asp-pname').textContent=place.name||'';
-      document.getElementById('asp-paddr').textContent=(place.formatted_address||'');
-      document.getElementById('asp-place-info').classList.add('show');
-    }
-  },400);
+  var prefill={name:place.name||''};
+  if(place.geometry){
+    prefill.lat=place.geometry.location.lat();
+    prefill.lng=place.geometry.location.lng();
+  }
+  openNewStopForm(prefill);
 }
 
 // ════════════════════════════════
@@ -1815,9 +1824,10 @@ function startApp(code, uid, name, tripName, isOrg){
     renderAvatars(); renderMembers(); renderPayerSelect(); renderLocList();
   });
   FB.onValue('tripgo/groups/'+code+'/stops',function(snap){
-    S.stops=snap.val()?Object.entries(snap.val())
+    var raw=snap.val()?Object.entries(snap.val())
       .sort(function(a,b){return a[0]<b[0]?-1:1;})
       .map(function(e){return Object.assign({_key:e[0]},e[1]);}):[];
+    S.stops=sortStopsForDisplay(raw);
     renderStops();
   });
   var firstMsg=true;
@@ -1839,6 +1849,48 @@ function startApp(code, uid, name, tripName, isOrg){
 // ════════════════════════════════
 // STOPS
 // ════════════════════════════════
+var _scrollToStopKey=null;
+
+// ── Parse "HH:MM" into minutes-since-midnight (null if invalid) ──
+function timeToMinutes(t){
+  if(!t) return null;
+  var m=/^(\d{1,2}):(\d{2})/.exec(String(t).trim());
+  if(!m) return null;
+  return parseInt(m[1],10)*60+parseInt(m[2],10);
+}
+
+// ── Group stops by day-tag, sort each group by time (or by manual .order if set) ──
+function sortStopsForDisplay(raw){
+  var dayOrder=[], groups={};
+  raw.forEach(function(s){
+    var d=s.day||'';
+    if(!(d in groups)){ groups[d]=[]; dayOrder.push(d); }
+    groups[d].push(s);
+  });
+  var result=[];
+  dayOrder.forEach(function(d){
+    var items=groups[d];
+    var hasManualOrder=items.some(function(s){return s.order!=null;});
+    var sorted;
+    if(hasManualOrder){
+      sorted=items.slice().sort(function(a,b){
+        var oa=a.order!=null?a.order:Infinity, ob=b.order!=null?b.order:Infinity;
+        return oa-ob;
+      });
+    } else {
+      sorted=items.slice().sort(function(a,b){
+        var ta=timeToMinutes(a.arrive), tb=timeToMinutes(b.arrive);
+        if(ta==null&&tb==null) return 0;
+        if(ta==null) return 1;
+        if(tb==null) return -1;
+        return ta-tb;
+      });
+    }
+    result=result.concat(sorted);
+  });
+  return result;
+}
+
 function renderStops(){
   var el=document.getElementById('stop-list');
   if(!S.stops.length){
@@ -1889,7 +1941,24 @@ function renderStops(){
   // Event delegation (all events on the list element)
   el.addEventListener('click', onStopListClick, {once:true});
 
-  S.stops.forEach(function(s,i){ attachSwipe(i); attachLongpress(i); });
+  S.stops.forEach(function(s,i){ attachSwipe(i); attachLongpress(i); attachDragHandle(i); });
+
+  // ── Scroll back to the stop that was just updated ──
+  if(_scrollToStopKey){
+    var targetKey=_scrollToStopKey;
+    _scrollToStopKey=null;
+    var idx=S.stops.findIndex(function(s){ return s._key===targetKey; });
+    if(idx>=0){
+      setTimeout(function(){
+        var row=document.getElementById('sw-'+idx);
+        if(row){
+          row.scrollIntoView({behavior:'smooth',block:'center'});
+          row.classList.add('stop-flash');
+          setTimeout(function(){ row.classList.remove('stop-flash'); },1700);
+        }
+      },80);
+    }
+  }
 }
 
 function onStopListClick(e){
@@ -1905,9 +1974,12 @@ function onStopListClick(e){
   var nav=e.target.closest('.stop-nav');
   if(nav){ var i=parseInt(nav.id.replace('sn-','')); navStop(i); return; }
 
-  // Arrow -> detail
+  // Arrow -> detail (unless a drag just happened on this arrow)
   var arr=e.target.closest('.stop-arr');
-  if(arr){ var i=parseInt(arr.id.replace('sa-','')); openStopDetail(i); return; }
+  if(arr){
+    if(_dragJustHappened){ _dragJustHappened=false; return; }
+    var i=parseInt(arr.id.replace('sa-','')); openStopDetail(i); return;
+  }
 
   // Stop text -> map + pin
   var txt=e.target.closest('.stop-txt');
@@ -2090,6 +2162,132 @@ function attachLongpress(i){
   row.addEventListener('mouseleave',cancel);
 }
 
+// ── Drag-to-reorder: long-press the chevron arrow (iOS Weather style) ──
+var _dragJustHappened=false;
+
+var _rowDrag=null; // shared drag state (single instance, not per-row)
+
+function beginRowDrag(i, clientY){
+  var s=S.stops[i]; if(!s) return;
+  var dayLabel=s.day||'';
+  var groupIdxs=[];
+  S.stops.forEach(function(st,j){ if((st.day||'')===dayLabel) groupIdxs.push(j); });
+  if(groupIdxs.length<2) return; // nothing to reorder against
+
+  var rowEl=document.getElementById('sw-'+i);
+  if(!rowEl) return;
+  _rowDrag={ idx:i, groupIdxs:groupIdxs, startY:clientY, insertBeforeIdx:i, afterIdx:-1, rowEl:rowEl };
+  rowEl.classList.add('dragging');
+  if(navigator.vibrate) navigator.vibrate(8);
+}
+
+function moveRowDrag(clientY){
+  var drag=_rowDrag; if(!drag) return;
+  var dy=clientY-drag.startY;
+  drag.rowEl.style.transform='translateY('+dy+'px)';
+
+  drag.groupIdxs.forEach(function(j){
+    var el=document.getElementById('sw-'+j);
+    if(el) el.classList.remove('drop-above','drop-below');
+  });
+
+  var nearestIdx=drag.idx, nearestDist=Infinity, placeAbove=true;
+  drag.groupIdxs.forEach(function(j){
+    if(j===drag.idx) return;
+    var el=document.getElementById('sw-'+j);
+    if(!el) return;
+    var rect=el.getBoundingClientRect();
+    var mid=rect.top+rect.height/2;
+    var dist=Math.abs(clientY-mid);
+    if(dist<nearestDist){ nearestDist=dist; nearestIdx=j; placeAbove=(clientY<mid); }
+  });
+
+  if(nearestIdx!==drag.idx){
+    var el=document.getElementById('sw-'+nearestIdx);
+    if(el) el.classList.add(placeAbove?'drop-above':'drop-below');
+    drag.insertBeforeIdx = placeAbove ? nearestIdx : -1;
+    drag.afterIdx = placeAbove ? -1 : nearestIdx;
+  } else {
+    drag.insertBeforeIdx=drag.idx; drag.afterIdx=-1;
+  }
+}
+
+function endRowDrag(){
+  var drag=_rowDrag; if(!drag) return;
+  _rowDrag=null;
+
+  var groupIdxs=drag.groupIdxs;
+  drag.rowEl.classList.remove('dragging');
+  drag.rowEl.style.transform='';
+  groupIdxs.forEach(function(j){
+    var el=document.getElementById('sw-'+j);
+    if(el) el.classList.remove('drop-above','drop-below');
+  });
+
+  var groupStops=groupIdxs.map(function(j){return S.stops[j];});
+  var draggedPos=groupIdxs.indexOf(drag.idx);
+  var moved=groupStops.splice(draggedPos,1)[0];
+
+  var insertPos;
+  if(drag.insertBeforeIdx>=0 && drag.insertBeforeIdx!==drag.idx){
+    insertPos=groupIdxs.indexOf(drag.insertBeforeIdx);
+    if(insertPos>draggedPos) insertPos--;
+  } else if(drag.afterIdx>=0){
+    insertPos=groupIdxs.indexOf(drag.afterIdx);
+    if(insertPos>draggedPos) insertPos--;
+    insertPos+=1;
+  } else {
+    insertPos=draggedPos;
+  }
+  insertPos=Math.max(0,Math.min(insertPos,groupStops.length));
+  groupStops.splice(insertPos,0,moved);
+
+  var changed=false;
+  groupStops.forEach(function(s,k){
+    var ord=(k+1)*10;
+    if(s.order!==ord){ changed=true; window.FB.set('tripgo/groups/'+S.groupCode+'/stops/'+s._key+'/order',ord); }
+  });
+  if(changed){ _scrollToStopKey=moved._key; showToast('✅ 順序已更新',1300); }
+  _dragJustHappened=true;
+}
+
+// ── Per-row: only attach the long-press timer + light touch tracking to the arrow icon ──
+// Heavy lifting (move/end) is delegated to the single shared document-level listener below.
+var _dragJustHappened=false;
+
+function attachDragHandle(i){
+  var arrow=document.getElementById('sa-'+i); if(!arrow) return;
+  var holdTimer=null;
+  function clearHold(){ clearTimeout(holdTimer); holdTimer=null; }
+
+  arrow.addEventListener('touchstart',function(e){
+    var y=e.touches[0].clientY;
+    holdTimer=setTimeout(function(){ beginRowDrag(i,y); },450);
+  },{passive:true});
+  arrow.addEventListener('touchmove',function(e){
+    if(_rowDrag&&_rowDrag.idx===i){ e.preventDefault(); } // block page scroll; document listener handles the actual move
+    else if(!_rowDrag) clearHold();
+  },{passive:false});
+  arrow.addEventListener('touchend',function(){ clearHold(); },{passive:true});
+
+  arrow.addEventListener('mousedown',function(e){
+    var y=e.clientY;
+    holdTimer=setTimeout(function(){ beginRowDrag(i,y); },450);
+  });
+  arrow.addEventListener('mouseup',function(){ clearHold(); });
+}
+
+// ── Single shared document-level listener (registered once, not per row/render) ──
+var _rowDragListenersInit=false;
+function initRowDragListeners(){
+  if(_rowDragListenersInit) return;
+  _rowDragListenersInit=true;
+  document.addEventListener('touchmove',function(e){ if(_rowDrag) moveRowDrag(e.touches[0].clientY); },{passive:false});
+  document.addEventListener('touchend',function(){ if(_rowDrag) endRowDrag(); },{passive:true});
+  document.addEventListener('mousemove',function(e){ if(_rowDrag) moveRowDrag(e.clientY); });
+  document.addEventListener('mouseup',function(){ if(_rowDrag) endRowDrag(); });
+}
+
 function toggleSel(i){
   if(MS_SET.has(i)) MS_SET.delete(i); else MS_SET.add(i);
   var cb=document.getElementById('cb-'+i);
@@ -2184,6 +2382,7 @@ function saveEditStop(){
   var s=S.stops[S.currentStop]; if(!s||!s._key) return;
   var name=document.getElementById('det-e-name').value.trim();
   if(!name){ showToast('請輸入景點名稱',1500); return; }
+  _scrollToStopKey=s._key;
   var path='tripgo/groups/'+S.groupCode+'/stops/'+s._key;
   var newLat=parseFloat(document.getElementById('det-e-lat').value)||0;
   var newLng=parseFloat(document.getElementById('det-e-lng').value)||0;
@@ -2263,7 +2462,107 @@ function editBudget(){
   document.getElementById('det-bud').textContent=val;
 }
 
-// ── Add Stop ──
+// ── New Stop (inline, expands below the 新增景點 button) ──
+function openNewStopForm(prefill){
+  showPane('itinerary'); // ensure itinerary tab is visible (e.g. when triggered from map's 加景點)
+  // Close any open inline-edit first
+  if(_inlineEditIdx>=0){ closeInlineEdit(_inlineEditIdx); }
+  cancelMapPick();
+  var panel=document.getElementById('new-stop-panel');
+  var btn=document.getElementById('btn-add-stop');
+  if(btn) btn.style.display='none';
+  panel.style.display='block';
+  renderNewStopForm(prefill);
+  setTimeout(function(){ panel.scrollIntoView({behavior:'smooth',block:'center'}); },80);
+}
+
+function closeNewStopForm(){
+  cancelMapPick();
+  var panel=document.getElementById('new-stop-panel');
+  panel.style.display='none';
+  panel.innerHTML='';
+  var btn=document.getElementById('btn-add-stop');
+  if(btn) btn.style.display='flex';
+}
+
+function renderNewStopForm(prefill){
+  prefill=prefill||{};
+  var panel=document.getElementById('new-stop-panel');
+  panel.innerHTML=
+    '<div class="exp-edit-form">'+
+      '<label class="exp-ef-label">景點名稱 <span style="font-weight:400;color:var(--text2);text-transform:none">（點此在地圖上定位）</span></label>'+
+      '<input class="exp-ef-inp" id="ief-name" value="'+escHtml(prefill.name||'')+'" placeholder="輸入景點名稱或點此在地圖選取"/>'+
+      '<input type="hidden" id="ief-lat" value="'+(prefill.lat||0)+'"/>'+
+      '<input type="hidden" id="ief-lng" value="'+(prefill.lng||0)+'"/>'+
+      '<div class="exp-ef-row">'+
+        '<div class="exp-ef-field"><label class="exp-ef-label">抵達時間</label><input class="exp-ef-inp" id="ief-arrive" placeholder="09:00"/></div>'+
+        '<div class="exp-ef-field"><label class="exp-ef-label">離開時間</label><input class="exp-ef-inp" id="ief-depart" placeholder="12:00"/></div>'+
+      '</div>'+
+      '<label class="exp-ef-label">天數標籤</label>'+
+      '<input class="exp-ef-inp" id="ief-day" placeholder="Day 1"/>'+
+      '<label class="exp-ef-label">備註</label>'+
+      '<input class="exp-ef-inp" id="ief-note" placeholder="（選填）"/>'+
+      '<div>'+
+        '<button class="exp-ef-save" id="ief-save">✓ 新增景點</button>'+
+        '<button class="exp-ef-cancel" id="ief-cancel">取消</button>'+
+      '</div>'+
+    '</div>';
+
+  document.getElementById('ief-name').addEventListener('focus',function(){
+    startMapPick(null, true); // autoNav=true: if prefill already has coords, jump there
+  });
+  document.getElementById('ief-save').addEventListener('click', saveNewStop);
+  document.getElementById('ief-cancel').addEventListener('click', closeNewStopForm);
+
+  // If prefilled with coords (e.g. from map's 加景點 button), drop a pin right away
+  if(prefill.lat&&prefill.lat!==0&&map){
+    map.panTo({lat:prefill.lat,lng:prefill.lng}); map.setZoom(16);
+    dropStopPin({lat:prefill.lat,lng:prefill.lng}, prefill.name||'');
+  }
+}
+
+function saveNewStop(){
+  var name=(document.getElementById('ief-name')||{}).value;
+  if(!name||!name.trim()){ showToast('請輸入景點名稱',1500); return; }
+  name=name.trim();
+  var arrive=(document.getElementById('ief-arrive')||{}).value||'';
+  var depart=(document.getElementById('ief-depart')||{}).value||'';
+  var day=(document.getElementById('ief-day')||{}).value||'';
+  var note=(document.getElementById('ief-note')||{}).value||'';
+  var lat=parseFloat((document.getElementById('ief-lat')||{}).value)||0;
+  var lng=parseFloat((document.getElementById('ief-lng')||{}).value)||0;
+
+  function doCreate(lat,lng){
+    var pushRef=window.FB.push('tripgo/groups/'+S.groupCode+'/stops',{
+      name:name, arrive:arrive.trim(), depart:depart.trim(),
+      day:day.trim(), note:note.trim(),
+      lat:lat||0, lng:lng||0,
+      activities:[], notes:[], budget:'NT$ 0', createdAt:Date.now()
+    });
+    if(pushRef&&pushRef.key) _scrollToStopKey=pushRef.key;
+    cancelMapPick();
+    closeNewStopForm();
+    showToast('✅ 景點已新增',1500);
+  }
+
+  cancelMapPick();
+  if(lat!==0){
+    doCreate(lat,lng);
+  } else {
+    var center=getGroupCenter();
+    if(plSvc&&center){
+      plSvc.textSearch({query:name,location:center,radius:100000},function(results,status){
+        if(status===google.maps.places.PlacesServiceStatus.OK&&results&&results.length>0){
+          var loc=results[0].geometry.location;
+          doCreate(loc.lat(),loc.lng());
+          showToast('✅ 已新增，位置已自動定位',2000);
+        } else doCreate(0,0);
+      });
+    } else doCreate(0,0);
+  }
+}
+
+// ── Add Stop (legacy full-screen, kept for reference but unused) ──
 var S_aspLat=0, S_aspLng=0;
 function openAddStop(){
   document.getElementById('add-stop-screen').classList.add('show');
@@ -3226,7 +3525,7 @@ function dropDetPin(pos){
 // ════════════════════════════════
 // INLINE EDIT + MAP PICK MODE
 // ════════════════════════════════
-var _mapPickStopIdx=-1, _inlineEditIdx=-1;
+var _mapPickStopIdx=-1, _inlineEditIdx=-1, _mapPickActive=false;
 
 function openInlineEdit(i){
   var s=S.stops[i]; if(!s) return;
@@ -3405,6 +3704,7 @@ function saveInlineEdit(i){
   var name=(document.getElementById('ief-name')||{}).value;
   if(!name||!name.trim()){showToast('請輸入景點名稱',1500);return;}
   name=name.trim();
+  _scrollToStopKey=s._key;
   var arrive=(document.getElementById('ief-arrive')||{}).value||'';
   var depart=(document.getElementById('ief-depart')||{}).value||'';
   var day=(document.getElementById('ief-day')||{}).value||'';
@@ -3454,7 +3754,8 @@ function saveInlineEdit(i){
 
 // ── Map Pick Mode ──
 function startMapPick(stopIdx, autoNav){
-  _mapPickStopIdx=stopIdx;
+  _mapPickStopIdx=(stopIdx==null?-1:stopIdx);
+  _mapPickActive=true;
   document.getElementById('map-pick-banner').classList.add('show');
   // Scroll map into view
   var mw=document.getElementById('map-wrap');
@@ -3481,12 +3782,13 @@ function startMapPick(stopIdx, autoNav){
 
 function cancelMapPick(){
   _mapPickStopIdx=-1;
+  _mapPickActive=false;
   document.getElementById('map-pick-banner').classList.remove('show');
   if(map) map.setOptions({draggableCursor:''});
 }
 
 function applyMapPickResult(lat,lng,name){
-  if(_mapPickStopIdx<0) return;
+  if(!_mapPickActive) return;
   var latInp=document.getElementById('ief-lat');
   var lngInp=document.getElementById('ief-lng');
   var nameInp=document.getElementById('ief-name');
@@ -3529,6 +3831,7 @@ window.addEventListener('load',function(){
   // Map controls
   document.getElementById('btn-locate').addEventListener('click',goToMe);
   document.getElementById('map-pick-cancel').addEventListener('click',cancelMapPick);
+  initRowDragListeners();
   document.getElementById('btn-clear-route').addEventListener('click',clearRoute);
   document.getElementById('btn-pc-close').addEventListener('click',closePc);
   document.getElementById('pca-nav').addEventListener('click',pcNav);
@@ -3549,7 +3852,7 @@ window.addEventListener('load',function(){
   });
 
   // Itinerary
-  document.getElementById('btn-add-stop').addEventListener('click',openAddStop);
+  document.getElementById('btn-add-stop').addEventListener('click',openNewStopForm);
   document.getElementById('btn-asp-cancel').addEventListener('click',closeAddStop);
   document.getElementById('btn-asp-save').addEventListener('click',saveStop);
   document.getElementById('btn-det-back').addEventListener('click',closeDetail);
