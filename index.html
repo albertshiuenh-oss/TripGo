@@ -331,15 +331,22 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 
 /* ── Divider ── */
 .divider{
-  height:5px;background:var(--bg2);
+  height:10px;background:var(--bg2);
   cursor:row-resize;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;
+  transition:height .15s;
 }
+.divider:hover,.divider.active{height:20px}
 @media(orientation:landscape){
-  .divider{width:5px;height:auto;cursor:col-resize}
+  .divider{width:10px;height:auto;cursor:col-resize}
+  .divider:hover,.divider.active{width:20px;height:auto}
 }
 .divider-dot{
   width:28px;height:3px;background:var(--border);border-radius:2px;
+  transition:width .15s,height .15s;
+}
+.divider:hover .divider-dot,.divider.active .divider-dot{
+  width:56px;height:6px;
 }
 
 /* ── Right Panel ── */
@@ -417,7 +424,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 .exp-section{margin-bottom:10px}
 .exp-sec-title{font-size:10px;font-weight:700;color:var(--text2);
   text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;
-  display:flex;align-items:center;gap:6px;}
+  display:flex;align-items:center;gap:6px;width:100%;}
+.exp-sec-title .exp-edit-btn{margin-left:auto!important}
 .exp-act-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px}
 .exp-chk{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border);
   cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
@@ -425,7 +433,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 .exp-chk.done::after{content:'✓';color:#fff;font-size:9px;}
 .exp-lbl{flex:1;color:var(--text);}
 .exp-lbl.done{text-decoration:line-through;color:var(--text2);}
-.exp-note-row{display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;font-size:12px;color:var(--text2);}
+.exp-note-row{display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;font-size:12px;color:var(--red);}
 .exp-dot{width:5px;height:5px;border-radius:50%;background:var(--blue);margin-top:5px;flex-shrink:0;}
 .exp-edit-btn{
   font-size:11px;padding:5px 12px;border-radius:8px;border:1px solid var(--blue);
@@ -493,7 +501,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 }
 .note-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px}
 .note-dot{width:6px;height:6px;border-radius:50%;background:var(--blue);margin-top:6px;flex-shrink:0}
-.note-txt{flex:1;font-size:13px;color:var(--text);line-height:1.4}
+.note-txt{flex:1;font-size:13px;color:var(--red);line-height:1.4}
 .add-row{display:flex;gap:6px;margin-top:6px}
 .add-inp{
   flex:1;padding:9px 12px;border:1.5px solid var(--border);
@@ -936,6 +944,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
     <span class="tb-logo" id="tb-logo"><i class="ti ti-map-2"></i> TripGo</span>
     <span class="tb-trip" id="tb-trip">旅遊群組</span>
     <span id="net-status" class="online"><i class="ti ti-wifi" style="font-size:11px"></i><span id="net-label">線上</span></span>
+    <span style="flex:1"></span>
+    <span id="tb-myname" style="font-size:11px;color:var(--text2);font-weight:600;flex-shrink:0;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
 
   </div>
   <div class="main">
@@ -1019,7 +1029,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
               </div>
             </div>
             <div class="sec"><div class="sec-t"><i class="ti ti-checkbox"></i>活動清單</div><div id="act-list"></div><div class="add-row"><input class="add-inp" id="act-inp" placeholder="新增活動…"/><button class="add-ok" id="btn-add-act"><i class="ti ti-plus"></i></button></div></div>
-            <div class="sec"><div class="sec-t"><i class="ti ti-alert-triangle"></i>注意事項</div><div id="note-list"></div><div class="add-row"><input class="add-inp" id="note-inp" placeholder="新增注意事項…"/><button class="add-ok" id="btn-add-note"><i class="ti ti-plus"></i></button></div></div>
+            <div class="sec"><div class="sec-t"><i class="ti ti-alert-triangle" style="color:#F9AB00"></i>注意事項</div><div id="note-list"></div><div class="add-row"><input class="add-inp" id="note-inp" placeholder="新增注意事項…"/><button class="add-ok" id="btn-add-note"><i class="ti ti-plus"></i></button></div></div>
             <div class="sec"><div class="sec-t"><i class="ti ti-coin"></i>費用預估</div><div class="bud-row"><span style="font-size:12px;color:var(--text2)">每人預估</span><div style="display:flex;align-items:center;gap:8px"><span class="bud-val" id="det-bud"></span><button class="bud-edit" id="btn-edit-bud">修改</button></div></div></div>
           </div>
         </div>
@@ -1134,9 +1144,16 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 
 <div class="modal" id="M-members"><div class="modal-box">
   <div class="m-handle"></div>
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
     <div class="m-title" style="margin-bottom:0">👥 成員管理 <span style="font-size:11px;color:var(--text2)" id="mem-count"></span></div>
     <button id="btn-members-close" style="background:var(--bg2);border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:14px;color:var(--gray)"><i class="ti ti-x"></i></button>
+  </div>
+  <div id="rename-trip-row" style="display:none;margin-bottom:12px;padding:10px 12px;background:var(--bg2);border-radius:10px">
+    <div style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">✏️ 旅遊名稱</div>
+    <div style="display:flex;gap:6px">
+      <input id="rename-inp" class="m-inp" style="flex:1;padding:8px 12px;font-size:13px" placeholder="輸入新旅遊名稱"/>
+      <button id="btn-rename-ok" style="padding:8px 14px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">更新</button>
+    </div>
   </div>
   <div id="mem-list"></div>
   <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
@@ -1529,6 +1546,27 @@ function selectPlace(pid,name){
 
 // ── Place Card ──
 var _pcData={};
+function _applyPlaceCard(place){
+  S.currentPlace=place;
+  _pcData={phone:place.formatted_phone_number||'',website:place.website||''};
+  document.getElementById('pc-name').textContent=place.name||'';
+  document.getElementById('pc-type').textContent=place.types?(place.types[0]||'').replace(/_/g,' '):'';
+  var ratingHtml='';
+  if(place.rating){
+    ratingHtml='★ '+place.rating;
+    if(place.opening_hours){
+      var open=place.opening_hours.isOpen();
+      ratingHtml+=' · <span style="color:'+(open?'var(--green)':'var(--red)')+'">'+( open?'營業中':'休息中')+'</span>';
+    }
+  }
+  document.getElementById('pc-rating').innerHTML=ratingHtml;
+  var info='';
+  if(place.formatted_address) info+='<div class="pc-info-row"><i class="ti ti-map-pin"></i><span>'+place.formatted_address+'</span></div>';
+  if(place.formatted_phone_number) info+='<div class="pc-info-row"><i class="ti ti-phone"></i><span>'+place.formatted_phone_number+'</span></div>';
+  document.getElementById('pc-info').innerHTML=info;
+  document.getElementById('place-card').classList.add('show');
+}
+// Full showPlaceCard - moves map to place location (for search results)
 function showPlaceCard(pid){
   if(!plSvc) return;
   S.currentPlaceId=pid;
@@ -1536,28 +1574,22 @@ function showPlaceCard(pid){
     fields:['name','geometry','rating','formatted_phone_number','website','types','opening_hours','formatted_address']},
     function(place,status){
       if(status!==google.maps.places.PlacesServiceStatus.OK) return;
-      S.currentPlace=place;
-      _pcData={phone:place.formatted_phone_number||'',website:place.website||''};
-      document.getElementById('pc-name').textContent=place.name||'';
-      document.getElementById('pc-type').textContent=place.types?(place.types[0]||'').replace(/_/g,' '):'';
-      var ratingHtml='';
-      if(place.rating){
-        ratingHtml='★ '+place.rating;
-        if(place.opening_hours){
-          var open=place.opening_hours.isOpen();
-          ratingHtml+=' · <span style="color:'+(open?'var(--green)':'var(--red)')+'">'+( open?'營業中':'休息中')+'</span>';
-        }
-      }
-      document.getElementById('pc-rating').innerHTML=ratingHtml;
-      var info='';
-      if(place.formatted_address) info+='<div class="pc-info-row"><i class="ti ti-map-pin"></i><span>'+place.formatted_address+'</span></div>';
-      if(place.formatted_phone_number) info+='<div class="pc-info-row"><i class="ti ti-phone"></i><span>'+place.formatted_phone_number+'</span></div>';
-      document.getElementById('pc-info').innerHTML=info;
-      document.getElementById('place-card').classList.add('show');
+      _applyPlaceCard(place);
       if(map&&place.geometry){
         map.panTo(place.geometry.location);
         if(map.getZoom()<14) map.setZoom(14);
       }
+    });
+}
+// No-move variant - shows card WITHOUT repositioning map (for stop taps with stored coords)
+function showPlaceCardFixed(pid){
+  if(!plSvc) return;
+  S.currentPlaceId=pid;
+  plSvc.getDetails({placeId:pid,
+    fields:['name','geometry','rating','formatted_phone_number','website','types','opening_hours','formatted_address']},
+    function(place,status){
+      if(status!==google.maps.places.PlacesServiceStatus.OK) return;
+      _applyPlaceCard(place); // No map.panTo - position already set by tapStop
     });
 }
 function closePc(){ document.getElementById('place-card').classList.remove('show'); S.currentPlace=null; }
@@ -1683,9 +1715,10 @@ function renderStops(){
         ) +
       '</div>' +
       '<div class="stop-expand" id="se-'+i+'">' +
-        (actsHtml?'<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-checkbox" aria-hidden="true"></i>活動清單</div>'+actsHtml+'</div>':'') +
-        (notesHtml?'<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-alert-triangle" aria-hidden="true"></i>注意事項</div>'+notesHtml+'</div>':'') +
-        '<button class="exp-edit-btn" data-i="'+i+'"><i class="ti ti-pencil" aria-hidden="true"></i> 編輯細節</button>' +
+        '<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-checkbox" aria-hidden="true"></i>活動清單<button class="exp-edit-btn" data-i="'+i+'" style="margin-left:auto"><i class="ti ti-pencil" aria-hidden="true"></i> 編輯細節</button></div>'+(actsHtml||'<div style="font-size:11px;color:var(--text2);padding:2px 0">（尚無活動）</div>')+'</div>' +
+        (notesHtml?'<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-alert-triangle" style="color:#F9AB00" aria-hidden="true"></i>注意事項</div>'+notesHtml+'</div>':'') +
+      (s.note?'<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-notes" aria-hidden="true"></i>備註</div><div style="font-size:12px;color:var(--text);line-height:1.5;padding:2px 0">'+s.note+'</div></div>':'') +
+        '' +  // edit button moved to act-section header
       '</div>' +
     '</div>';
   });
@@ -1784,11 +1817,11 @@ function tapStop(i){
       icon:{url:pinUrl, scaledSize:new google.maps.Size(22,40), anchor:new google.maps.Point(11,40)},
       title:s.name
     });
-    // Also try to show place card
+    // Show place card info WITHOUT moving the map (pin already at correct location)
     if(plSvc){
-      plSvc.textSearch({query:s.name,location:{lat:lat,lng:lng},radius:300},function(results,status){
+      plSvc.textSearch({query:s.name,location:{lat:lat,lng:lng},radius:500},function(results,status){
         if(status===google.maps.places.PlacesServiceStatus.OK&&results&&results.length>0)
-          showPlaceCard(results[0].place_id);
+          showPlaceCardFixed(results[0].place_id);
         else showSimplePc(s);
       });
     }
@@ -2212,12 +2245,15 @@ function renderMembers(){
   var html='';
   S.members.forEach(function(m,i){
     var isOrg=m.role==='organizer';
+    var isSelf=m.id===S.myUid;
+    var canDelete=S.isOrg||isSelf; // organizer can delete anyone; others only self
+    var delLabel=isSelf?'刪除自己':'移除';
     html+='<div class="mem-row">'+
       '<div class="mem-av av'+(i%7)+'">'+m.name.substring(0,2).toUpperCase()+'</div>'+
-      '<div style="flex:1"><div class="mem-nm">'+(isOrg?'👑 ':'')+m.name+'</div><div class="mem-role">'+(isOrg?'組織者':'團員')+'</div></div>'+
+      '<div style="flex:1"><div class="mem-nm">'+(isOrg?'👑 ':'')+m.name+(isSelf?' <span style="font-size:9px;color:var(--blue);background:#E8F0FE;border-radius:4px;padding:1px 5px">我</span>':'')+'</div><div class="mem-role">'+(isOrg?'組織者':'團員')+'</div></div>'+
       '<div class="mem-acts">'+
-        '<button class="mem-org-btn'+(isOrg?' on':'')+'" data-action="setorg" data-mid="'+m.id+'">'+(isOrg?'✓ 組織者':'設組織者')+'</button>'+
-        '<button class="mem-del-btn" data-action="delmember" data-mid="'+m.id+'">移除</button>'+
+        (S.isOrg?'<button class="mem-org-btn'+(isOrg?' on':'')+'" data-action="setorg" data-mid="'+m.id+'">'+(isOrg?'✓ 組織者':'設組織者')+'</button>':'')+
+        (canDelete?'<button class="mem-del-btn" data-action="delmember" data-mid="'+m.id+'">'+delLabel+'</button>':'')+
       '</div></div>';
   });
   el.innerHTML=html;
@@ -2754,9 +2790,9 @@ function initDivider(){
   div.addEventListener('mousedown',function(e){onStart(portrait()?e.clientY:e.clientX);});
   document.addEventListener('mousemove',function(e){onMove(portrait()?e.clientY:e.clientX);});
   document.addEventListener('mouseup',onEnd);
-  div.addEventListener('touchstart',function(e){onStart(portrait()?e.touches[0].clientY:e.touches[0].clientX);},{passive:true});
+  div.addEventListener('touchstart',function(e){div.classList.add('active');onStart(portrait()?e.touches[0].clientY:e.touches[0].clientX);},{passive:true});
   document.addEventListener('touchmove',function(e){onMove(portrait()?e.touches[0].clientY:e.touches[0].clientX);},{passive:true});
-  document.addEventListener('touchend',onEnd);
+  document.addEventListener('touchend',function(){div.classList.remove('active');onEnd();});
 }
 
 // ════════════════════════════════
@@ -2773,7 +2809,14 @@ window.addEventListener('load',function(){
   document.addEventListener('click',function(){document.getElementById('js-gear-menu').classList.remove('show');});
 
   // Main app topbar
-  document.getElementById('btn-members').addEventListener('click',function(){openModal('M-members');});
+  document.getElementById('btn-members').addEventListener('click',function(){
+    openModal('M-members');
+    // Show rename row only for organizer
+    var row=document.getElementById('rename-trip-row');
+    if(row){ row.style.display=S.isOrg?'block':'none'; }
+    var inp=document.getElementById('rename-inp');
+    if(inp) inp.value=document.getElementById('tb-trip').textContent||'';
+  });
   document.getElementById('btn-invite').addEventListener('click',function(){openModal('M-invite');});
   document.getElementById('tb-trip').addEventListener('click',openTripSwitcher);
   document.getElementById('btn-tsw-close').addEventListener('click',closeTripSwitcher);
@@ -2843,6 +2886,15 @@ window.addEventListener('load',function(){
   document.getElementById('btn-add-member').addEventListener('click',addMember);
   document.getElementById('btn-admin-close').addEventListener('click',closeAdminPanel);
   document.getElementById('btn-members-close').addEventListener('click',function(){closeModal('M-members');});
+  document.getElementById('btn-rename-ok').addEventListener('click',function(){
+    var v=document.getElementById('rename-inp').value.trim();
+    if(!v){showToast('請輸入旅遊名稱',1500);return;}
+    window.FB.set('tripgo/groups/'+S.groupCode+'/tripName',v);
+    document.getElementById('tb-trip').textContent=v;
+    updateStoredTrip(S.groupCode,S.myUid,S.myName,v,S.isOrg);
+    showToast('✅ 旅遊名稱已更新',2000);
+    closeModal('M-members');
+  });
   ['M-members','M-invite','M-expense','M-seg-expense'].forEach(function(id){
     document.getElementById(id).addEventListener('click',function(e){ if(e.target===this) closeModal(id); });
   });
