@@ -483,10 +483,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .exp-ef-row .exp-ef-field{flex:1}
 .exp-ef-save{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-right:6px}
 .exp-ef-cancel{background:var(--bg2);color:var(--text2);border:none;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer}
-.exp-ef-locbtn{width:100%;padding:8px;background:#E8F0FE;border:1.5px dashed var(--blue);border-radius:8px;
-  color:var(--blue);font-size:12px;font-weight:600;cursor:pointer;margin-bottom:8px;
-  display:flex;align-items:center;justify-content:center;gap:6px}
-.exp-ef-locbtn.picked{background:#E6F4EA;border-color:var(--green);color:var(--green)}
+/* exp-ef-locbtn removed: name field itself triggers map pick now */
 /* Map pick mode banner */
 #map-pick-banner{
   display:none;position:absolute;bottom:0;left:0;right:0;z-index:10;
@@ -1465,9 +1462,10 @@ window.initMap = function(){
   plSvc = new google.maps.places.PlacesService(map);
   map.addListener('click', function(e){
     if(_mapPickStopIdx>=0){
-      // MAP PICK MODE: capture location for inline edit
+      // MAP PICK MODE: capture location for inline edit + also show place info
       if(e.placeId){
         e.stop();
+        showPlaceCard(e.placeId); // shows full info card (rating, address, phone…)
         plSvc.getDetails({placeId:e.placeId,fields:['name','geometry']},function(place,status){
           if(status===google.maps.places.PlacesServiceStatus.OK){
             applyMapPickResult(place.geometry.location.lat(),place.geometry.location.lng(),place.name||'');
@@ -1633,7 +1631,8 @@ function selectPlace(pid,name){
   document.getElementById('search-clear').style.display='block';
   document.getElementById('search-drop').classList.remove('show');
   if(_mapPickStopIdx>=0){
-    // In pick mode: resolve coordinates and apply
+    // In pick mode: show place info card AND resolve coordinates to apply
+    showPlaceCard(pid);
     plSvc.getDetails({placeId:pid,fields:['name','geometry']},function(place,status){
       if(status===google.maps.places.PlacesServiceStatus.OK){
         applyMapPickResult(place.geometry.location.lat(),place.geometry.location.lng(),place.name||name||'');
@@ -3187,6 +3186,26 @@ function openInlineEdit(i){
   }
 }
 
+function renderActsEditable(s){
+  var html='';
+  (s.activities||[]).forEach(function(a,ai){
+    html+='<div class="exp-act-row">'+
+      '<div class="exp-chk'+(a.done?' done':'')+'" data-ai="'+ai+'" data-type="ief-act"></div>'+
+      '<span class="exp-lbl'+(a.done?' done':'')+'">'+a.label+'</span>'+
+      '<button class="act-del" data-ai="'+ai+'" data-type="ief-act-del" style="margin-left:auto"><i class="ti ti-x"></i></button>'+
+    '</div>';
+  });
+  return html;
+}
+function renderNotesEditable(s){
+  var html='';
+  (s.notes||[]).forEach(function(n,ni){
+    html+='<div class="exp-note-row"><div class="exp-dot"></div><span style="flex:1">'+n+'</span>'+
+      '<button class="note-del" data-ni="'+ni+'" data-type="ief-note-del"><i class="ti ti-x"></i></button></div>';
+  });
+  return html;
+}
+
 function renderInlineEditForm(i){
   var s=S.stops[i]; if(!s) return;
   var expPanel=document.getElementById('se-'+i);
@@ -3196,12 +3215,8 @@ function renderInlineEditForm(i){
 
   expPanel.innerHTML=
     '<div class="exp-edit-form">'+
-      '<label class="exp-ef-label">景點名稱</label>'+
+      '<label class="exp-ef-label">景點名稱 <span style="font-weight:400;color:var(--text2);text-transform:none">（點此在地圖上定位）</span></label>'+
       '<input class="exp-ef-inp" id="ief-name" value="'+escHtml(s.name||'')+'"/>'+
-      '<button class="exp-ef-locbtn'+(locPicked?' picked':'')+'" id="ief-locbtn">'+
-        '<i class="ti ti-map-pin'+(locPicked?'-check':'')+'"></i>'+
-        (locPicked?'✓ 已有座標，點此重新選取':'📍 在地圖選取精確位置')+
-      '</button>'+
       '<input type="hidden" id="ief-lat" value="'+(s.lat||0)+'"/>'+
       '<input type="hidden" id="ief-lng" value="'+(s.lng||0)+'"/>'+
       '<div class="exp-ef-row">'+
@@ -3212,17 +3227,78 @@ function renderInlineEditForm(i){
       '<input class="exp-ef-inp" id="ief-day" value="'+escHtml(s.day||'')+'" placeholder="Day 1"/>'+
       '<label class="exp-ef-label">備註</label>'+
       '<input class="exp-ef-inp" id="ief-note" value="'+escHtml(s.note||'')+'" placeholder="（選填）"/>'+
+
+      '<label class="exp-ef-label" style="margin-top:6px"><i class="ti ti-checkbox"></i> 活動清單</label>'+
+      '<div id="ief-act-list">'+renderActsEditable(s)+'</div>'+
+      '<div class="add-row" style="margin-bottom:10px"><input class="add-inp" id="ief-act-inp" placeholder="新增活動…"/><button class="add-ok" id="ief-act-add"><i class="ti ti-plus"></i></button></div>'+
+
+      '<label class="exp-ef-label"><i class="ti ti-alert-triangle" style="color:#F9AB00"></i> 注意事項</label>'+
+      '<div id="ief-note-list">'+renderNotesEditable(s)+'</div>'+
+      '<div class="add-row" style="margin-bottom:10px"><input class="add-inp" id="ief-note-inp" placeholder="新增注意事項…"/><button class="add-ok" id="ief-note-add"><i class="ti ti-plus"></i></button></div>'+
+
+      '<label class="exp-ef-label"><i class="ti ti-coin"></i> 預計花費（每人）</label>'+
+      '<input class="exp-ef-inp" id="ief-budget" value="'+escHtml((s.budget||'NT$ 0').replace(/[^0-9]/g,''))+'" placeholder="0" inputmode="numeric"/>'+
+
       '<div>'+
         '<button class="exp-ef-save" id="ief-save">✓ 儲存</button>'+
         '<button class="exp-ef-cancel" id="ief-cancel">取消</button>'+
       '</div>'+
     '</div>';
 
-  document.getElementById('ief-locbtn').addEventListener('click',function(){
-    startMapPick(i);
+  document.getElementById('ief-name').addEventListener('focus',function(){
+    startMapPick(i, true);
   });
   document.getElementById('ief-save').addEventListener('click',function(){ saveInlineEdit(i); });
   document.getElementById('ief-cancel').addEventListener('click',function(){ closeInlineEdit(i); });
+
+  // Activities: toggle/delete/add (local state, persisted on 儲存)
+  function wireActEvents(){
+    expPanel.querySelectorAll('[data-type="ief-act"]').forEach(function(el){
+      el.addEventListener('click',function(){
+        var ai=parseInt(this.dataset.ai);
+        s.activities[ai].done=!s.activities[ai].done;
+        document.getElementById('ief-act-list').innerHTML=renderActsEditable(s);
+        wireActEvents();
+      });
+    });
+    expPanel.querySelectorAll('[data-type="ief-act-del"]').forEach(function(el){
+      el.addEventListener('click',function(){
+        var ai=parseInt(this.dataset.ai);
+        s.activities.splice(ai,1);
+        document.getElementById('ief-act-list').innerHTML=renderActsEditable(s);
+        wireActEvents();
+      });
+    });
+  }
+  function wireNoteEvents(){
+    expPanel.querySelectorAll('[data-type="ief-note-del"]').forEach(function(el){
+      el.addEventListener('click',function(){
+        var ni=parseInt(this.dataset.ni);
+        s.notes.splice(ni,1);
+        document.getElementById('ief-note-list').innerHTML=renderNotesEditable(s);
+        wireNoteEvents();
+      });
+    });
+  }
+  wireActEvents();
+  wireNoteEvents();
+
+  document.getElementById('ief-act-add').addEventListener('click',function(){
+    var inp=document.getElementById('ief-act-inp'),v=inp.value.trim(); if(!v)return;
+    if(!s.activities) s.activities=[];
+    s.activities.push({label:v,done:false});
+    inp.value='';
+    document.getElementById('ief-act-list').innerHTML=renderActsEditable(s);
+    wireActEvents();
+  });
+  document.getElementById('ief-note-add').addEventListener('click',function(){
+    var inp=document.getElementById('ief-note-inp'),v=inp.value.trim(); if(!v)return;
+    if(!s.notes) s.notes=[];
+    s.notes.push(v);
+    inp.value='';
+    document.getElementById('ief-note-list').innerHTML=renderNotesEditable(s);
+    wireNoteEvents();
+  });
 }
 
 function escHtml(s){
@@ -3275,8 +3351,14 @@ function saveInlineEdit(i){
   var depart=(document.getElementById('ief-depart')||{}).value||'';
   var day=(document.getElementById('ief-day')||{}).value||'';
   var note=(document.getElementById('ief-note')||{}).value||'';
+  var budgetRaw=(document.getElementById('ief-budget')||{}).value||'0';
+  var budgetNum=parseInt(budgetRaw.replace(/[^0-9]/g,''))||0;
+  var budget='NT$ '+budgetNum.toLocaleString();
   var newLat=parseFloat((document.getElementById('ief-lat')||{}).value)||0;
   var newLng=parseFloat((document.getElementById('ief-lng')||{}).value)||0;
+  // Activities/notes were edited in-memory on s.activities / s.notes
+  var activities=s.activities||[];
+  var notes=s.notes||[];
 
   function doSaveInline(lat,lng){
     var path='tripgo/groups/'+S.groupCode+'/stops/'+s._key;
@@ -3285,6 +3367,9 @@ function saveInlineEdit(i){
     window.FB.set(path+'/depart',depart.trim());
     window.FB.set(path+'/day',day.trim());
     window.FB.set(path+'/note',note.trim());
+    window.FB.set(path+'/budget',budget);
+    window.FB.set(path+'/activities',activities);
+    window.FB.set(path+'/notes',notes);
     if(lat&&lat!==0){window.FB.set(path+'/lat',lat);window.FB.set(path+'/lng',lng);}
     cancelMapPick();
     showToast('✅ 已儲存',1500);
@@ -3310,7 +3395,7 @@ function saveInlineEdit(i){
 }
 
 // ── Map Pick Mode ──
-function startMapPick(stopIdx){
+function startMapPick(stopIdx, autoNav){
   _mapPickStopIdx=stopIdx;
   document.getElementById('map-pick-banner').classList.add('show');
   // Scroll map into view
@@ -3318,7 +3403,22 @@ function startMapPick(stopIdx){
   if(mw) mw.scrollIntoView({behavior:'smooth',block:'start'});
   // Show pick cursor on map
   if(map) map.setOptions({draggableCursor:'crosshair'});
-  showToast('點選地圖上的景點或搜尋地名',2500);
+
+  // If this stop already has coordinates, navigate there immediately and drop a pin
+  if(autoNav){
+    var latInp=document.getElementById('ief-lat');
+    var lngInp=document.getElementById('ief-lng');
+    var lat=latInp?parseFloat(latInp.value):0;
+    var lng=lngInp?parseFloat(lngInp.value):0;
+    if(lat&&lat!==0&&map){
+      map.panTo({lat:lat,lng:lng}); map.setZoom(16);
+      var s=S.stops[stopIdx];
+      dropStopPin({lat:lat,lng:lng}, s?s.name:'');
+      showToast('📍 點地圖上其他地點可重新選取',2000);
+      return;
+    }
+  }
+  showToast('📍 點選地圖上的景點，或用上方搜尋欄輸入地名',2500);
 }
 
 function cancelMapPick(){
@@ -3332,15 +3432,14 @@ function applyMapPickResult(lat,lng,name){
   var latInp=document.getElementById('ief-lat');
   var lngInp=document.getElementById('ief-lng');
   var nameInp=document.getElementById('ief-name');
-  var btn=document.getElementById('ief-locbtn');
   if(latInp) latInp.value=lat;
   if(lngInp) lngInp.value=lng;
-  if(name&&nameInp&&!nameInp.value.trim()) nameInp.value=name;
-  if(btn){ btn.className='exp-ef-locbtn picked'; btn.innerHTML='<i class="ti ti-map-pin-check"></i>✓ 已選定位置'; }
+  // Always auto-fill name field with the newly picked place's name
+  if(name&&nameInp) nameInp.value=name;
   cancelMapPick();
-  // Drop preview pin
   dropStopPin({lat:lat,lng:lng}, name||'選定位置');
   map.panTo({lat:lat,lng:lng}); map.setZoom(16);
+  showToast('✅ 已更新位置'+(name?'：'+name:''),1800);
 }
 
 window.addEventListener('load',function(){
