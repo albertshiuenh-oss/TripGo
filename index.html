@@ -1973,7 +1973,7 @@ function onStopListClick(e){
   var arr=e.target.closest('.stop-arr');
   if(arr){
     if(_dragJustHappened){ _dragJustHappened=false; return; }
-    var i=parseInt(arr.id.replace('sa-','')); openStopDetail(i); return;
+    var i=parseInt(arr.id.replace('sa-','')); tapStop(i); return;
   }
 
   // Stop text -> map + pin
@@ -3837,9 +3837,7 @@ window.addEventListener('load',function(){
   document.getElementById('btn-asp-save').addEventListener('click',saveStop);
   document.getElementById('btn-det-back').addEventListener('click',closeDetail);
   document.getElementById('det-edit-btn').addEventListener('click',toggleEditMode);
-  document.getElementById('det-e-name').addEventListener('focus',function(){
-    if(_editMode) openDetMap();
-  });
+  // det-e-name focus handler removed (openDetMap deprecated)
   document.getElementById('det-del-btn').addEventListener('click',function(){
     var s=S.stops[S.currentStop]; if(!s) return;
     showCustomConfirm('🗑️','刪除景點？','「'+s.name+'」將從行程中移除。','確定刪除',function(){
