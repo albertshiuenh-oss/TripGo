@@ -440,7 +440,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .stop-name{font-size:13px;font-weight:600;color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stop-txt.active .stop-name{color:var(--blue);font-weight:700}
-.stop-time{font-size:12px;color:var(--amber);font-weight:600;margin-top:2px}
+.stop-time{font-size:11px;color:var(--text2);margin-top:2px}
 .stop-nav{
   font-size:10px;padding:4px 8px;border-radius:8px;
   border:1px solid var(--border);background:#fff;
@@ -495,6 +495,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 #map-pick-cancel{background:rgba(255,255,255,.25);border:none;border-radius:6px;
   padding:4px 10px;color:#fff;font-size:11px;cursor:pointer}
 .stop-arr{touch-action:none;cursor:grab}
+.stop-transit{
+  display:inline-flex;align-items:center;gap:3px;
+  background:#E6F1FB;color:#185FA5;
+  border-radius:99px;font-size:9px;font-weight:600;
+  padding:2px 7px;flex-shrink:0;cursor:pointer;
+}
+.stop-transit:active{background:#B5D4F4}
 .stop-wrap.dragging{
   position:relative;z-index:30;
   box-shadow:0 8px 20px rgba(0,0,0,.22);
@@ -1089,19 +1096,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
           </div>
           <div class="det-body">
             <div id="det-edit-fields">
-              <!-- Edit map panel (shown when tapping 景點名稱) -->
-              <div id="det-map-panel" style="display:none;margin-bottom:10px;border-radius:12px;overflow:hidden;position:relative;height:180px">
-                <div id="det-gmap" style="width:100%;height:100%"></div>
-                <div style="position:absolute;top:6px;left:6px;right:6px;z-index:5">
-                  <div style="display:flex;align-items:center;gap:8px;padding:0 10px;height:36px;background:#fff;border-radius:18px;box-shadow:0 2px 8px rgba(0,0,0,.2)">
-                    <i class="ti ti-search" style="font-size:14px;color:var(--blue);flex-shrink:0"></i>
-                    <input id="det-map-inp" placeholder="搜尋地點…" autocomplete="off" style="flex:1;border:none;outline:none;font-size:13px"/>
-                    <button id="det-map-close" style="background:none;border:none;cursor:pointer;font-size:14px;color:var(--gray);flex-shrink:0"><i class="ti ti-x"></i></button>
-                  </div>
-                </div>
-                <div style="position:absolute;bottom:6px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#fff;font-size:10px;padding:3px 8px;border-radius:8px;pointer-events:none" id="det-map-hint">點地圖選定位置</div>
-              </div>
-              <input type="hidden" id="det-e-lat" value="0"/>
+                            <input type="hidden" id="det-e-lat" value="0"/>
               <input type="hidden" id="det-e-lng" value="0"/>
               <div class="det-edit-fields-inner">
                 <div class="edit-field">
@@ -1921,11 +1916,11 @@ function renderStops(){
         '<div class="stop-cb'+(sel?' on':'')+'" id="cb-'+i+'"></div>' +
         '<div class="stop-txt" id="st-'+i+'">' +
           '<div class="stop-name">'+s.name+'</div>' +
-          '<div class="stop-time">'+(s.arrive||'')+(s.depart?' → '+s.depart:'')+(s.note?' · '+s.note.substring(0,20):'')+'</div>' +
+          '<div class="stop-time">'+((s.arrive||'')+(s.depart?' ~ '+s.depart:'')+(s.note?' · '+s.note.substring(0,25):''))+'</div>' +
         '</div>' +
         (MS_MODE?'':
-          '<button class="stop-nav" id="sn-'+i+'"><i class="ti ti-navigation" style="font-size:11px"></i> 導航</button>' +
-          '<i class="ti ti-chevron-right stop-arr" id="sa-'+i+'"></i>'
+          (s.transit&&s.transit.minutes?'<span class="stop-transit" id="stn-'+i+'" data-i="'+i+'"><i class="ti '+(s.transit.mode==='walk'?'ti-walk':s.transit.mode==='bus'?'ti-bus':s.transit.mode==='train'?'ti-train':'ti-car')+'" style="font-size:9px" aria-hidden="true"></i> '+s.transit.minutes+'min</span>':'')+
+          '<i class="ti ti-chevron-down stop-arr" id="sa-'+i+'"></i>'
         ) +
       '</div>' +
       '<div class="stop-expand" id="se-'+i+'">' +
@@ -1970,9 +1965,9 @@ function onStopListClick(e){
   var cb=e.target.closest('.stop-cb');
   if(cb){ var i=parseInt(cb.id.replace('cb-','')); toggleSel(i); return; }
 
-  // Nav button
-  var nav=e.target.closest('.stop-nav');
-  if(nav){ var i=parseInt(nav.id.replace('sn-','')); navStop(i); return; }
+  // Transit badge click → navigate to that stop
+  var trnav=e.target.closest('.stop-transit');
+  if(trnav){ var i=parseInt(trnav.dataset.i); navStop(i); return; }
 
   // Arrow -> detail (unless a drag just happened on this arrow)
   var arr=e.target.closest('.stop-arr');
@@ -2044,7 +2039,7 @@ function tapStop(i){
   var activeTxt=document.getElementById('st-'+i);
   if(activeTxt) activeTxt.classList.add('active');
   var arrEl=document.getElementById('sa-'+i);
-  if(arrEl) arrEl.style.transform='rotate(90deg)';
+  if(arrEl) arrEl.style.transform='rotate(180deg)';
 
   S.currentStop=i;
 
@@ -3474,8 +3469,6 @@ function initDivider(){
 // ════════════════════════════════
 
 // ── Det-map for editing stop location ──
-var detMap=null, detMarker=null, detAc=null;
-var _detLat=0, _detLng=0, _detFromMap=false;
 
 function getGroupCenter(){
   var coords=S.stops.filter(function(s){return s.lat&&s.lng&&parseFloat(s.lat)!==0;})
@@ -3486,83 +3479,9 @@ function getGroupCenter(){
   return {lat:lat,lng:lng};
 }
 
-function openDetMap(){
-  var panel=document.getElementById('det-map-panel');
-  if(!panel) return;
-  panel.style.display='block';
-  var s=S.stops[S.currentStop];
-  var center=(_detLat&&_detLat!==0)?{lat:_detLat,lng:_detLng}:
-             (getGroupCenter()||{lat:S.myLat,lng:S.myLng});
-  setTimeout(function(){
-    if(!detMap){
-      detMap=new google.maps.Map(document.getElementById('det-gmap'),{
-        center:center,zoom:14,
-        mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false
-      });
-      detMap.addListener('click',function(e){
-        if(e.placeId){
-          e.stop();
-          // Get place details
-          var ps=new google.maps.places.PlacesService(detMap);
-          ps.getDetails({placeId:e.placeId,fields:['name','geometry','formatted_address']},function(place,status){
-            if(status!==google.maps.places.PlacesServiceStatus.OK) return;
-            setDetLocation(place.geometry.location.lat(),place.geometry.location.lng(),place.name||'');
-          });
-        } else {
-          setDetLocation(e.latLng.lat(),e.latLng.lng(),'');
-        }
-      });
-      // Autocomplete
-      var inp=document.getElementById('det-map-inp');
-      if(inp&&!inp._ac){
-        var center2=getGroupCenter();
-        var ac=new google.maps.places.Autocomplete(inp,{
-          fields:['name','geometry','formatted_address'],
-          locationBias:center2?new google.maps.Circle({center:center2,radius:50000}):undefined
-        });
-        inp._ac=ac;
-        ac.addListener('place_changed',function(){
-          var place=ac.getPlace();
-          if(!place||!place.geometry) return;
-          setDetLocation(place.geometry.location.lat(),place.geometry.location.lng(),place.name||inp.value);
-          document.getElementById('det-gmap') && detMap.panTo(place.geometry.location);
-        });
-      }
-    } else {
-      detMap.panTo(center);
-      google.maps.event.trigger(detMap,'resize');
-    }
-    // Drop existing pin if we have coords
-    if(_detLat&&_detLat!==0) dropDetPin({lat:_detLat,lng:_detLng});
-  },100);
-}
 
-function closeDetMap(){
-  var panel=document.getElementById('det-map-panel');
-  if(panel) panel.style.display='none';
-}
 
-function setDetLocation(lat,lng,name){
-  _detLat=lat; _detLng=lng; _detFromMap=true;
-  document.getElementById('det-e-lat').value=lat;
-  document.getElementById('det-e-lng').value=lng;
-  if(name) document.getElementById('det-e-name').value=name;
-  var badge=document.getElementById('det-loc-badge');
-  if(badge) badge.style.display='inline';
-  var hint=document.getElementById('det-map-hint');
-  if(hint) hint.textContent='✓ 已選定';
-  dropDetPin({lat:lat,lng:lng});
-  if(detMap) detMap.panTo({lat:lat,lng:lng});
-}
 
-function dropDetPin(pos){
-  if(detMarker) detMarker.setMap(null);
-  detMarker=new google.maps.Marker({position:pos,map:detMap,
-    animation:google.maps.Animation.DROP,
-    icon:{path:google.maps.SymbolPath.CIRCLE,scale:10,
-      fillColor:'#EA4335',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}
-  });
-}
 
 
 // ════════════════════════════════
@@ -3622,6 +3541,18 @@ function renderInlineEditForm(i){
       '<div class="exp-ef-row">'+
         '<div class="exp-ef-field"><label class="exp-ef-label">抵達時間</label><input class="exp-ef-inp" id="ief-arrive" value="'+escHtml(s.arrive||'')+'" placeholder="09:00"/></div>'+
         '<div class="exp-ef-field"><label class="exp-ef-label">離開時間</label><input class="exp-ef-inp" id="ief-depart" value="'+escHtml(s.depart||'')+'" placeholder="12:00"/></div>'+
+      '</div>'+
+      '<div class="exp-ef-row">'+
+        '<div class="exp-ef-field"><label class="exp-ef-label">前往交通</label>'+
+          '<select class="exp-ef-inp" id="ief-transit-mode" style="cursor:pointer">'+
+            '<option value=""'+((!s.transit||!s.transit.mode)?' selected':'')+'>（無）</option>'+
+            '<option value="car"'+((s.transit&&s.transit.mode==='car')?' selected':'')+'>🚗 開車</option>'+
+            '<option value="walk"'+((s.transit&&s.transit.mode==='walk')?' selected':'')+'>🚶 步行</option>'+
+            '<option value="bus"'+((s.transit&&s.transit.mode==='bus')?' selected':'')+'>🚌 公車</option>'+
+            '<option value="train"'+((s.transit&&s.transit.mode==='train')?' selected':'')+'>🚆 火車</option>'+
+          '</select>'+
+        '</div>'+
+        '<div class="exp-ef-field"><label class="exp-ef-label">所需時間（分）</label><input class="exp-ef-inp" id="ief-transit-mins" type="number" inputmode="numeric" min="0" value="'+(s.transit&&s.transit.minutes?s.transit.minutes:'')+'" placeholder="0"/></div>'+
       '</div>'+
       '<label class="exp-ef-label">天數標籤</label>'+
       '<input class="exp-ef-inp" id="ief-day" value="'+escHtml(s.day||'')+'" placeholder="Day 1"/>'+
@@ -3752,6 +3683,8 @@ function saveInlineEdit(i){
   var depart=(document.getElementById('ief-depart')||{}).value||'';
   var day=(document.getElementById('ief-day')||{}).value||'';
   var note=(document.getElementById('ief-note')||{}).value||'';
+  var transitMode=(document.getElementById('ief-transit-mode')||{}).value||'';
+  var transitMins=parseInt((document.getElementById('ief-transit-mins')||{}).value)||0;
   var budgetRaw=(document.getElementById('ief-budget')||{}).value||'0';
   var budgetNum=parseInt(budgetRaw.replace(/[^0-9]/g,''))||0;
   var budget='NT$ '+budgetNum.toLocaleString();
@@ -3771,6 +3704,10 @@ function saveInlineEdit(i){
     window.FB.set(path+'/budget',budget);
     window.FB.set(path+'/activities',activities);
     window.FB.set(path+'/notes',notes);
+    if(transitMode&&transitMins>0)
+      window.FB.set(path+'/transit',{mode:transitMode,minutes:transitMins});
+    else
+      window.FB.set(path+'/transit',null);
     if(lat&&lat!==0){window.FB.set(path+'/lat',lat);window.FB.set(path+'/lng',lng);}
     cancelMapPick();
     showToast('✅ 已儲存',1500);
@@ -3903,7 +3840,6 @@ window.addEventListener('load',function(){
   document.getElementById('det-e-name').addEventListener('focus',function(){
     if(_editMode) openDetMap();
   });
-  document.getElementById('det-map-close').addEventListener('click',closeDetMap);
   document.getElementById('det-del-btn').addEventListener('click',function(){
     var s=S.stops[S.currentStop]; if(!s) return;
     showCustomConfirm('🗑️','刪除景點？','「'+s.name+'」將從行程中移除。','確定刪除',function(){
