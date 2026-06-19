@@ -475,6 +475,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   font-size:11px;padding:5px 12px;border-radius:8px;border:1px solid var(--blue);
   background:#fff;color:var(--blue);cursor:pointer;
 }
+.exp-del-btn{
+  font-size:10px;padding:4px 10px;border-radius:99px;border:none;
+  background:#FCEBEB;color:#A32D2D;cursor:pointer;
+  display:inline-flex;align-items:center;gap:4px;flex-shrink:0;
+}
 .exp-edit-form{background:#fff;border-radius:10px;padding:12px;border:1px solid var(--border);margin-top:8px}
 .exp-ef-label{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px}
 .exp-ef-inp{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;outline:none;margin-bottom:8px}
@@ -483,6 +488,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .exp-ef-row .exp-ef-field{flex:1}
 .exp-ef-save{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-right:6px}
 .exp-ef-cancel{background:var(--bg2);color:var(--text2);border:none;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer}
+.exp-ef-del{background:#FCE8E6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;color:var(--red);cursor:pointer}
 /* exp-ef-locbtn removed: name field itself triggers map pick now */
 /* Map pick mode banner */
 #map-pick-banner{
@@ -1924,7 +1930,7 @@ function renderStops(){
         ) +
       '</div>' +
       '<div class="stop-expand" id="se-'+i+'">' +
-        '<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-checkbox" aria-hidden="true"></i>活動清單<button class="exp-edit-btn" data-i="'+i+'" style="margin-left:auto"><i class="ti ti-pencil" aria-hidden="true"></i> 編輯細節</button></div>'+(actsHtml||'<div style="font-size:11px;color:var(--text2);padding:2px 0">（尚無活動）</div>')+'</div>' +
+        '<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-checkbox" aria-hidden="true"></i>活動清單<button class="exp-edit-btn" data-i="'+i+'" style="margin-left:auto"><i class="ti ti-pencil" aria-hidden="true"></i> 編輯細節</button><button class="exp-del-btn" data-i="'+i+'" style="margin-left:6px"><i class="ti ti-trash" aria-hidden="true"></i> 刪除</button></div>'+(actsHtml||'<div style="font-size:11px;color:var(--text2);padding:2px 0">（尚無活動）</div>')+'</div>' +
         (notesHtml?'<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-alert-triangle" style="color:#F9AB00" aria-hidden="true"></i>注意事項</div>'+notesHtml+'</div>':'') +
 
         '</div>' +
@@ -1993,6 +1999,17 @@ function onStopListClick(e){
   if(editBtn){
     var si=parseInt(editBtn.dataset.i);
     openInlineEdit(si); return;
+  }
+
+  // Delete button in expand panel
+  var delBtn=e.target.closest('.exp-del-btn');
+  if(delBtn){
+    var si=parseInt(delBtn.dataset.i);
+    var s=S.stops[si]; if(!s) return;
+    showCustomConfirm('🗑️','刪除景點？','「'+s.name+'」將從行程中移除，此動作無法復原。','確定刪除',function(){
+      deleteStop(s._key);
+    });
+    return;
   }
 }
 
@@ -3570,9 +3587,10 @@ function renderInlineEditForm(i){
       '<label class="exp-ef-label"><i class="ti ti-coin"></i> 預計花費（每人）</label>'+
       '<input class="exp-ef-inp" id="ief-budget" value="'+escHtml((s.budget||'NT$ 0').replace(/[^0-9]/g,''))+'" placeholder="0" inputmode="numeric"/>'+
 
-      '<div>'+
+      '<div style="display:flex;align-items:center;gap:6px">'+
         '<button class="exp-ef-save" id="ief-save">✓ 儲存</button>'+
         '<button class="exp-ef-cancel" id="ief-cancel">取消</button>'+
+        '<button class="exp-ef-del" id="ief-del" style="margin-left:auto"><i class="ti ti-trash" aria-hidden="true"></i></button>'+
       '</div>'+
     '</div>';
 
@@ -3581,6 +3599,13 @@ function renderInlineEditForm(i){
   });
   document.getElementById('ief-save').addEventListener('click',function(){ saveInlineEdit(i); });
   document.getElementById('ief-cancel').addEventListener('click',function(){ closeInlineEdit(i); });
+  document.getElementById('ief-del').addEventListener('click',function(){
+    var s=S.stops[i]; if(!s) return;
+    showCustomConfirm('🗑️','刪除景點？','「'+s.name+'」將從行程中移除，此動作無法復原。','確定刪除',function(){
+      closeInlineEdit(i);
+      deleteStop(s._key);
+    });
+  });
 
   // Activities: toggle/delete/add (local state, persisted on 儲存)
   function wireActEvents(){
