@@ -413,8 +413,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 /* /* .tab.on::after removed */
 #pane-chat{display:none;flex-direction:column;overflow:hidden;padding-bottom:0}
 #pane-chat.on{display:flex}
-.pane.on{display:block}
-#pane-itinerary{position:relative}
+.pane{display:none;flex:1;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch}
+.pane.on{display:flex;flex-direction:column}
+#pane-itinerary{position:relative;overflow-y:auto;flex:1;min-height:0}
 
 /* ── Itinerary ── */
 .stop-empty{
@@ -464,6 +465,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   display:none;background:var(--bg2);
   border-bottom:1px solid var(--border);
   padding:12px 14px;
+  overflow:visible;
 }
 .stop-expand.open{display:block}
 .exp-section{margin-bottom:10px}
@@ -1605,45 +1607,72 @@ function getInitials(name){
   if(parts.length>=2) return (parts[0][0]+parts[1][0]).toUpperCase();
   return parts[0].substring(0,2).toUpperCase();
 }
+// ── Member label overlay: renders a small CSS div next to each marker ──
+var MemberLabelOverlay=null;
+function buildMemberLabelOverlayClass(){
+  if(MemberLabelOverlay||!google) return;
+  MemberLabelOverlay=function(pos,text,isStale){
+    this.pos=pos; this.text=text; this.isStale=isStale; this.div=null;
+  };
+  MemberLabelOverlay.prototype=Object.create(google.maps.OverlayView.prototype);
+  MemberLabelOverlay.prototype.onAdd=function(){
+    var d=document.createElement('div');
+    d.style.cssText='position:absolute;background:rgba(0,0,0,.72);color:#fff;font-size:9px;font-weight:600;border-radius:4px;padding:1px 5px;white-space:nowrap;pointer-events:none;'+(this.isStale?'opacity:.4;':'');
+    d.textContent=this.text;
+    this.div=d;
+    this.getPanes().floatPane.appendChild(d);
+  };
+  MemberLabelOverlay.prototype.draw=function(){
+    var proj=this.getProjection();
+    if(!proj||!this.div) return;
+    var pt=proj.fromLatLngToDivPixel(this.pos);
+    this.div.style.left=(pt.x+16)+'px';
+    this.div.style.top=(pt.y-8)+'px';
+  };
+  MemberLabelOverlay.prototype.onRemove=function(){
+    if(this.div&&this.div.parentNode) this.div.parentNode.removeChild(this.div);
+    this.div=null;
+  };
+}
+
 function updateMemberMarkers(){
   Object.keys(memberMarkers).forEach(function(uid){
     memberMarkers[uid].setMap(null); delete memberMarkers[uid];
   });
-  // Also remove old time labels
-  if(window._memberLabelMarkers){
-    window._memberLabelMarkers.forEach(function(m){ m.setMap(null); });
+  if(window._memberLabels){
+    window._memberLabels.forEach(function(ov){ ov.setMap(null); });
   }
-  window._memberLabelMarkers=[];
+  window._memberLabels=[];
+  if(!map) return;
+  buildMemberLabelOverlayClass();
   Object.entries(S.allLocs).forEach(function(entry){
     var uid=entry[0], loc=entry[1];
-    if(!loc||uid===S.myUid||!map) return;
+    if(!loc||uid===S.myUid) return;
     var ageMs=loc.at?(Date.now()-loc.at):Infinity;
     var isStale=ageMs>30*60*1000;
     var initials=getInitials(loc.name);
-    // Orange solid circle + black text
     memberMarkers[uid]=new google.maps.Marker({
       position:{lat:loc.lat,lng:loc.lng},map:map,
       icon:{path:google.maps.SymbolPath.CIRCLE,scale:12,
         fillColor:'#F9AB00',fillOpacity:isStale?0.35:1,
         strokeColor:'#fff',strokeOpacity:isStale?0.5:1,strokeWeight:2,
         labelOrigin:new google.maps.Point(0,0)},
-      label:{text:initials,color:isStale?'rgba(0,0,0,.4)':'#000',fontSize:'9px',fontWeight:'800'},
+      label:{text:initials,color:isStale?'rgba(0,0,0,.35)':'#000',fontSize:'9px',fontWeight:'800'},
       title:loc.name+' · '+formatTimeAgo(loc.at)
     });
-    // Floating time-ago label next to the dot
-    var ago=formatTimeAgo(loc.at);
-    var labelMarker=new google.maps.Marker({
-      position:{lat:loc.lat,lng:loc.lng},map:map,
-      icon:{url:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',scaledSize:new google.maps.Size(1,1)},
-      label:{text:ago,color:isStale?'rgba(80,80,80,.5)':'rgba(30,30,30,.85)',fontSize:'9px',fontWeight:'600',
-        className:'member-time-label'},
-      title:loc.name,
-      clickable:false
-    });
-    window._memberLabelMarkers.push(labelMarker);
     memberMarkers[uid].addListener('click',function(){
       showToast(loc.name+' · '+formatTimeAgo(loc.at),2000);
     });
+    // OverlayView label — reliable CSS div positioned next to the marker
+    if(MemberLabelOverlay){
+      var ov=new MemberLabelOverlay(
+        new google.maps.LatLng(loc.lat, loc.lng),
+        formatTimeAgo(loc.at),
+        isStale
+      );
+      ov.setMap(map);
+      window._memberLabels.push(ov);
+    }
   });
 }
 
@@ -1962,6 +1991,56 @@ function startApp(code, uid, name, tripName, isOrg){
 var _scrollToStopKey=null;
 
 // ── Find index of next upcoming stop (first stop whose arrive time is in the future) ──
+// ── Fetch live transit time for the next stop via Directions API ──
+var _liveTransitCache={}, _liveTransitTimer=null;
+function fetchLiveTransit(stopIdx){
+  var s=S.stops[stopIdx];
+  if(!s||!s.transit||!s.transit.minutes) return; // no planned transit = nothing to compare
+  if(!s.lat||!s.lng||s.lat===0) return; // no destination coords
+  var cacheKey=stopIdx+':'+s._key;
+  if(_liveTransitCache[cacheKey]&&(Date.now()-_liveTransitCache[cacheKey].at)<5*60*1000) {
+    // Cache valid for 5 minutes — apply and re-render
+    applyLiveTransit(stopIdx, _liveTransitCache[cacheKey].mins);
+    return;
+  }
+  // Find origin: previous stop coords or current user location
+  var origin=null;
+  if(stopIdx>0){
+    var prev=S.stops[stopIdx-1];
+    if(prev&&prev.lat&&prev.lat!==0) origin={lat:prev.lat, lng:prev.lng};
+  }
+  if(!origin&&S.myLoc) origin={lat:S.myLoc.lat, lng:S.myLoc.lng};
+  if(!origin) return; // can't compute without origin
+  if(!window.dsvc) return;
+  var mode=s.transit.mode||'car';
+  var travelMode=mode==='walk'?google.maps.TravelMode.WALKING:
+                 mode==='bus'||mode==='train'?google.maps.TravelMode.TRANSIT:
+                 google.maps.TravelMode.DRIVING;
+  var req={
+    origin: origin,
+    destination: {lat:s.lat, lng:s.lng},
+    travelMode: travelMode,
+  };
+  if(travelMode===google.maps.TravelMode.DRIVING){
+    req.drivingOptions={departureTime:new Date(), trafficModel:'bestguess'};
+  }
+  window.dsvc.route(req, function(result, status){
+    if(status!==google.maps.DirectionsStatus.OK) return;
+    var leg=result.routes[0].legs[0];
+    // Use duration_in_traffic if available (driving), else duration
+    var secs=(leg.duration_in_traffic||leg.duration).value;
+    var mins=Math.round(secs/60);
+    _liveTransitCache[cacheKey]={mins:mins, at:Date.now()};
+    applyLiveTransit(stopIdx, mins);
+  });
+}
+function applyLiveTransit(stopIdx, liveMins){
+  var s=S.stops[stopIdx];
+  if(!s||!s.transit) return;
+  s.transit.liveMins=liveMins; // patch in-memory only, not saved to Firebase
+  renderStops(); // re-render to pick up the new liveMins value
+}
+
 function findNextStopIdx(){
   var now=new Date();
   var hhmm=now.getHours()*60+now.getMinutes();
@@ -2094,6 +2173,9 @@ function renderStops(){
       var el=document.getElementById('sw-'+nextIdx);
       if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
     },80);
+    // Fetch live transit time for the next stop (debounced, cached 5 min)
+    clearTimeout(_liveTransitTimer);
+    _liveTransitTimer=setTimeout(function(){ fetchLiveTransit(nextIdx); },800);
   }
 
   // ── Scroll back to the stop that was just updated ──
@@ -3755,12 +3837,21 @@ function openInlineEdit(i){
   var expPanel=document.getElementById('se-'+i);
   if(!expPanel) return;
 
-  // Ensure stop panel is open
+  function afterRender(){
+    // Scroll so the save button is visible
+    setTimeout(function(){
+      var pane=document.getElementById('pane-itinerary');
+      var saveBtn=expPanel.querySelector('.exp-ef-save');
+      if(saveBtn&&pane) pane.scrollTop=pane.scrollTop+(saveBtn.getBoundingClientRect().bottom-pane.getBoundingClientRect().bottom)+16;
+    },150);
+  }
+
   if(!expPanel.classList.contains('open')){
     tapStop(i);
-    setTimeout(function(){ renderInlineEditForm(i); },100);
+    setTimeout(function(){ renderInlineEditForm(i); afterRender(); },100);
   } else {
     renderInlineEditForm(i);
+    afterRender();
   }
 }
 
