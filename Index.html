@@ -14,16 +14,16 @@
   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   -webkit-tap-highlight-color:transparent}
 :root{
-  --blue:#1A73E8;--green:#34A853;--red:#EA4335;--yellow:#F9AB00;
+  --blue:#2B5F8E;--green:#34A853;--red:#EA4335;--yellow:#F9AB00;
   --gray:#5F6368;--bg:#fff;--bg2:#F8F9FA;--border:#DADCE0;
   --text:#202124;--text2:#5F6368;
 }
-html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
+html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 
 /* ── Join Screen ── */
 #S-join{
   position:fixed;inset:0;z-index:100;
-  background:linear-gradient(160deg,#1565C0,#1A73E8 50%,#1976D2);
+  background:linear-gradient(160deg,#1A3F61,#2B5F8E 50%,#22527D);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:32px 24px;
 }
@@ -161,6 +161,27 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
   background:#fff;border:1px solid var(--border);border-radius:6px;
   padding:2px 8px;font-size:10px;cursor:pointer;color:var(--blue);
 }
+.adm-trip-del{
+  background:#FCE8E6;border:none;border-radius:6px;
+  padding:2px 8px;font-size:10px;cursor:pointer;color:var(--red);
+}
+.adm-trash-card{
+  background:#FFF8F8;border:1px dashed #F5C6C0;
+  border-radius:12px;padding:12px 14px;margin-bottom:8px;
+}
+.adm-trash-name{font-size:13px;font-weight:700;color:var(--text)}
+.adm-trash-meta{font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5}
+.adm-trash-expire{font-size:10px;color:var(--red);font-weight:700;margin-top:4px}
+.adm-trash-actions{display:flex;gap:6px;margin-top:8px}
+.adm-restore-btn{padding:4px 10px;border-radius:6px;border:1px solid var(--green);
+  background:#E6F4EA;color:#1E7A3C;font-size:11px;cursor:pointer;font-weight:600}
+.adm-perm-del-btn{padding:4px 10px;border-radius:6px;border:none;
+  background:#FCE8E6;color:var(--red);font-size:11px;cursor:pointer;font-weight:600}
+.adm-trip-enter{
+  width:100%;margin-top:8px;padding:8px;border:none;border-radius:8px;
+  background:var(--blue);color:#fff;font-size:12px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
 .adm-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px}
 .adm-title{font-size:17px;font-weight:700;color:var(--text);margin-bottom:16px}
 .adm-field{margin-bottom:12px}
@@ -202,7 +223,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 }
 #net-status.online{background:#E6F4EA;color:#1E7A3C}
 #net-status.offline{background:#FCE8E6;color:var(--red)}
-.tb-avs{display:flex;align-items:center;flex-shrink:0}
+
 .tb-btn{
   width:32px;height:32px;border-radius:8px;border:none;
   background:var(--bg2);cursor:pointer;
@@ -215,7 +236,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
   background:var(--blue);color:#fff;cursor:pointer;
   font-size:11px;font-weight:700;flex-shrink:0;
 }
-.tb-org{font-size:11px;color:var(--yellow);font-weight:700;flex-shrink:0}
+
 
 /* ── Layout ── */
 .main{
@@ -227,7 +248,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
   position:relative;
   height:42vh;flex-shrink:0;
   background:#E8E8E8;
+  transition:height .25s ease;
 }
+#map-wrap.map-mini{height:5vh}
 @media(orientation:landscape){
   #map-wrap{height:100%;width:58%;flex-shrink:0}
 }
@@ -325,16 +348,42 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 .pcac.green{background:#E6F4EA;color:#34A853}
 
 /* ── Divider ── */
+/* ── Divider ── */
 .divider{
-  height:5px;background:var(--bg2);
-  cursor:row-resize;flex-shrink:0;
+  position:relative;
+  flex-shrink:0;
   display:flex;align-items:center;justify-content:center;
+  /* Portrait: horizontal bar */
+  height:14px;
+  background:var(--border);
+  cursor:row-resize;
+  z-index:3;
 }
 @media(orientation:landscape){
-  .divider{width:5px;height:auto;cursor:col-resize}
+  .divider{
+    width:14px;height:auto;
+    background:var(--border);
+    cursor:col-resize;
+  }
 }
+/* The pill handle */
 .divider-dot{
-  width:28px;height:3px;background:var(--border);border-radius:2px;
+  background:#fff;
+  border-radius:99px;
+  box-shadow:0 1px 4px rgba(0,0,0,.18);
+  transition:transform .15s;
+  /* Portrait: wide pill */
+  width:40px;height:5px;
+}
+@media(orientation:landscape){
+  .divider-dot{
+    /* Landscape: tall pill */
+    width:5px;height:40px;
+  }
+}
+.divider:hover .divider-dot,
+.divider.active .divider-dot{
+  transform:scale(1.5);
 }
 
 /* ── Right Panel ── */
@@ -347,17 +396,30 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
   background:#fff;flex-shrink:0;
 }
 .tab{
-  flex:1;padding:12px 4px;border:none;background:none;
-  cursor:pointer;font-size:12px;color:var(--text2);
-  display:flex;flex-direction:column;align-items:center;gap:2px;
+  flex:1;height:28px;border:none;background:none;
+  cursor:pointer;font-size:17px;color:var(--text2);
+  display:flex;align-items:center;justify-content:center;
+  position:relative;margin:3px 2px;border-radius:7px;
 }
-.tab.on{color:var(--blue)}
+.tab.on{background:#E6F1FB;color:#185FA5}
+.tabs{display:flex;padding:0 4px;gap:3px}
+.tab-dollar{font-size:15px;font-weight:700}
+.tab-dot{
+  position:absolute;top:1px;right:calc(50% - 12px);
+  width:7px;height:7px;border-radius:50%;
+  background:#E24B4A;border:1.5px solid #fff;
+  display:none;
+}
+.tab-dot.show{display:block}
 .tab.on::after{
   content:'';display:block;height:2px;width:100%;
   background:var(--blue);position:relative;top:12px;
 }
 .pane{display:none;flex:1;overflow-y:auto;padding-bottom:80px}
+#pane-chat{display:none;flex-direction:column;overflow:hidden;padding-bottom:0}
+#pane-chat.on{display:flex}
 .pane.on{display:block}
+#pane-itinerary{position:relative}
 
 /* ── Itinerary ── */
 .stop-empty{
@@ -389,10 +451,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 .stop-cb.on::after{content:'✓';color:#fff;font-size:11px}
 .multiselect .stop-cb{display:flex}
 .stop-txt{flex:1;cursor:pointer;min-width:0}
-.stop-name{font-size:13px;font-weight:600;color:var(--text);
+.stop-name{font-size:16px;font-weight:600;color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stop-txt.active .stop-name{color:var(--blue);font-weight:700}
-.stop-time{font-size:12px;color:var(--amber);font-weight:600;margin-top:2px}
+.stop-time{font-size:11px;color:var(--text2);margin-top:2px}
 .stop-nav{
   font-size:10px;padding:4px 8px;border-radius:8px;
   border:1px solid var(--border);background:#fff;
@@ -412,7 +474,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 .exp-section{margin-bottom:10px}
 .exp-sec-title{font-size:10px;font-weight:700;color:var(--text2);
   text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;
-  display:flex;align-items:center;gap:6px;}
+  display:flex;align-items:center;gap:6px;width:100%;}
+.exp-sec-title .exp-edit-btn{margin-left:auto!important}
 .exp-act-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px}
 .exp-chk{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border);
   cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
@@ -420,12 +483,92 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 .exp-chk.done::after{content:'✓';color:#fff;font-size:9px;}
 .exp-lbl{flex:1;color:var(--text);}
 .exp-lbl.done{text-decoration:line-through;color:var(--text2);}
-.exp-note-row{display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;font-size:12px;color:var(--text2);}
+.exp-note-row{display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;font-size:12px;color:var(--red);}
 .exp-dot{width:5px;height:5px;border-radius:50%;background:var(--blue);margin-top:5px;flex-shrink:0;}
 .exp-edit-btn{
   font-size:11px;padding:5px 12px;border-radius:8px;border:1px solid var(--blue);
-  background:#fff;color:var(--blue);cursor:pointer;margin-top:4px;
+  background:#fff;color:var(--blue);cursor:pointer;
 }
+.exp-del-btn{
+  font-size:10px;padding:4px 10px;border-radius:99px;border:none;
+  background:#FCEBEB;color:#A32D2D;cursor:pointer;
+  display:inline-flex;align-items:center;gap:4px;flex-shrink:0;
+}
+.exp-edit-form{background:#fff;border-radius:10px;padding:12px;border:1px solid var(--border);margin-top:8px}
+.exp-ef-label{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px}
+.exp-ef-inp{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;outline:none;margin-bottom:8px}
+.exp-ef-inp:focus{border-color:var(--blue)}
+.exp-ef-row{display:flex;gap:6px}
+.exp-ef-row .exp-ef-field{flex:1}
+.exp-ef-save{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-right:6px}
+.exp-ef-cancel{background:var(--bg2);color:var(--text2);border:none;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer}
+.exp-ef-del{background:#FCE8E6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;color:var(--red);cursor:pointer}
+/* exp-ef-locbtn removed: name field itself triggers map pick now */
+/* Map pick mode banner */
+#map-pick-banner{
+  display:none;position:absolute;bottom:0;left:0;right:0;z-index:10;
+  background:rgba(26,115,232,.92);color:#fff;
+  padding:9px 14px;font-size:12px;font-weight:700;
+  display:none;align-items:center;justify-content:space-between;
+}
+#map-pick-banner.show{display:flex}
+#map-pick-cancel{background:rgba(255,255,255,.25);border:none;border-radius:6px;
+  padding:4px 10px;color:#fff;font-size:11px;cursor:pointer}
+.stop-past{opacity:.55;filter:grayscale(60%)}
+.stop-next-row{background:var(--bg2);border-radius:8px}
+.next-stop-tag{
+  font-size:9px;font-weight:700;
+  background:#FFF3E0;color:#E65100;
+  border-radius:4px;padding:1px 5px;
+  margin-left:5px;vertical-align:middle;
+  white-space:nowrap;
+}
+.stop-transit-green{
+  display:inline-flex;align-items:center;gap:4px;
+  background:#E8F5E9;color:#1B5E20;
+  border-radius:99px;font-size:12px;font-weight:600;
+  padding:4px 11px;flex-shrink:0;cursor:pointer;
+}
+.stop-transit-green i{font-size:16px}
+.stop-transit-black{
+  display:inline-flex;align-items:center;gap:4px;
+  background:#EBEBEB;color:#1A1A1A;
+  border-radius:99px;font-size:12px;font-weight:600;
+  padding:4px 11px;flex-shrink:0;cursor:pointer;
+}
+.stop-transit-black i{font-size:16px}
+.stop-transit-red{
+  display:inline-flex;align-items:center;gap:4px;
+  background:#FCEBEB;color:#A32D2D;
+  border-radius:99px;font-size:12px;font-weight:600;
+  padding:4px 11px;flex-shrink:0;cursor:pointer;
+}
+.stop-transit-red i{font-size:16px}
+.transit-diff{font-size:10px;font-weight:700;flex-shrink:0}
+.transit-diff-green{color:#1B5E20}
+.transit-diff-red{color:#A32D2D}
+.stop-arr{touch-action:none;cursor:grab}
+.stop-transit{
+  display:inline-flex;align-items:center;gap:5px;
+  background:#E6F1FB;color:#185FA5;
+  border-radius:99px;font-size:12px;font-weight:600;
+  padding:4px 11px;flex-shrink:0;cursor:pointer;
+}
+.stop-transit i{font-size:16px}
+.stop-transit:active{background:#B5D4F4}
+.stop-wrap.dragging{
+  position:relative;z-index:30;
+  box-shadow:0 8px 20px rgba(0,0,0,.22);
+  border-radius:10px;background:#fff;
+  transition:box-shadow .15s;
+}
+.stop-wrap.drop-above{box-shadow:inset 0 3px 0 0 var(--blue);}
+.stop-wrap.drop-below{box-shadow:inset 0 -3px 0 0 var(--blue);}
+@keyframes stopFlash{
+  0%{background:#E8F0FE;}
+  100%{background:#fff;}
+}
+.stop-flash .stop-row{animation:stopFlash 1.6s ease-out;}
 .add-stop-btn{
   display:flex;align-items:center;justify-content:center;gap:6px;
   margin:12px 14px;padding:12px;
@@ -488,7 +631,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 }
 .note-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px}
 .note-dot{width:6px;height:6px;border-radius:50%;background:var(--blue);margin-top:6px;flex-shrink:0}
-.note-txt{flex:1;font-size:13px;color:var(--text);line-height:1.4}
+.note-txt{flex:1;font-size:13px;color:var(--red);line-height:1.4}
 .add-row{display:flex;gap:6px;margin-top:6px}
 .add-inp{
   flex:1;padding:9px 12px;border:1.5px solid var(--border);
@@ -557,7 +700,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 .msg-nm{font-size:10px;color:var(--text2);margin-bottom:2px}
 .msg-t{font-size:9px;color:var(--text2);align-self:flex-end;flex-shrink:0}
 .chat-input-wrap{
-  position:sticky;bottom:0;background:#fff;
+  flex-shrink:0;background:#fff;
   border-top:1px solid var(--border);padding:8px 10px;
 }
 .sticker-tray{display:none;padding:8px;font-size:26px;
@@ -594,15 +737,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 .seg-sub{font-size:10px;color:var(--text2)}
 
 /* ── Members / Locations ── */
-.av{
-  width:26px;height:26px;border-radius:50%;
-  font-size:9px;font-weight:700;color:#fff;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;
-  position:relative;
-}
-.av0{background:#1A73E8}.av1{background:#34A853}.av2{background:#EA4335}
-.av3{background:#F9AB00;color:#333}.av4{background:#7C4DFF}.av5{background:#00BCD4}.av6{background:#FF6D00}
-.av-crown{position:absolute;top:-6px;left:50%;transform:translateX(-50%);font-size:10px}
+
 .mem-row{
   display:flex;align-items:center;gap:10px;
   padding:10px 14px;border-bottom:1px solid var(--bg2);
@@ -639,7 +774,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 /* ── Add Stop Screen ── */
 #add-stop-screen{
   display:none;
-  position:fixed;inset:0;z-index:20;
+  position:fixed;inset:0;z-index:200;
   background:#fff;flex-direction:column;
 }
 #add-stop-screen.show{display:flex}
@@ -728,7 +863,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 /* ── Trip Switcher ── */
 #trip-switcher{
   display:none;position:fixed;inset:0;z-index:9500;
-  background:linear-gradient(160deg,#1565C0,#1A73E8 50%,#1976D2);
+  background:linear-gradient(160deg,#1A3F61,#2B5F8E 50%,#22527D);
   flex-direction:column;overflow-y:auto;
 }
 #trip-switcher.show{display:flex}
@@ -853,6 +988,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:9px;color:rgba(255,255,255,.35);z-index:1">build 2026-06-15-A</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -907,11 +1043,17 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
       <div class="adm-title" style="margin-bottom:0">🛡 管理員面板</div>
       <button id="btn-admin-close" style="background:var(--bg2);border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:14px;color:var(--gray)"><i class="ti ti-x"></i></button>
     </div>
-    <button id="btn-admin-refresh" style="width:100%;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px">
-      <i class="ti ti-refresh"></i> 重新整理旅程列表
-    </button>
+    <div style="display:flex;gap:6px;margin-bottom:12px">
+      <button id="btn-admin-trips" style="flex:1;padding:9px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+        <i class="ti ti-map-2"></i> 所有旅程
+      </button>
+      <button id="btn-admin-trash" style="flex:1;padding:9px;background:#FCE8E6;color:var(--red);border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+        <i class="ti ti-trash"></i> 垃圾桶
+      </button>
+    </div>
     <div id="adm-trip-status" style="font-size:12px;color:var(--text2);margin-bottom:8px"></div>
     <div id="adm-trip-list"></div>
+    <div id="adm-trash-list" style="display:none"></div>
 
     <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
       <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🔑 修改管理員密碼</div>
@@ -930,8 +1072,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
     <span class="tb-logo" id="tb-logo"><i class="ti ti-map-2"></i> TripGo</span>
     <span class="tb-trip" id="tb-trip">旅遊群組</span>
     <span id="net-status" class="online"><i class="ti ti-wifi" style="font-size:11px"></i><span id="net-label">線上</span></span>
-    <div class="tb-avs" id="tb-avs"></div>
-    <span class="tb-org" id="tb-org" style="display:none">👑 組織者</span>
+    <span style="flex:1"></span>
+    <span id="tb-myname" style="font-size:11px;color:var(--text2);font-weight:600;flex-shrink:0;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+
   </div>
   <div class="main">
     <div id="map-wrap">
@@ -973,19 +1116,24 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
         <div id="pc-info"></div>
       </div>
       <span id="map-members" style="position:absolute;bottom:8px;left:8px;font-size:10px;color:#fff;background:rgba(0,0,0,.4);border-radius:10px;padding:2px 8px"></span>
+      <div id="map-pick-banner">
+        <span>📍 點選地圖景點，或用搜尋欄輸入地名</span>
+        <button id="map-pick-cancel">取消</button>
+      </div>
     </div>
     <div class="divider" id="divider"><div class="divider-dot"></div></div>
     <div id="right-panel">
       <div class="tabs">
-        <button class="tab on" data-pane="itinerary"><i class="ti ti-route"></i><span>行程</span></button>
-        <button class="tab" data-pane="chat"><i class="ti ti-message"></i><span>群組</span></button>
-        <button class="tab" data-pane="expense"><i class="ti ti-receipt"></i><span>費用</span></button>
-        <button class="tab" data-pane="locations"><i class="ti ti-users"></i><span>團員</span></button>
+        <button class="tab on" data-pane="itinerary" aria-label="行程"><i class="ti ti-route"></i></button>
+        <button class="tab" data-pane="chat" aria-label="群組"><i class="ti ti-message"></i><span class="tab-dot" id="chat-unread-dot"></span></button>
+        <button class="tab" data-pane="expense" aria-label="費用"><span class="tab-dollar">$</span><span class="tab-dot" id="expense-unread-dot"></span></button>
+        <button class="tab" data-pane="locations" aria-label="團員"><i class="ti ti-users"></i><span class="tab-dot" id="members-unread-dot"></span></button>
       </div>
       <!-- Itinerary pane -->
       <div class="pane on" id="pane-itinerary">
         <div id="stop-list"></div>
         <button class="add-stop-btn" id="btn-add-stop"><i class="ti ti-plus"></i> 新增景點</button>
+        <div id="new-stop-panel" style="display:none;margin:0 14px 12px"></div>
         <div class="bud-bar">
           <div class="bud-top"><span>預算使用</span><span id="bud-pct">0%</span></div>
           <div class="bud-track"><div class="bud-fill" id="bud-fill" style="width:0%"></div></div>
@@ -1002,8 +1150,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
           </div>
           <div class="det-body">
             <div id="det-edit-fields">
+                            <input type="hidden" id="det-e-lat" value="0"/>
+              <input type="hidden" id="det-e-lng" value="0"/>
               <div class="det-edit-fields-inner">
-                <div class="edit-field"><label class="edit-label">景點名稱</label><input class="edit-input" id="det-e-name"/></div>
+                <div class="edit-field">
+                  <label class="edit-label">景點名稱 <span id="det-loc-badge" style="display:none;font-size:9px;background:#E6F4EA;color:#1E7A3C;border-radius:4px;padding:1px 5px;margin-left:4px">✓ 已選定位置</span></label>
+                  <input class="edit-input" id="det-e-name" placeholder="點此搜尋或點地圖選取"/>
+                </div>
                 <div class="edit-row">
                   <div class="edit-field"><label class="edit-label">抵達時間</label><input class="edit-input" id="det-e-arrive" placeholder="09:00"/></div>
                   <div class="edit-field"><label class="edit-label">離開時間</label><input class="edit-input" id="det-e-depart" placeholder="12:00"/></div>
@@ -1011,10 +1164,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
                 <div class="edit-field"><label class="edit-label">天數標籤</label><input class="edit-input" id="det-e-day" placeholder="Day 1"/></div>
                 <div class="edit-field"><label class="edit-label">備註</label><input class="edit-input" id="det-e-note" placeholder="（選填）"/></div>
                 <button class="save-btn" id="btn-det-save"><i class="ti ti-check"></i> 儲存修改</button>
-              </div>
+              </div><!-- /det-edit-fields-inner -->
             </div>
             <div class="sec"><div class="sec-t"><i class="ti ti-checkbox"></i>活動清單</div><div id="act-list"></div><div class="add-row"><input class="add-inp" id="act-inp" placeholder="新增活動…"/><button class="add-ok" id="btn-add-act"><i class="ti ti-plus"></i></button></div></div>
-            <div class="sec"><div class="sec-t"><i class="ti ti-alert-triangle"></i>注意事項</div><div id="note-list"></div><div class="add-row"><input class="add-inp" id="note-inp" placeholder="新增注意事項…"/><button class="add-ok" id="btn-add-note"><i class="ti ti-plus"></i></button></div></div>
+            <div class="sec"><div class="sec-t"><i class="ti ti-alert-triangle" style="color:#F9AB00"></i>注意事項</div><div id="note-list"></div><div class="add-row"><input class="add-inp" id="note-inp" placeholder="新增注意事項…"/><button class="add-ok" id="btn-add-note"><i class="ti ti-plus"></i></button></div></div>
             <div class="sec"><div class="sec-t"><i class="ti ti-coin"></i>費用預估</div><div class="bud-row"><span style="font-size:12px;color:var(--text2)">每人預估</span><div style="display:flex;align-items:center;gap:8px"><span class="bud-val" id="det-bud"></span><button class="bud-edit" id="btn-edit-bud">修改</button></div></div></div>
           </div>
         </div>
@@ -1022,7 +1175,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
       <!-- Chat pane -->
       <div class="pane" id="pane-chat">
         <div id="chat-st" style="font-size:11px;color:var(--text2);text-align:center;padding:8px">載入訊息中…</div>
-        <div id="msg-scroll" style="overflow-y:auto;flex:1;padding:10px 14px;max-height:calc(100% - 120px)"><div id="msg-list"></div></div>
+        <div id="msg-scroll" style="overflow-y:auto;flex:1;padding:10px 14px;min-height:0"><div id="msg-list"></div></div>
         <div class="chat-input-wrap">
           <div class="sticker-tray" id="sticker-tray">
             <span data-s="😀">😀</span><span data-s="😂">😂</span><span data-s="😍">😍</span>
@@ -1129,9 +1282,16 @@ html,body{width:100%;height:100%;overflow:hidden;background:#1A73E8}
 
 <div class="modal" id="M-members"><div class="modal-box">
   <div class="m-handle"></div>
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
     <div class="m-title" style="margin-bottom:0">👥 成員管理 <span style="font-size:11px;color:var(--text2)" id="mem-count"></span></div>
     <button id="btn-members-close" style="background:var(--bg2);border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:14px;color:var(--gray)"><i class="ti ti-x"></i></button>
+  </div>
+  <div id="rename-trip-row" style="display:none;margin-bottom:12px;padding:10px 12px;background:var(--bg2);border-radius:10px">
+    <div style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">✏️ 旅遊名稱</div>
+    <div style="display:flex;gap:6px">
+      <input id="rename-inp" class="m-inp" style="flex:1;padding:8px 12px;font-size:13px" placeholder="輸入新旅遊名稱"/>
+      <button id="btn-rename-ok" style="padding:8px 14px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">更新</button>
+    </div>
   </div>
   <div id="mem-list"></div>
   <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
@@ -1361,10 +1521,25 @@ window.initMap = function(){
   });
   dsvc  = new google.maps.DirectionsService();
   drend = new google.maps.DirectionsRenderer({map:map, suppressMarkers:true,
-    polylineOptions:{strokeColor:'#1A73E8',strokeWeight:4}});
+    polylineOptions:{strokeColor:'#2B5F8E',strokeWeight:4}});
   acSvc = new google.maps.places.AutocompleteService();
   plSvc = new google.maps.places.PlacesService(map);
   map.addListener('click', function(e){
+    if(_mapPickActive){
+      // MAP PICK MODE: capture location for inline edit + also show place info
+      if(e.placeId){
+        e.stop();
+        showPlaceCard(e.placeId); // shows full info card (rating, address, phone…)
+        plSvc.getDetails({placeId:e.placeId,fields:['name','geometry']},function(place,status){
+          if(status===google.maps.places.PlacesServiceStatus.OK){
+            applyMapPickResult(place.geometry.location.lat(),place.geometry.location.lng(),place.name||'');
+          }
+        });
+      } else {
+        applyMapPickResult(e.latLng.lat(),e.latLng.lng(),'');
+      }
+      return;
+    }
     if(e.placeId){ e.stop(); showPlaceCard(e.placeId); }
     else closePc();
   });
@@ -1398,10 +1573,10 @@ function getMyLoc(){
     if(myCircle) myCircle.setMap(null);
     myMarker = new google.maps.Marker({position:ll,map:map,
       icon:{path:google.maps.SymbolPath.CIRCLE,scale:7,
-        fillColor:'#4285F4',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}});
+        fillColor:'#2B5F8E',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}});
     myCircle = new google.maps.Circle({center:ll,radius:pos.coords.accuracy,
-      map:map,strokeColor:'#4285F4',strokeOpacity:.3,strokeWeight:1,
-      fillColor:'#4285F4',fillOpacity:.08});
+      map:map,strokeColor:'#2B5F8E',strokeOpacity:.3,strokeWeight:1,
+      fillColor:'#2B5F8E',fillOpacity:.08});
   },null,{enableHighAccuracy:true,timeout:10000});
 }
 function goToMe(){ getMyLoc(); }
@@ -1414,9 +1589,24 @@ function startLocShare(code, uid, name){
       {lat:pos.coords.latitude,lng:pos.coords.longitude,name:name,at:Date.now()});
   },null,{enableHighAccuracy:true,maximumAge:10000});
 }
+function formatTimeAgo(ts){
+  if(!ts) return '未分享';
+  var s=Math.round((Date.now()-ts)/1000);
+  if(s<60) return s+'秒前';
+  var m=Math.round(s/60);
+  if(m<60) return m+'分前';
+  var h=Math.round(m/60);
+  if(h<24) return h+'小時前';
+  var d=Math.round(h/24);
+  return d+'天前';
+}
 function getInitials(name){
   if(!name) return '?';
-  var parts=name.trim().split(/\s+/);
+  var s=name.trim();
+  // Chinese: first character
+  if(/[\u4e00-\u9fff]/.test(s)) return s[0];
+  // English / other: first two letters of first two words
+  var parts=s.split(/\s+/);
   if(parts.length>=2) return (parts[0][0]+parts[1][0]).toUpperCase();
   return parts[0].substring(0,2).toUpperCase();
 }
@@ -1424,20 +1614,40 @@ function updateMemberMarkers(){
   Object.keys(memberMarkers).forEach(function(uid){
     memberMarkers[uid].setMap(null); delete memberMarkers[uid];
   });
+  // Also remove old time labels
+  if(window._memberLabelMarkers){
+    window._memberLabelMarkers.forEach(function(m){ m.setMap(null); });
+  }
+  window._memberLabelMarkers=[];
   Object.entries(S.allLocs).forEach(function(entry){
     var uid=entry[0], loc=entry[1];
     if(!loc||uid===S.myUid||!map) return;
+    var ageMs=loc.at?(Date.now()-loc.at):Infinity;
+    var isStale=ageMs>30*60*1000;
+    var initials=getInitials(loc.name);
+    // Orange solid circle + black text
     memberMarkers[uid]=new google.maps.Marker({
       position:{lat:loc.lat,lng:loc.lng},map:map,
       icon:{path:google.maps.SymbolPath.CIRCLE,scale:12,
-        fillColor:'#F9AB00',fillOpacity:1,
-        strokeColor:'#fff',strokeOpacity:1,strokeWeight:2,
+        fillColor:'#F9AB00',fillOpacity:isStale?0.35:1,
+        strokeColor:'#fff',strokeOpacity:isStale?0.5:1,strokeWeight:2,
         labelOrigin:new google.maps.Point(0,0)},
-      label:{text:getInitials(loc.name),color:'#fff',fontSize:'10px',fontWeight:'700'},
-      title:loc.name
+      label:{text:initials,color:isStale?'rgba(0,0,0,.4)':'#000',fontSize:'9px',fontWeight:'800'},
+      title:loc.name+' · '+formatTimeAgo(loc.at)
     });
+    // Floating time-ago label next to the dot
+    var ago=formatTimeAgo(loc.at);
+    var labelMarker=new google.maps.Marker({
+      position:{lat:loc.lat,lng:loc.lng},map:map,
+      icon:{url:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',scaledSize:new google.maps.Size(1,1)},
+      label:{text:ago,color:isStale?'rgba(80,80,80,.5)':'rgba(30,30,30,.85)',fontSize:'9px',fontWeight:'600',
+        className:'member-time-label'},
+      title:loc.name,
+      clickable:false
+    });
+    window._memberLabelMarkers.push(labelMarker);
     memberMarkers[uid].addListener('click',function(){
-      showToast(loc.name,1500);
+      showToast(loc.name+' · '+formatTimeAgo(loc.at),2000);
     });
   });
 }
@@ -1519,40 +1729,123 @@ function selectPlace(pid,name){
   document.getElementById('search-inp').value=name||'';
   document.getElementById('search-clear').style.display='block';
   document.getElementById('search-drop').classList.remove('show');
+  if(_mapPickActive){
+    // In pick mode: show place info card AND resolve coordinates to apply
+    showPlaceCard(pid);
+    plSvc.getDetails({placeId:pid,fields:['name','geometry']},function(place,status){
+      if(status===google.maps.places.PlacesServiceStatus.OK){
+        applyMapPickResult(place.geometry.location.lat(),place.geometry.location.lng(),place.name||name||'');
+      }
+    });
+    return;
+  }
   if(plSvc) showPlaceCard(pid);
 }
 
 // ── Place Card ──
 var _pcData={};
+// Type ID -> Chinese label map
+var PLACE_TYPE_ZH={
+  'restaurant':'餐廳','food':'餐廳','cafe':'咖啡廳','bar':'酒吧','bakery':'烘焙坊',
+  'lodging':'住宿','hotel':'飯店',
+  'tourist_attraction':'觀光景點','museum':'博物館','art_gallery':'美術館',
+  'park':'公園','natural_feature':'自然景觀',
+  'castle':'城堡','church':'教堂','hindu_temple':'寺廟','mosque':'清真寺','synagogue':'猶太教堂',
+  'airport':'機場','train_station':'火車站','subway_station':'地鐵站','bus_station':'巴士站',
+  'shopping_mall':'購物中心','store':'商店','supermarket':'超市','convenience_store':'便利商店',
+  'hospital':'醫院','pharmacy':'藥局','bank':'銀行','atm':'ATM',
+  'gas_station':'加油站','parking':'停車場',
+  'amusement_park':'遊樂園','aquarium':'水族館','zoo':'動物園',
+  'spa':'水療','gym':'健身房',
+  'car_rental':'租車','travel_agency':'旅行社',
+  'establishment':'商家','point_of_interest':'景點'
+};
+function placeTypeZh(types){
+  if(!types||!types.length) return '';
+  for(var i=0;i<types.length;i++){
+    var t=types[i];
+    if(PLACE_TYPE_ZH[t]&&t!=='establishment'&&t!=='point_of_interest') return PLACE_TYPE_ZH[t];
+  }
+  return PLACE_TYPE_ZH[types[0]]||(types[0]||'').replace(/_/g,' ');
+}
+
+function isOpenNow(place){
+  if(place.opening_hours&&typeof place.opening_hours.isOpen==='function'){
+    try{
+      if(place.utc_offset_minutes!=null){
+        var nowUtc=new Date();
+        var localMs=nowUtc.getTime()+(place.utc_offset_minutes*60000)+nowUtc.getTimezoneOffset()*60000;
+        var local=new Date(localMs);
+        var day=local.getUTCDay();
+        var mins=local.getUTCHours()*60+local.getUTCMinutes();
+        var periods=place.opening_hours.periods||[];
+        if(!periods.length) return place.opening_hours.isOpen();
+        for(var i=0;i<periods.length;i++){
+          var p=periods[i];
+          if(!p.open) continue;
+          var openDay=p.open.day, openMin=p.open.hours*60+p.open.minutes;
+          var closeDay=p.close?p.close.day:openDay;
+          var closeMin=p.close?p.close.hours*60+p.close.minutes:1440;
+          if(openDay===closeDay){
+            if(day===openDay&&mins>=openMin&&mins<closeMin) return true;
+          } else {
+            if(day===openDay&&mins>=openMin) return true;
+            if(day===closeDay&&mins<closeMin) return true;
+          }
+        }
+        return false;
+      }
+      return place.opening_hours.isOpen();
+    }catch(e){ return null; }
+  }
+  return null;
+}
+
+function _applyPlaceCard(place){
+  S.currentPlace=place;
+  _pcData={phone:place.formatted_phone_number||'',website:place.website||''};
+  document.getElementById('pc-name').textContent=place.name||'';
+  document.getElementById('pc-type').textContent=placeTypeZh(place.types);
+  var ratingHtml='';
+  if(place.rating){
+    ratingHtml='★ '+place.rating;
+    if(place.user_ratings_total)
+      ratingHtml+=' <span style="font-size:10px;color:var(--text2)">('+place.user_ratings_total.toLocaleString()+')</span>';
+    var openStatus=isOpenNow(place);
+    if(openStatus!==null)
+      ratingHtml+=' · <span style="color:'+(openStatus?'var(--green)':'var(--red)')+'">'+(openStatus?'營業中':'休息中')+'</span>';
+  }
+  document.getElementById('pc-rating').innerHTML=ratingHtml;
+  var info='';
+  if(place.formatted_address) info+='<div class="pc-info-row"><i class="ti ti-map-pin"></i><span>'+place.formatted_address+'</span></div>';
+  if(place.formatted_phone_number) info+='<div class="pc-info-row"><i class="ti ti-phone"></i><span>'+place.formatted_phone_number+'</span></div>';
+  document.getElementById('pc-info').innerHTML=info;
+  document.getElementById('place-card').classList.add('show');
+}
+// Full showPlaceCard - moves map to place location (for search results)
 function showPlaceCard(pid){
   if(!plSvc) return;
   S.currentPlaceId=pid;
   plSvc.getDetails({placeId:pid,
-    fields:['name','geometry','rating','formatted_phone_number','website','types','opening_hours','formatted_address']},
+    fields:['name','geometry','rating','user_ratings_total','formatted_phone_number','website','types','opening_hours','formatted_address','utc_offset_minutes']},
     function(place,status){
       if(status!==google.maps.places.PlacesServiceStatus.OK) return;
-      S.currentPlace=place;
-      _pcData={phone:place.formatted_phone_number||'',website:place.website||''};
-      document.getElementById('pc-name').textContent=place.name||'';
-      document.getElementById('pc-type').textContent=place.types?(place.types[0]||'').replace(/_/g,' '):'';
-      var ratingHtml='';
-      if(place.rating){
-        ratingHtml='★ '+place.rating;
-        if(place.opening_hours){
-          var open=place.opening_hours.isOpen();
-          ratingHtml+=' · <span style="color:'+(open?'var(--green)':'var(--red)')+'">'+( open?'營業中':'休息中')+'</span>';
-        }
-      }
-      document.getElementById('pc-rating').innerHTML=ratingHtml;
-      var info='';
-      if(place.formatted_address) info+='<div class="pc-info-row"><i class="ti ti-map-pin"></i><span>'+place.formatted_address+'</span></div>';
-      if(place.formatted_phone_number) info+='<div class="pc-info-row"><i class="ti ti-phone"></i><span>'+place.formatted_phone_number+'</span></div>';
-      document.getElementById('pc-info').innerHTML=info;
-      document.getElementById('place-card').classList.add('show');
+      _applyPlaceCard(place);
       if(map&&place.geometry){
         map.panTo(place.geometry.location);
         if(map.getZoom()<14) map.setZoom(14);
       }
+    });
+}
+// No-move variant - shows card WITHOUT repositioning map (for stop taps with stored coords)
+function showPlaceCardFixed(pid){
+  if(!plSvc) return;
+  S.currentPlaceId=pid;
+  plSvc.getDetails({placeId:pid,
+    fields:['name','geometry','rating','user_ratings_total','formatted_phone_number','website','types','opening_hours','formatted_address','utc_offset_minutes']},
+    function(place,status){
+      if(status!==google.maps.places.PlacesServiceStatus.OK) return;
+      _applyPlaceCard(place); // No map.panTo - position already set by tapStop
     });
 }
 function closePc(){ document.getElementById('place-card').classList.remove('show'); S.currentPlace=null; }
@@ -1574,18 +1867,12 @@ function pcAddToItinerary(){
   if(!S.currentPlace) return;
   var place=S.currentPlace;
   closePc();
-  openAddStop();
-  setTimeout(function(){
-    if(place.name) document.getElementById('ns-name').value=place.name;
-    if(place.geometry){
-      S.aspLat=place.geometry.location.lat();
-      S.aspLng=place.geometry.location.lng();
-      if(aspMap){ aspMap.panTo(place.geometry.location); aspMap.setZoom(15); aspDropPin(place.geometry.location); }
-      document.getElementById('asp-pname').textContent=place.name||'';
-      document.getElementById('asp-paddr').textContent=(place.formatted_address||'');
-      document.getElementById('asp-place-info').classList.add('show');
-    }
-  },400);
+  var prefill={name:place.name||''};
+  if(place.geometry){
+    prefill.lat=place.geometry.location.lat();
+    prefill.lng=place.geometry.location.lng();
+  }
+  openNewStopForm(prefill);
 }
 
 // ════════════════════════════════
@@ -1601,36 +1888,72 @@ function startApp(code, uid, name, tripName, isOrg){
   document.getElementById('invite-code-show').textContent=code;
   document.getElementById('invite-url-show').textContent=getInviteUrl();
   document.getElementById('tb-trip').textContent=tripName;
-  document.getElementById('tb-org').style.display=isOrg?'inline':'none';
   document.getElementById('S-join').classList.add('hide');
   document.getElementById('S-app').classList.add('show');
 
   setMapHeight();
   setTimeout(function(){ if(map) google.maps.event.trigger(map,'resize'); },300);
 
+  // Reset UI state for new trip
+  document.getElementById('detail').classList.remove('show');
+  if(stopMarker){stopMarker.setMap(null);stopMarker=null;}
+  document.querySelectorAll('.stop-expand.open').forEach(function(p){p.classList.remove('open');});
+  document.querySelectorAll('.stop-txt.active').forEach(function(e){e.classList.remove('active');});
   // Clear old listeners before subscribing new ones
   window.FB.clearListeners();
 
   var FB=window.FB;
+  var _firstMembers=true, _prevMemberCount=0;
   FB.onValue('tripgo/groups/'+code+'/members',function(snap){
+    var prev=_prevMemberCount;
     S.members=snap.val()?Object.values(snap.val()):[];
+    _prevMemberCount=S.members.length;
     renderAvatars(); renderMembers(); renderPayerSelect(); renderLocList();
+    if(!_firstMembers&&S.members.length>prev){
+      var locPane=document.getElementById('pane-locations');
+      if(!(locPane&&locPane.classList.contains('on'))){
+        var memDot=document.getElementById('members-unread-dot'); if(memDot) memDot.classList.add('show');
+      }
+    }
+    _firstMembers=false;
   });
   FB.onValue('tripgo/groups/'+code+'/stops',function(snap){
-    S.stops=snap.val()?Object.entries(snap.val())
+    var raw=snap.val()?Object.entries(snap.val())
       .sort(function(a,b){return a[0]<b[0]?-1:1;})
       .map(function(e){return Object.assign({_key:e[0]},e[1]);}):[];
+    S.stops=sortStopsForDisplay(raw);
     renderStops();
   });
   var firstMsg=true;
   FB.onChildAdded('tripgo/groups/'+code+'/chat',function(snap){
     var m=snap.val();
     appendMsg(m.uid,m.name,m.text,m.sticker,m.time);
-    if(!firstMsg) document.getElementById('msg-scroll').scrollTop=9999;
+    if(!firstMsg){
+      document.getElementById('msg-scroll').scrollTop=9999;
+      // Show unread red dot if we're not currently looking at the chat pane (and it's not our own message)
+      var chatPane=document.getElementById('pane-chat');
+      var onChatNow=chatPane&&chatPane.classList.contains('on');
+      if(!onChatNow&&m.uid!==S.myUid){
+        var dot=document.getElementById('chat-unread-dot'); if(dot) dot.classList.add('show');
+      }
+    }
   });
   setTimeout(function(){ firstMsg=false; var el=document.getElementById('chat-st'); if(el)el.style.display='none'; },2000);
+  var _firstExpense=true;
   FB.onValue('tripgo/groups/'+code+'/expenses',function(snap){
-    S.expenses=snap.val()||{}; renderExpenses();
+    var prev=Object.keys(S.expenses||{}).length;
+    S.expenses=snap.val()||{};
+    renderExpenses();
+    if(!_firstExpense){
+      var curr=Object.keys(S.expenses).length;
+      if(curr>prev){
+        var expPane=document.getElementById('pane-expense');
+        if(!(expPane&&expPane.classList.contains('on'))){
+          var expDot=document.getElementById('expense-unread-dot'); if(expDot) expDot.classList.add('show');
+        }
+      }
+    }
+    _firstExpense=false;
   });
   FB.onValue('tripgo/groups/'+code+'/locations',function(snap){
     S.allLocs=snap.val()||{}; updateMemberMarkers(); renderLocList();
@@ -1641,6 +1964,61 @@ function startApp(code, uid, name, tripName, isOrg){
 // ════════════════════════════════
 // STOPS
 // ════════════════════════════════
+var _scrollToStopKey=null;
+
+// ── Find index of next upcoming stop (first stop whose arrive time is in the future) ──
+function findNextStopIdx(){
+  var now=new Date();
+  var hhmm=now.getHours()*60+now.getMinutes();
+  for(var i=0;i<S.stops.length;i++){
+    var s=S.stops[i];
+    var t=timeToMinutes(s.arrive);
+    if(t==null) continue; // no time → skip
+    if(t>hhmm) return i;
+  }
+  return -1; // all done
+}
+
+// ── Parse "HH:MM" into minutes-since-midnight (null if invalid) ──
+function timeToMinutes(t){
+  if(!t) return null;
+  var m=/^(\d{1,2}):(\d{2})/.exec(String(t).trim());
+  if(!m) return null;
+  return parseInt(m[1],10)*60+parseInt(m[2],10);
+}
+
+// ── Group stops by day-tag, sort each group by time (or by manual .order if set) ──
+function sortStopsForDisplay(raw){
+  var dayOrder=[], groups={};
+  raw.forEach(function(s){
+    var d=s.day||'';
+    if(!(d in groups)){ groups[d]=[]; dayOrder.push(d); }
+    groups[d].push(s);
+  });
+  var result=[];
+  dayOrder.forEach(function(d){
+    var items=groups[d];
+    var hasManualOrder=items.some(function(s){return s.order!=null;});
+    var sorted;
+    if(hasManualOrder){
+      sorted=items.slice().sort(function(a,b){
+        var oa=a.order!=null?a.order:Infinity, ob=b.order!=null?b.order:Infinity;
+        return oa-ob;
+      });
+    } else {
+      sorted=items.slice().sort(function(a,b){
+        var ta=timeToMinutes(a.arrive), tb=timeToMinutes(b.arrive);
+        if(ta==null&&tb==null) return 0;
+        if(ta==null) return 1;
+        if(tb==null) return -1;
+        return ta-tb;
+      });
+    }
+    result=result.concat(sorted);
+  });
+  return result;
+}
+
 function renderStops(){
   var el=document.getElementById('stop-list');
   if(!S.stops.length){
@@ -1648,6 +2026,7 @@ function renderStops(){
     return;
   }
   var lastDay='',html='';
+  var nextIdx=findNextStopIdx();
   S.stops.forEach(function(s,i){
     if(s.day&&s.day!==lastDay){ lastDay=s.day; html+='<div class="day-hdr">'+s.day+'</div>'; }
     var sel=MS_SET.has(i);
@@ -1666,23 +2045,45 @@ function renderStops(){
         notesHtml+='<div class="exp-note-row"><div class="exp-dot"></div><span>'+n+'</span></div>';
       });
     }
-    html+='<div class="stop-wrap" id="sw-'+i+'">' +
-      '<div class="stop-row" id="sr-'+i+'">' +
+    var isPast=nextIdx>=0&&i<nextIdx;
+    var isNext=i===nextIdx;
+    var pastCls=isPast?' stop-past':'';
+    var nextTag=isNext?'<span class="next-stop-tag">下一站</span>':'';
+    // Transit badge with live-vs-planned coloring
+    var tbadge='';
+    if(s.transit&&s.transit.minutes){
+      var tmode=s.transit.mode||'car';
+      var ticon=tmode==='walk'?'ti-walk':tmode==='bus'?'ti-bus':tmode==='train'?'ti-train':'ti-car';
+      var liveMins=s.transit.liveMins; // set externally when live data available
+      var planned=s.transit.minutes;
+      var bdgCls='stop-transit'; var diffStr='';
+      if(isNext&&liveMins!=null){
+        var diff=liveMins-planned;
+        if(diff<=-5){ bdgCls='stop-transit-green'; diffStr='<span class="transit-diff transit-diff-green">-'+Math.abs(diff)+'min</span>'; }
+        else if(diff>=5){ bdgCls='stop-transit-red'; diffStr='<span class="transit-diff transit-diff-red">+'+diff+'min</span>'; }
+        else { bdgCls='stop-transit-black'; }
+        tbadge='<span class="'+bdgCls+'" id="stn-'+i+'" data-i="'+i+'"><i class="ti '+ticon+'" aria-hidden="true"></i> '+liveMins+'min</span>'+diffStr;
+      } else {
+        tbadge='<span class="stop-transit" id="stn-'+i+'" data-i="'+i+'"><i class="ti '+ticon+'" aria-hidden="true"></i> '+planned+'min</span>';
+      }
+    }
+    html+='<div class="stop-wrap'+pastCls+'" id="sw-'+i+'">' +
+      '<div class="stop-row" id="sr-'+i+(isNext?' stop-next-row':'')+'">' +
         '<div class="stop-cb'+(sel?' on':'')+'" id="cb-'+i+'"></div>' +
         '<div class="stop-txt" id="st-'+i+'">' +
-          '<div class="stop-name">'+s.name+'</div>' +
-          '<div class="stop-time">'+(s.arrive||'')+(s.depart?' → '+s.depart:'')+(s.note?' · '+s.note.substring(0,20):'')+'</div>' +
+          '<div class="stop-name">'+s.name+nextTag+'</div>' +
+          '<div class="stop-time">'+((s.arrive||'')+(s.depart?' ~ '+s.depart:'')+(s.note?' · '+s.note.substring(0,25):''))+'</div>' +
         '</div>' +
         (MS_MODE?'':
-          '<button class="stop-nav" id="sn-'+i+'"><i class="ti ti-navigation" style="font-size:11px"></i> 導航</button>' +
-          '<i class="ti ti-chevron-right stop-arr" id="sa-'+i+'"></i>'
+          tbadge+
+          '<i class="ti ti-chevron-down stop-arr" id="sa-'+i+'"></i>'
         ) +
       '</div>' +
       '<div class="stop-expand" id="se-'+i+'">' +
-        (actsHtml?'<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-checkbox" aria-hidden="true"></i>活動清單</div>'+actsHtml+'</div>':'') +
-        (notesHtml?'<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-alert-triangle" aria-hidden="true"></i>注意事項</div>'+notesHtml+'</div>':'') +
-        '<button class="exp-edit-btn" data-i="'+i+'"><i class="ti ti-pencil" aria-hidden="true"></i> 編輯細節</button>' +
-      '</div>' +
+        '<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-checkbox" aria-hidden="true"></i>活動清單<button class="exp-edit-btn" data-i="'+i+'" style="margin-left:auto"><i class="ti ti-pencil" aria-hidden="true"></i> 編輯細節</button><button class="exp-del-btn" data-i="'+i+'" style="margin-left:6px"><i class="ti ti-trash" aria-hidden="true"></i> 刪除</button></div>'+(actsHtml||'<div style="font-size:11px;color:var(--text2);padding:2px 0">（尚無活動）</div>')+'</div>' +
+        (notesHtml?'<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-alert-triangle" style="color:#F9AB00" aria-hidden="true"></i>注意事項</div>'+notesHtml+'</div>':'') +
+
+        '</div>' +
     '</div>';
   });
   el.innerHTML=html;
@@ -1691,7 +2092,31 @@ function renderStops(){
   // Event delegation (all events on the list element)
   el.addEventListener('click', onStopListClick, {once:true});
 
-  S.stops.forEach(function(s,i){ attachSwipe(i); attachLongpress(i); });
+  S.stops.forEach(function(s,i){ attachSwipe(i); attachLongpress(i); attachDragHandle(i); });
+  // Auto-scroll so the next upcoming stop sits at the top of the visible list
+  if(nextIdx>=0){
+    setTimeout(function(){
+      var el=document.getElementById('sw-'+nextIdx);
+      if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+    },80);
+  }
+
+  // ── Scroll back to the stop that was just updated ──
+  if(_scrollToStopKey){
+    var targetKey=_scrollToStopKey;
+    _scrollToStopKey=null;
+    var idx=S.stops.findIndex(function(s){ return s._key===targetKey; });
+    if(idx>=0){
+      setTimeout(function(){
+        var row=document.getElementById('sw-'+idx);
+        if(row){
+          row.scrollIntoView({behavior:'smooth',block:'center'});
+          row.classList.add('stop-flash');
+          setTimeout(function(){ row.classList.remove('stop-flash'); },1700);
+        }
+      },80);
+    }
+  }
 }
 
 function onStopListClick(e){
@@ -1703,13 +2128,16 @@ function onStopListClick(e){
   var cb=e.target.closest('.stop-cb');
   if(cb){ var i=parseInt(cb.id.replace('cb-','')); toggleSel(i); return; }
 
-  // Nav button
-  var nav=e.target.closest('.stop-nav');
-  if(nav){ var i=parseInt(nav.id.replace('sn-','')); navStop(i); return; }
+  // Transit badge click → navigate to that stop
+  var trnav=e.target.closest('.stop-transit');
+  if(trnav){ var i=parseInt(trnav.dataset.i); navStop(i); return; }
 
-  // Arrow -> detail
+  // Arrow -> detail (unless a drag just happened on this arrow)
   var arr=e.target.closest('.stop-arr');
-  if(arr){ var i=parseInt(arr.id.replace('sa-','')); openStopDetail(i); return; }
+  if(arr){
+    if(_dragJustHappened){ _dragJustHappened=false; return; }
+    var i=parseInt(arr.id.replace('sa-','')); tapStop(i); return;
+  }
 
   // Stop text -> map + pin
   var txt=e.target.closest('.stop-txt');
@@ -1723,88 +2151,99 @@ function onStopListClick(e){
     tAct(ai); return;
   }
 
-  // Edit detail button
+  // Edit detail button → open inline edit (not overlay)
   var editBtn=e.target.closest('.exp-edit-btn');
   if(editBtn){
     var si=parseInt(editBtn.dataset.i);
-    openStopDetail(si); return;
+    openInlineEdit(si); return;
   }
+
+  // Delete button in expand panel
+  var delBtn=e.target.closest('.exp-del-btn');
+  if(delBtn){
+    var si=parseInt(delBtn.dataset.i);
+    var s=S.stops[si]; if(!s) return;
+    showCustomConfirm('🗑️','刪除景點？','「'+s.name+'」將從行程中移除，此動作無法復原。','確定刪除',function(){
+      deleteStop(s._key);
+    });
+    return;
+  }
+}
+
+var _tapToken=0; // increments each tap; callbacks check before acting
+
+function makePinUrl(){
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="22.4" height="40" viewBox="0 0 22.4 40">'+
+    '<path d="M11.2 0 C5.02 0 0 5.02 0 11.2 C0 19.6 11.2 40 11.2 40 C11.2 40 22.4 19.6 22.4 11.2 C22.4 5.02 17.38 0 11.2 0 Z"'+
+    ' fill="rgba(43,95,142,0.82)" stroke="rgba(255,255,255,0.9)" stroke-width="1.5"/>'+
+    '<circle cx="11.2" cy="11.5" r="4" fill="rgba(255,255,255,0.9)"/>'+
+    '</svg>';
+  return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg);
+}
+
+function dropStopPin(pos, title){
+  if(stopMarker){ stopMarker.setMap(null); stopMarker=null; }
+  stopMarker=new google.maps.Marker({
+    position:pos, map:map,
+    animation:google.maps.Animation.DROP,
+    icon:{url:makePinUrl(), scaledSize:new google.maps.Size(22,40), anchor:new google.maps.Point(11,40)},
+    title:title
+  });
 }
 
 function tapStop(i){
   if(MS_MODE){ toggleSel(i); return; }
   var s=S.stops[i]; if(!s) return;
 
-  // Toggle expand/collapse inline detail
   var expPanel=document.getElementById('se-'+i);
   var isOpen=expPanel&&expPanel.classList.contains('open');
 
-  // Collapse all other panels
+  // Collapse all panels & highlights
   document.querySelectorAll('.stop-expand.open').forEach(function(p){ p.classList.remove('open'); });
   document.querySelectorAll('.stop-txt.active').forEach(function(el){ el.classList.remove('active'); });
   document.querySelectorAll('.stop-arr').forEach(function(el){ el.style.transform=''; });
 
   if(isOpen){
-    // Was open - just collapse, clear marker
     if(stopMarker){stopMarker.setMap(null);stopMarker=null;}
+    closePc();
     return;
   }
 
-  // Open this panel
   if(expPanel) expPanel.classList.add('open');
   var activeTxt=document.getElementById('st-'+i);
   if(activeTxt) activeTxt.classList.add('active');
   var arrEl=document.getElementById('sa-'+i);
-  if(arrEl) arrEl.style.transform='rotate(90deg)';
+  if(arrEl) arrEl.style.transform='rotate(180deg)';
 
   S.currentStop=i;
-  var hasCoords=s.lat&&s.lng&&parseFloat(s.lat)!==0;
 
-  // ── NEW: Place absolute marker pin on map ──
-  if(stopMarker){ stopMarker.setMap(null); stopMarker=null; }
+  // ── Request token: any stale async callback will be ignored ──
+  var token=++_tapToken;
+
+  var hasCoords=s.lat&&s.lng&&parseFloat(s.lat)!==0;
 
   if(map && hasCoords){
     var lat=parseFloat(s.lat), lng=parseFloat(s.lng);
     map.panTo({lat:lat,lng:lng}); map.setZoom(15);
-    // Drop a red pin at the exact location
-    // Teardrop SVG pin - semi-transparent, elongated tip
-    var pinSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="22.4" height="40" viewBox="0 0 22.4 40">' +
-      '<path d="M11.2 0 C5.02 0 0 5.02 0 11.2 C0 19.6 11.2 40 11.2 40 C11.2 40 22.4 19.6 22.4 11.2 C22.4 5.02 17.38 0 11.2 0 Z"' +
-      ' fill="rgba(26,115,232,0.72)" stroke="rgba(255,255,255,0.9)" stroke-width="1.5"/>' +
-      '<circle cx="11.2" cy="11.5" r="4" fill="rgba(255,255,255,0.9)"/>' +
-      '</svg>';
-    var pinUrl = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(pinSvg);
-    stopMarker=new google.maps.Marker({
-      position:{lat:lat,lng:lng}, map:map,
-      animation:google.maps.Animation.DROP,
-      icon:{url:pinUrl, scaledSize:new google.maps.Size(22,40), anchor:new google.maps.Point(11,40)},
-      title:s.name
-    });
-    // Also try to show place card
+    dropStopPin({lat:lat,lng:lng}, s.name);
     if(plSvc){
-      plSvc.textSearch({query:s.name,location:{lat:lat,lng:lng},radius:300},function(results,status){
+      plSvc.textSearch({query:s.name,location:{lat:lat,lng:lng},radius:500},function(results,status){
+        if(_tapToken!==token) return; // stale callback - a newer tap happened, ignore
         if(status===google.maps.places.PlacesServiceStatus.OK&&results&&results.length>0)
-          showPlaceCard(results[0].place_id);
+          showPlaceCardFixed(results[0].place_id);
         else showSimplePc(s);
       });
     }
   } else if(map&&plSvc){
-    plSvc.textSearch({query:s.name},function(results,status){
+    var center=getGroupCenter();
+    var searchOpts=center?{query:s.name,location:center,radius:100000}:{query:s.name};
+    plSvc.textSearch(searchOpts,function(results,status){
+      if(_tapToken!==token) return; // stale - ignore
       if(status===google.maps.places.PlacesServiceStatus.OK&&results&&results.length>0){
         var loc=results[0].geometry.location;
         map.panTo(loc); map.setZoom(15);
-        var pinSvg2 = '<svg xmlns="http://www.w3.org/2000/svg" width="22.4" height="40" viewBox="0 0 22.4 40">' +
-          '<path d="M11.2 0 C5.02 0 0 5.02 0 11.2 C0 19.6 11.2 40 11.2 40 C11.2 40 22.4 19.6 22.4 11.2 C22.4 5.02 17.38 0 11.2 0 Z"' +
-          ' fill="rgba(26,115,232,0.72)" stroke="rgba(255,255,255,0.9)" stroke-width="1.5"/>' +
-          '<circle cx="11.2" cy="11.5" r="4" fill="rgba(255,255,255,0.9)"/>' +
-          '</svg>';
-        var pinUrl2 = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(pinSvg2);
-        stopMarker=new google.maps.Marker({
-          position:loc, map:map, animation:google.maps.Animation.DROP,
-          icon:{url:pinUrl2, scaledSize:new google.maps.Size(22,40), anchor:new google.maps.Point(11,40)},
-          title:s.name
-        });
-        showPlaceCard(results[0].place_id);
+        dropStopPin(loc, s.name);
+        showPlaceCardFixed(results[0].place_id);
       } else showSimplePc(s);
     });
   }
@@ -1817,12 +2256,20 @@ function openStopDetail(i){
   document.getElementById('det-title').textContent=s.name;
   document.getElementById('det-time').textContent=(s.arrive||'')+(s.depart?' → '+s.depart:'');
   document.getElementById('det-bud').textContent=s.budget||'NT$ 0';
-  exitEditMode();
   renderActs(s); renderNotes(s);
   document.getElementById('detail').classList.add('show');
-  // Move map if not already there
-  if(S.currentStop!==i) tapStop(i);
+  // Move map to this stop (always, since opening detail = user wants to see it)
+  tapStop(i);
+  if(S.isOrg){
+    _editMode=false;
+    toggleEditMode();
+  } else {
+    exitEditMode();
+  }
 }
+
+// Move map to stop without toggling expand panel (used by detail panel)
+
 
 function showSimplePc(s){
   S.currentPlace={name:s.name,geometry:null};
@@ -1882,6 +2329,132 @@ function attachLongpress(i){
   row.addEventListener('mousedown',start);
   row.addEventListener('mouseup',cancel);
   row.addEventListener('mouseleave',cancel);
+}
+
+// ── Drag-to-reorder: long-press the chevron arrow (iOS Weather style) ──
+var _dragJustHappened=false;
+
+var _rowDrag=null; // shared drag state (single instance, not per-row)
+
+function beginRowDrag(i, clientY){
+  var s=S.stops[i]; if(!s) return;
+  var dayLabel=s.day||'';
+  var groupIdxs=[];
+  S.stops.forEach(function(st,j){ if((st.day||'')===dayLabel) groupIdxs.push(j); });
+  if(groupIdxs.length<2) return; // nothing to reorder against
+
+  var rowEl=document.getElementById('sw-'+i);
+  if(!rowEl) return;
+  _rowDrag={ idx:i, groupIdxs:groupIdxs, startY:clientY, insertBeforeIdx:i, afterIdx:-1, rowEl:rowEl };
+  rowEl.classList.add('dragging');
+  if(navigator.vibrate) navigator.vibrate(8);
+}
+
+function moveRowDrag(clientY){
+  var drag=_rowDrag; if(!drag) return;
+  var dy=clientY-drag.startY;
+  drag.rowEl.style.transform='translateY('+dy+'px)';
+
+  drag.groupIdxs.forEach(function(j){
+    var el=document.getElementById('sw-'+j);
+    if(el) el.classList.remove('drop-above','drop-below');
+  });
+
+  var nearestIdx=drag.idx, nearestDist=Infinity, placeAbove=true;
+  drag.groupIdxs.forEach(function(j){
+    if(j===drag.idx) return;
+    var el=document.getElementById('sw-'+j);
+    if(!el) return;
+    var rect=el.getBoundingClientRect();
+    var mid=rect.top+rect.height/2;
+    var dist=Math.abs(clientY-mid);
+    if(dist<nearestDist){ nearestDist=dist; nearestIdx=j; placeAbove=(clientY<mid); }
+  });
+
+  if(nearestIdx!==drag.idx){
+    var el=document.getElementById('sw-'+nearestIdx);
+    if(el) el.classList.add(placeAbove?'drop-above':'drop-below');
+    drag.insertBeforeIdx = placeAbove ? nearestIdx : -1;
+    drag.afterIdx = placeAbove ? -1 : nearestIdx;
+  } else {
+    drag.insertBeforeIdx=drag.idx; drag.afterIdx=-1;
+  }
+}
+
+function endRowDrag(){
+  var drag=_rowDrag; if(!drag) return;
+  _rowDrag=null;
+
+  var groupIdxs=drag.groupIdxs;
+  drag.rowEl.classList.remove('dragging');
+  drag.rowEl.style.transform='';
+  groupIdxs.forEach(function(j){
+    var el=document.getElementById('sw-'+j);
+    if(el) el.classList.remove('drop-above','drop-below');
+  });
+
+  var groupStops=groupIdxs.map(function(j){return S.stops[j];});
+  var draggedPos=groupIdxs.indexOf(drag.idx);
+  var moved=groupStops.splice(draggedPos,1)[0];
+
+  var insertPos;
+  if(drag.insertBeforeIdx>=0 && drag.insertBeforeIdx!==drag.idx){
+    insertPos=groupIdxs.indexOf(drag.insertBeforeIdx);
+    if(insertPos>draggedPos) insertPos--;
+  } else if(drag.afterIdx>=0){
+    insertPos=groupIdxs.indexOf(drag.afterIdx);
+    if(insertPos>draggedPos) insertPos--;
+    insertPos+=1;
+  } else {
+    insertPos=draggedPos;
+  }
+  insertPos=Math.max(0,Math.min(insertPos,groupStops.length));
+  groupStops.splice(insertPos,0,moved);
+
+  var changed=false;
+  groupStops.forEach(function(s,k){
+    var ord=(k+1)*10;
+    if(s.order!==ord){ changed=true; window.FB.set('tripgo/groups/'+S.groupCode+'/stops/'+s._key+'/order',ord); }
+  });
+  if(changed){ _scrollToStopKey=moved._key; showToast('✅ 順序已更新',1300); }
+  _dragJustHappened=true;
+}
+
+// ── Per-row: only attach the long-press timer + light touch tracking to the arrow icon ──
+// Heavy lifting (move/end) is delegated to the single shared document-level listener below.
+var _dragJustHappened=false;
+
+function attachDragHandle(i){
+  var arrow=document.getElementById('sa-'+i); if(!arrow) return;
+  var holdTimer=null;
+  function clearHold(){ clearTimeout(holdTimer); holdTimer=null; }
+
+  arrow.addEventListener('touchstart',function(e){
+    var y=e.touches[0].clientY;
+    holdTimer=setTimeout(function(){ beginRowDrag(i,y); },450);
+  },{passive:true});
+  arrow.addEventListener('touchmove',function(e){
+    if(_rowDrag&&_rowDrag.idx===i){ e.preventDefault(); } // block page scroll; document listener handles the actual move
+    else if(!_rowDrag) clearHold();
+  },{passive:false});
+  arrow.addEventListener('touchend',function(){ clearHold(); },{passive:true});
+
+  arrow.addEventListener('mousedown',function(e){
+    var y=e.clientY;
+    holdTimer=setTimeout(function(){ beginRowDrag(i,y); },450);
+  });
+  arrow.addEventListener('mouseup',function(){ clearHold(); });
+}
+
+// ── Single shared document-level listener (registered once, not per row/render) ──
+var _rowDragListenersInit=false;
+function initRowDragListeners(){
+  if(_rowDragListenersInit) return;
+  _rowDragListenersInit=true;
+  document.addEventListener('touchmove',function(e){ if(_rowDrag) moveRowDrag(e.touches[0].clientY); },{passive:false});
+  document.addEventListener('touchend',function(){ if(_rowDrag) endRowDrag(); },{passive:true});
+  document.addEventListener('mousemove',function(e){ if(_rowDrag) moveRowDrag(e.clientY); });
+  document.addEventListener('mouseup',function(){ if(_rowDrag) endRowDrag(); });
 }
 
 function toggleSel(i){
@@ -1960,24 +2533,60 @@ function toggleEditMode(){
     document.getElementById('det-e-depart').value=s.depart||'';
     document.getElementById('det-e-day').value=s.day||'';
     document.getElementById('det-e-note').value=s.note||'';
+    // Init stored coords
+    _detLat=parseFloat(s.lat)||0;
+    _detLng=parseFloat(s.lng)||0;
+    _detFromMap=false;
+    document.getElementById('det-e-lat').value=_detLat;
+    document.getElementById('det-e-lng').value=_detLng;
+    var badge=document.getElementById('det-loc-badge');
+    if(badge) badge.style.display=(_detLat!==0?'inline':'none');
     document.getElementById('det-edit-fields').style.display='block';
     document.getElementById('det-edit-btn').textContent='取消';
     document.getElementById('det-edit-btn').style.color='var(--red)';
-  } else exitEditMode();
+    closeDetMap();
+  } else { exitEditMode(); closeDetMap(); }
 }
 function saveEditStop(){
   var s=S.stops[S.currentStop]; if(!s||!s._key) return;
   var name=document.getElementById('det-e-name').value.trim();
   if(!name){ showToast('請輸入景點名稱',1500); return; }
+  _scrollToStopKey=s._key;
   var path='tripgo/groups/'+S.groupCode+'/stops/'+s._key;
-  window.FB.set(path+'/name', name);
-  window.FB.set(path+'/arrive', document.getElementById('det-e-arrive').value.trim());
-  window.FB.set(path+'/depart', document.getElementById('det-e-depart').value.trim());
-  window.FB.set(path+'/day',    document.getElementById('det-e-day').value.trim());
-  window.FB.set(path+'/note',   document.getElementById('det-e-note').value.trim());
-  document.getElementById('det-title').textContent=name;
-  exitEditMode();
-  showToast('✅ 已儲存',1500);
+  var newLat=parseFloat(document.getElementById('det-e-lat').value)||0;
+  var newLng=parseFloat(document.getElementById('det-e-lng').value)||0;
+
+  function doSave(lat,lng){
+    window.FB.set(path+'/name',   name);
+    window.FB.set(path+'/arrive', document.getElementById('det-e-arrive').value.trim());
+    window.FB.set(path+'/depart', document.getElementById('det-e-depart').value.trim());
+    window.FB.set(path+'/day',    document.getElementById('det-e-day').value.trim());
+    window.FB.set(path+'/note',   document.getElementById('det-e-note').value.trim());
+    if(lat&&lat!==0){ window.FB.set(path+'/lat',lat); window.FB.set(path+'/lng',lng); }
+    document.getElementById('det-title').textContent=name;
+    closeDetMap(); exitEditMode();
+    showToast('✅ 已儲存',1500);
+  }
+
+  if(_detFromMap && newLat!==0){
+    // User picked from map - use exact coords
+    doSave(newLat,newLng);
+  } else if(newLat!==0){
+    // Kept original coords
+    doSave(newLat,newLng);
+  } else {
+    // No coords - text search with location bias
+    var center=getGroupCenter();
+    if(plSvc && center){
+      plSvc.textSearch({query:name,location:center,radius:100000},function(results,status){
+        if(status===google.maps.places.PlacesServiceStatus.OK&&results&&results.length>0){
+          var loc=results[0].geometry.location;
+          doSave(loc.lat(),loc.lng());
+          showToast('✅ 已儲存，位置已自動定位',2000);
+        } else { doSave(0,0); }
+      });
+    } else { doSave(0,0); }
+  }
 }
 function renderActs(s){
   var acts=(s&&s.activities)||[], html='';
@@ -2022,7 +2631,107 @@ function editBudget(){
   document.getElementById('det-bud').textContent=val;
 }
 
-// ── Add Stop ──
+// ── New Stop (inline, expands below the 新增景點 button) ──
+function openNewStopForm(prefill){
+  showPane('itinerary'); // ensure itinerary tab is visible (e.g. when triggered from map's 加景點)
+  // Close any open inline-edit first
+  if(_inlineEditIdx>=0){ closeInlineEdit(_inlineEditIdx); }
+  cancelMapPick();
+  var panel=document.getElementById('new-stop-panel');
+  var btn=document.getElementById('btn-add-stop');
+  if(btn) btn.style.display='none';
+  panel.style.display='block';
+  renderNewStopForm(prefill);
+  setTimeout(function(){ panel.scrollIntoView({behavior:'smooth',block:'center'}); },80);
+}
+
+function closeNewStopForm(){
+  cancelMapPick();
+  var panel=document.getElementById('new-stop-panel');
+  panel.style.display='none';
+  panel.innerHTML='';
+  var btn=document.getElementById('btn-add-stop');
+  if(btn) btn.style.display='flex';
+}
+
+function renderNewStopForm(prefill){
+  prefill=prefill||{};
+  var panel=document.getElementById('new-stop-panel');
+  panel.innerHTML=
+    '<div class="exp-edit-form">'+
+      '<label class="exp-ef-label">景點名稱 <span style="font-weight:400;color:var(--text2);text-transform:none">（點此在地圖上定位）</span></label>'+
+      '<input class="exp-ef-inp" id="ief-name" value="'+escHtml(prefill.name||'')+'" placeholder="輸入景點名稱或點此在地圖選取"/>'+
+      '<input type="hidden" id="ief-lat" value="'+(prefill.lat||0)+'"/>'+
+      '<input type="hidden" id="ief-lng" value="'+(prefill.lng||0)+'"/>'+
+      '<div class="exp-ef-row">'+
+        '<div class="exp-ef-field"><label class="exp-ef-label">抵達時間</label><input class="exp-ef-inp" id="ief-arrive" placeholder="09:00"/></div>'+
+        '<div class="exp-ef-field"><label class="exp-ef-label">離開時間</label><input class="exp-ef-inp" id="ief-depart" placeholder="12:00"/></div>'+
+      '</div>'+
+      '<label class="exp-ef-label">天數標籤</label>'+
+      '<input class="exp-ef-inp" id="ief-day" placeholder="Day 1"/>'+
+      '<label class="exp-ef-label">備註</label>'+
+      '<input class="exp-ef-inp" id="ief-note" placeholder="（選填）"/>'+
+      '<div>'+
+        '<button class="exp-ef-save" id="ief-save">✓ 新增景點</button>'+
+        '<button class="exp-ef-cancel" id="ief-cancel">取消</button>'+
+      '</div>'+
+    '</div>';
+
+  document.getElementById('ief-name').addEventListener('focus',function(){
+    startMapPick(null, true); // autoNav=true: if prefill already has coords, jump there
+  });
+  document.getElementById('ief-save').addEventListener('click', saveNewStop);
+  document.getElementById('ief-cancel').addEventListener('click', closeNewStopForm);
+
+  // If prefilled with coords (e.g. from map's 加景點 button), drop a pin right away
+  if(prefill.lat&&prefill.lat!==0&&map){
+    map.panTo({lat:prefill.lat,lng:prefill.lng}); map.setZoom(16);
+    dropStopPin({lat:prefill.lat,lng:prefill.lng}, prefill.name||'');
+  }
+}
+
+function saveNewStop(){
+  var name=(document.getElementById('ief-name')||{}).value;
+  if(!name||!name.trim()){ showToast('請輸入景點名稱',1500); return; }
+  name=name.trim();
+  var arrive=(document.getElementById('ief-arrive')||{}).value||'';
+  var depart=(document.getElementById('ief-depart')||{}).value||'';
+  var day=(document.getElementById('ief-day')||{}).value||'';
+  var note=(document.getElementById('ief-note')||{}).value||'';
+  var lat=parseFloat((document.getElementById('ief-lat')||{}).value)||0;
+  var lng=parseFloat((document.getElementById('ief-lng')||{}).value)||0;
+
+  function doCreate(lat,lng){
+    var pushRef=window.FB.push('tripgo/groups/'+S.groupCode+'/stops',{
+      name:name, arrive:arrive.trim(), depart:depart.trim(),
+      day:day.trim(), note:note.trim(),
+      lat:lat||0, lng:lng||0,
+      activities:[], notes:[], budget:'NT$ 0', createdAt:Date.now()
+    });
+    if(pushRef&&pushRef.key) _scrollToStopKey=pushRef.key;
+    cancelMapPick();
+    closeNewStopForm();
+    showToast('✅ 景點已新增',1500);
+  }
+
+  cancelMapPick();
+  if(lat!==0){
+    doCreate(lat,lng);
+  } else {
+    var center=getGroupCenter();
+    if(plSvc&&center){
+      plSvc.textSearch({query:name,location:center,radius:100000},function(results,status){
+        if(status===google.maps.places.PlacesServiceStatus.OK&&results&&results.length>0){
+          var loc=results[0].geometry.location;
+          doCreate(loc.lat(),loc.lng());
+          showToast('✅ 已新增，位置已自動定位',2000);
+        } else doCreate(0,0);
+      });
+    } else doCreate(0,0);
+  }
+}
+
+// ── Add Stop (legacy full-screen, kept for reference but unused) ──
 var S_aspLat=0, S_aspLng=0;
 function openAddStop(){
   document.getElementById('add-stop-screen').classList.add('show');
@@ -2199,15 +2908,8 @@ function renderPayerSelect(){
 // MEMBERS
 // ════════════════════════════════
 function renderAvatars(){
-  var row=document.getElementById('tb-avs'); row.innerHTML='';
-  S.members.forEach(function(m,i){
-    var av=document.createElement('div'); av.className='av av'+(i%7);
-    if(i>0) av.style.marginLeft='-5px'; av.title=m.name;
-    av.textContent=m.name.substring(0,2).toUpperCase();
-    if(m.role==='organizer'){var c=document.createElement('span');c.className='av-crown';c.textContent='👑';av.appendChild(c);}
-    row.appendChild(av);
-  });
-  document.getElementById('map-members').textContent=S.members.length+'位成員';
+  var el=document.getElementById('map-members');
+  if(el) el.textContent=S.members.length+'位成員';
 }
 function renderMembers(){
   var el=document.getElementById('mem-list');
@@ -2215,12 +2917,15 @@ function renderMembers(){
   var html='';
   S.members.forEach(function(m,i){
     var isOrg=m.role==='organizer';
+    var isSelf=m.id===S.myUid;
+    var canDelete=S.isOrg||isSelf; // organizer can delete anyone; others only self
+    var delLabel=isSelf?'刪除自己':'移除';
     html+='<div class="mem-row">'+
       '<div class="mem-av av'+(i%7)+'">'+m.name.substring(0,2).toUpperCase()+'</div>'+
-      '<div style="flex:1"><div class="mem-nm">'+(isOrg?'👑 ':'')+m.name+'</div><div class="mem-role">'+(isOrg?'組織者':'團員')+'</div></div>'+
+      '<div style="flex:1"><div class="mem-nm">'+(isOrg?'👑 ':'')+m.name+(isSelf?' <span style="font-size:9px;color:var(--blue);background:#E8F0FE;border-radius:4px;padding:1px 5px">我</span>':'')+'</div><div class="mem-role">'+(isOrg?'組織者':'團員')+'</div></div>'+
       '<div class="mem-acts">'+
-        '<button class="mem-org-btn'+(isOrg?' on':'')+'" data-action="setorg" data-mid="'+m.id+'">'+(isOrg?'✓ 組織者':'設組織者')+'</button>'+
-        '<button class="mem-del-btn" data-action="delmember" data-mid="'+m.id+'">移除</button>'+
+        (S.isOrg?'<button class="mem-org-btn'+(isOrg?' on':'')+'" data-action="setorg" data-mid="'+m.id+'">'+(isOrg?'✓ 組織者':'設組織者')+'</button>':'')+
+        (canDelete?'<button class="mem-del-btn" data-action="delmember" data-mid="'+m.id+'">'+delLabel+'</button>':'')+
       '</div></div>';
   });
   el.innerHTML=html;
@@ -2255,8 +2960,7 @@ function renderLocList(){
   var el=document.getElementById('loc-list'); if(!el) return;
   var html='';
   S.members.forEach(function(m,i){
-    var loc=S.allLocs[m.id], ago='未分享';
-    if(loc&&loc.at){var s=Math.round((Date.now()-loc.at)/1000);ago=s<60?s+'秒前':Math.round(s/60)+'分前';}
+    var loc=S.allLocs[m.id], ago=formatTimeAgo(loc&&loc.at);
     html+='<div class="loc-row">'+
       '<div class="loc-av av'+(i%7)+'">'+m.name.substring(0,2).toUpperCase()+'</div>'+
       '<div style="flex:1"><div class="loc-nm">'+(m.role==='organizer'?'👑 ':'')+m.name+'</div>'+
@@ -2276,12 +2980,34 @@ function renderLocList(){
 // ════════════════════════════════
 // UI HELPERS
 // ════════════════════════════════
+var _lastChatReadAt=0;
 function showPane(name){
   document.querySelectorAll('.pane').forEach(function(p){p.classList.remove('on');});
   var pane=document.getElementById('pane-'+name); if(pane) pane.classList.add('on');
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('on');});
   var tab=document.querySelector('.tab[data-pane="'+name+'"]'); if(tab) tab.classList.add('on');
   if(name==='locations'){ renderLocList(); fitMapToMembers(); }
+
+  // Chat pane: collapse the map to make room for conversation (manual drag still works once inside)
+  var mw=document.getElementById('map-wrap');
+  if(mw){
+    mw.style.height=''; mw.style.width=''; // clear any leftover manual drag size from a previous pane
+    if(name==='chat'){ mw.classList.add('map-mini'); }
+    else { mw.classList.remove('map-mini'); }
+    if(map) setTimeout(function(){ google.maps.event.trigger(map,'resize'); },260);
+  }
+
+  if(name==='chat'){
+    _lastChatReadAt=Date.now();
+    var dot=document.getElementById('chat-unread-dot'); if(dot) dot.classList.remove('show');
+    try{ localStorage.setItem('tg_chat_read_'+(S.groupCode||''), String(_lastChatReadAt)); }catch(e){}
+  }
+  if(name==='expense'){
+    var dot=document.getElementById('expense-unread-dot'); if(dot) dot.classList.remove('show');
+  }
+  if(name==='locations'){
+    var dot=document.getElementById('members-unread-dot'); if(dot) dot.classList.remove('show');
+  }
 }
 function fitMapToMembers(){
   if(!map) return;
@@ -2435,6 +3161,7 @@ function doAdmin(){
 }
 function openAdminPanel(){
   document.getElementById('M-admin-panel').classList.add('show');
+  autoPurgeTrash(); // clean up items older than 7 days
   loadAllTrips();
 }
 function closeAdminPanel(){ document.getElementById('M-admin-panel').classList.remove('show'); }
@@ -2457,14 +3184,108 @@ function changeAdminPassword(){
     });
   });
 }
+// ── Admin: soft-delete trip to trash ──
+function adminTrashTrip(code){
+  showCustomConfirm('🗑️','移至垃圾桶？','旅程將放入垃圾桶，<b>7天後自動永久刪除</b>。','確定移除',function(){
+    if(!window.FB||!window.FB.ready){showToast('⏳ 連線中',1500);return;}
+    window.FB.get('tripgo/groups/'+code).then(function(snap){
+      if(!snap.exists()){showToast('❌ 找不到旅程',1500);return;}
+      var data=snap.val();
+      data._trashedAt=Date.now();
+      window.FB.set('tripgo/trash/'+code,data).then(function(){
+        window.FB.remove('tripgo/groups/'+code);
+        showToast('✅ 已移至垃圾桶',2000);
+        loadAllTrips();
+      });
+    });
+  });
+}
+
+// ── Admin: permanently delete from trash ──
+function adminPermDelete(code){
+  showCustomConfirm('💀','永久刪除？','此操作<b>無法復原</b>，所有資料將永遠消失。','確定永久刪除',function(){
+    window.FB.remove('tripgo/trash/'+code);
+    showToast('✅ 已永久刪除',2000);
+    loadTrashBin();
+  });
+}
+
+// ── Admin: restore from trash ──
+function adminRestore(code){
+  if(!window.FB||!window.FB.ready){showToast('⏳ 連線中',1500);return;}
+  window.FB.get('tripgo/trash/'+code).then(function(snap){
+    if(!snap.exists()){showToast('❌ 找不到旅程',1500);return;}
+    var data=snap.val();
+    delete data._trashedAt;
+    window.FB.set('tripgo/groups/'+code,data).then(function(){
+      window.FB.remove('tripgo/trash/'+code);
+      showToast('✅ 已還原旅程 '+code,2000);
+      loadTrashBin();
+    });
+  });
+}
+
+// ── Admin: auto-purge trash items older than 7 days ──
+function autoPurgeTrash(){
+  if(!window.FB||!window.FB.ready) return;
+  window.FB.get('tripgo/trash').then(function(snap){
+    if(!snap.exists()) return;
+    var now=Date.now(), sevenDays=7*24*60*60*1000;
+    Object.entries(snap.val()||{}).forEach(function(e){
+      var code=e[0],item=e[1];
+      if(item._trashedAt&&(now-item._trashedAt)>sevenDays) window.FB.remove('tripgo/trash/'+code);
+    });
+  });
+}
+
+function daysDiff(ts){ return Math.max(0,7-Math.floor((Date.now()-ts)/(24*60*60*1000))); }
+
+function loadTrashBin(){
+  var status=document.getElementById('adm-trip-status');
+  var trashEl=document.getElementById('adm-trash-list');
+  var listEl=document.getElementById('adm-trip-list');
+  listEl.style.display='none'; trashEl.style.display='block';
+  status.textContent='載入垃圾桶…';
+  if(!window.FB||!window.FB.ready){status.textContent='⏳ 連線中';return;}
+  window.FB.get('tripgo/trash').then(function(snap){
+    if(!snap.exists()||!snap.val()){status.textContent='垃圾桶是空的 🎉';trashEl.innerHTML='';return;}
+    var items=snap.val(), codes=Object.keys(items);
+    status.textContent='垃圾桶：'+codes.length+' 個旅程';
+    var html='';
+    codes.forEach(function(code){
+      var g=items[code];
+      var memberCount=g.members?Object.keys(g.members).length:0;
+      var stopCount=g.stops?Object.keys(g.stops).length:0;
+      var daysLeft=g._trashedAt?daysDiff(g._trashedAt):'?';
+      html+='<div class="adm-trash-card">'+
+        '<div class="adm-trash-name">'+(g.tripName||'(未命名)')+'</div>'+
+        '<div class="adm-trash-meta">邀請碼：'+code+' · '+memberCount+'人 · '+stopCount+'個景點</div>'+
+        '<div class="adm-trash-expire">⏰ 還有 '+daysLeft+' 天永久刪除</div>'+
+        '<div class="adm-trash-actions">'+
+          '<button class="adm-restore-btn" data-code="'+code+'"><i class="ti ti-arrow-back-up"></i> 還原</button>'+
+          '<button class="adm-perm-del-btn" data-code="'+code+'"><i class="ti ti-trash-x"></i> 永久刪除</button>'+
+        '</div></div>';
+    });
+    trashEl.innerHTML=html;
+    trashEl.querySelectorAll('.adm-restore-btn').forEach(function(btn){
+      btn.addEventListener('click',function(){adminRestore(this.dataset.code);});
+    });
+    trashEl.querySelectorAll('.adm-perm-del-btn').forEach(function(btn){
+      btn.addEventListener('click',function(){adminPermDelete(this.dataset.code);});
+    });
+  }).catch(function(err){status.textContent='❌ '+err.message;});
+}
+
 function loadAllTrips(){
   var status=document.getElementById('adm-trip-status');
   var list=document.getElementById('adm-trip-list');
+  var trashEl=document.getElementById('adm-trash-list');
+  list.style.display='block'; if(trashEl) trashEl.style.display='none';
   status.textContent='載入中…'; list.innerHTML='';
-  if(!window.FB||!window.FB.ready){ status.textContent='⏳ 連線中，請稍後再試'; return; }
+  if(!window.FB||!window.FB.ready){status.textContent='⏳ 連線中，請稍後再試';return;}
   window.FB.get('tripgo/groups').then(function(snap){
     var data=snap.val();
-    if(!data){ status.textContent='❌ 沒有任何旅程資料'; return; }
+    if(!data){status.textContent='❌ 沒有任何旅程資料';return;}
     var codes=Object.keys(data);
     status.textContent='共找到 '+codes.length+' 個旅程';
     var html='';
@@ -2475,9 +3296,13 @@ function loadAllTrips(){
       var members=g.members?Object.values(g.members).map(function(m){return m.name;}).join('、'):'';
       html+='<div class="adm-trip-card">'+
         '<div class="adm-trip-name">'+(g.tripName||'(未命名)')+'</div>'+
-        '<div class="adm-trip-meta">成員：'+(members||'無')+' ('+memberCount+'人) · 景點數：'+stopCount+'</div>'+
-        '<div class="adm-trip-code">'+code+'<button class="adm-trip-copy" data-code="'+code+'">複製</button></div>'+
-      '</div>';
+        '<div class="adm-trip-meta">成員：'+(members||'無')+' ('+memberCount+'人) · 景點：'+stopCount+'個</div>'+
+        '<div style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap">'+
+          '<div class="adm-trip-code" style="flex:1">'+code+'</div>'+
+          '<button class="adm-trip-copy" data-code="'+code+'">複製</button>'+
+          '<button class="adm-trip-join" data-code="'+code+'" data-name="'+(g.tripName||'旅遊群組')+'" style="padding:2px 8px;border-radius:6px;border:none;background:#E8F0FE;color:var(--blue);font-size:10px;cursor:pointer;font-weight:600"><i class="ti ti-login" style="font-size:10px"></i> 以管理員加入</button>'+
+          '<button class="adm-trip-del" data-code="'+code+'"><i class="ti ti-trash"></i> 刪除</button>'+
+        '</div></div>';
     });
     list.innerHTML=html;
     list.querySelectorAll('.adm-trip-copy').forEach(function(btn){
@@ -2487,7 +3312,25 @@ function loadAllTrips(){
         else{var t=document.createElement('textarea');t.value=code;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);showToast('已複製：'+code,1500);}
       });
     });
-  }).catch(function(err){ status.textContent='❌ 讀取失敗：'+err.message; });
+    list.querySelectorAll('.adm-trip-del').forEach(function(btn){
+      btn.addEventListener('click',function(){adminTrashTrip(this.dataset.code);});
+    });
+    list.querySelectorAll('.adm-trip-join').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var code=this.dataset.code;
+        var tripName=this.dataset.name;
+        closeAdminPanel();
+        // Join as admin (organizer role)
+        var uid='ADMIN'+Math.floor(Math.random()*9999);
+        window.FB.set('tripgo/groups/'+code+'/members/'+uid,{
+          id:uid,name:'管理員',role:'organizer',joinedAt:Date.now()
+        }).then(function(){
+          startApp(code,uid,'管理員',tripName,true);
+          showToast('✅ 以管理員身分加入 '+code,2000);
+        });
+      });
+    });
+  }).catch(function(err){status.textContent='❌ 讀取失敗：'+err.message;});
 }
 function clearSession(){
   showCustomConfirm('🗑️','清除舊資料？','將清除本機的登入記錄，不影響 Firebase 資料。','確定清除',function(){
@@ -2599,7 +3442,6 @@ function openTripSwitcher(){
     }).join('');
     othEl.querySelectorAll('.tsw-trip-card').forEach(function(card,i){
       var t=others[i];
-      // action buttons handled by querySelectorAll below
       card.addEventListener('click',function(e){
         if(e.target.closest('.tsw-action-btn')) return;
         closeTripSwitcher();
@@ -2629,7 +3471,49 @@ function onHomeNameInput(val){
   localStorage.setItem('tg_last_name',val.trim());
   renderTripsPreview(val);
 }
-function renderTripsPreview(inputName){
+// ── Fallback: scan Firebase for groups where this name is a member ──
+// (covers the case where localStorage doesn't have this trip yet -
+//  e.g. different browser/device, or local storage was cleared)
+var _allGroupsCache=null, _allGroupsCacheTime=0, _fbNameSearchTimer=null;
+
+function searchFirebaseForName(name, nl, localMatched){
+  clearTimeout(_fbNameSearchTimer);
+  _fbNameSearchTimer=setTimeout(function(){
+    if(!window.FB||!window.FB.ready) return;
+    var now=Date.now();
+    if(_allGroupsCache && (now-_allGroupsCacheTime)<60000){
+      applyFirebaseNameMatches(name, nl, localMatched, _allGroupsCache);
+      return;
+    }
+    window.FB.get('tripgo/groups').then(function(snap){
+      _allGroupsCache=snap.val()||{};
+      _allGroupsCacheTime=Date.now();
+      applyFirebaseNameMatches(name, nl, localMatched, _allGroupsCache);
+    });
+  },400);
+}
+
+function applyFirebaseNameMatches(name, nl, localMatched, data){
+  var existingCodes={};
+  localMatched.forEach(function(t){ existingCodes[t.code]=true; });
+  var foundNew=false;
+  Object.keys(data).forEach(function(code){
+    var g=data[code]; if(!g.members||existingCodes[code]) return;
+    Object.values(g.members).forEach(function(m){
+      if(m.name && m.name.toLowerCase().indexOf(nl)>=0 && !existingCodes[code]){
+        existingCodes[code]=true; foundNew=true;
+        updateStoredTrip(code, m.id, m.name, g.tripName||'(未命名)', m.role==='organizer');
+      }
+    });
+  });
+  // Re-render either way, so the "搜尋雲端中…" placeholder always resolves to a final state.
+  // Only re-render if the name field still matches this search (avoid clobbering newer input).
+  // Pass _skipFbSearch=true to prevent this from re-triggering another search (would loop forever otherwise).
+  var curVal=(document.getElementById('js-home-name')||{}).value||'';
+  if(curVal.trim()===name) renderTripsPreview(name, true);
+}
+
+function renderTripsPreview(inputName, _skipFbSearch){
   var preview=document.getElementById('js-trips-preview');
   var list=document.getElementById('jtp-list');
   var countEl=document.getElementById('jtp-count');
@@ -2639,9 +3523,10 @@ function renderTripsPreview(inputName){
   var trips=getStoredTrips();
   var nl=name.toLowerCase();
   var matched=trips.filter(function(t){return t.name.toLowerCase().indexOf(nl)>=0;});
+  if(!_skipFbSearch) searchFirebaseForName(name, nl, matched); // fire-and-forget fallback, debounced+cached; skip on the result-render to avoid loops
   if(!matched.length){
     preview.style.display='flex';
-    list.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.6)">找不到「'+name+'」的旅程</div>';
+    list.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.6)">找不到「'+name+'」的旅程，搜尋雲端中…</div>';
     countEl.textContent=''; return;
   }
   var built=matched.filter(function(t){return t.isOrg;}).length;
@@ -2726,25 +3611,382 @@ function initDivider(){
   var div=document.getElementById('divider'); if(!div) return;
   var dragging=false, startPos=0, startSize=0;
   var portrait=function(){return window.innerHeight>window.innerWidth;};
-  function onStart(pos){ dragging=true; startPos=pos; var mw=document.getElementById('map-wrap'); startSize=portrait()?mw.offsetHeight:mw.offsetWidth; }
-  function onMove(pos){ if(!dragging)return; var delta=pos-startPos; var mw=document.getElementById('map-wrap'); var top=(document.querySelector('.topbar')||{}).offsetHeight||44;
-    if(portrait()){ var h=Math.max(80,Math.min(startSize+delta,window.innerHeight-top-80)); mw.style.height=h+'px'; }
-    else { var w=Math.max(100,Math.min(startSize+delta,window.innerWidth-100)); mw.style.width=w+'px'; }
+
+  function onStart(e){
+    dragging=true;
+    var touch=e.touches?e.touches[0]:e;
+    startPos=portrait()?touch.clientY:touch.clientX;
+    var mw=document.getElementById('map-wrap');
+    startSize=portrait()?mw.offsetHeight:mw.offsetWidth;
+    div.classList.add('active');
+    e.preventDefault(); // 阻止頁面滾動
+  }
+
+  function onMove(e){
+    if(!dragging) return;
+    e.preventDefault(); // 阻止頁面滾動
+    var touch=e.touches?e.touches[0]:e;
+    var pos=portrait()?touch.clientY:touch.clientX;
+    var delta=pos-startPos;
+    var mw=document.getElementById('map-wrap');
+    var top=(document.querySelector('.topbar')||{}).offsetHeight||44;
+    if(portrait()){
+      var h=Math.max(100,Math.min(startSize+delta,window.innerHeight-top-120));
+      mw.style.height=h+'px';
+    } else {
+      var w=Math.max(150,Math.min(startSize+delta,window.innerWidth-150));
+      mw.style.width=w+'px';
+    }
     if(map) google.maps.event.trigger(map,'resize');
   }
-  function onEnd(){ dragging=false; }
-  div.addEventListener('mousedown',function(e){onStart(portrait()?e.clientY:e.clientX);});
-  document.addEventListener('mousemove',function(e){onMove(portrait()?e.clientY:e.clientX);});
-  document.addEventListener('mouseup',onEnd);
-  div.addEventListener('touchstart',function(e){onStart(portrait()?e.touches[0].clientY:e.touches[0].clientX);},{passive:true});
-  document.addEventListener('touchmove',function(e){onMove(portrait()?e.touches[0].clientY:e.touches[0].clientX);},{passive:true});
-  document.addEventListener('touchend',onEnd);
+
+  function onEnd(){
+    dragging=false;
+    div.classList.remove('active');
+  }
+
+  // Mouse (desktop)
+  div.addEventListener('mousedown', onStart);
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onEnd);
+
+  // Touch (mobile) - passive:false so we can preventDefault
+  div.addEventListener('touchstart', onStart, {passive:false});
+  document.addEventListener('touchmove', function(e){
+    if(dragging) onMove(e);
+  }, {passive:false});
+  document.addEventListener('touchend', onEnd);
+  document.addEventListener('touchcancel', onEnd);
 }
 
 // ════════════════════════════════
 // WIRE UP ALL BUTTONS
 // ════════════════════════════════
+
+// ── Det-map for editing stop location ──
+
+function getGroupCenter(){
+  var coords=S.stops.filter(function(s){return s.lat&&s.lng&&parseFloat(s.lat)!==0;})
+    .map(function(s){return{lat:parseFloat(s.lat),lng:parseFloat(s.lng)};});
+  if(!coords.length) return null;
+  var lat=coords.reduce(function(a,b){return a+b.lat;},0)/coords.length;
+  var lng=coords.reduce(function(a,b){return a+b.lng;},0)/coords.length;
+  return {lat:lat,lng:lng};
+}
+
+
+
+
+
+
+// ════════════════════════════════
+// INLINE EDIT + MAP PICK MODE
+// ════════════════════════════════
+var _mapPickStopIdx=-1, _inlineEditIdx=-1, _mapPickActive=false;
+
+function openInlineEdit(i){
+  var s=S.stops[i]; if(!s) return;
+  _inlineEditIdx=i;
+  S.currentStop=i;
+  var expPanel=document.getElementById('se-'+i);
+  if(!expPanel) return;
+
+  // Ensure stop panel is open
+  if(!expPanel.classList.contains('open')){
+    tapStop(i);
+    setTimeout(function(){ renderInlineEditForm(i); },100);
+  } else {
+    renderInlineEditForm(i);
+  }
+}
+
+function renderActsEditable(s){
+  var html='';
+  (s.activities||[]).forEach(function(a,ai){
+    html+='<div class="exp-act-row">'+
+      '<div class="exp-chk'+(a.done?' done':'')+'" data-ai="'+ai+'" data-type="ief-act"></div>'+
+      '<span class="exp-lbl'+(a.done?' done':'')+'">'+a.label+'</span>'+
+      '<button class="act-del" data-ai="'+ai+'" data-type="ief-act-del" style="margin-left:auto"><i class="ti ti-x"></i></button>'+
+    '</div>';
+  });
+  return html;
+}
+function renderNotesEditable(s){
+  var html='';
+  (s.notes||[]).forEach(function(n,ni){
+    html+='<div class="exp-note-row"><div class="exp-dot"></div><span style="flex:1">'+n+'</span>'+
+      '<button class="note-del" data-ni="'+ni+'" data-type="ief-note-del"><i class="ti ti-x"></i></button></div>';
+  });
+  return html;
+}
+
+function renderInlineEditForm(i){
+  var s=S.stops[i]; if(!s) return;
+  var expPanel=document.getElementById('se-'+i);
+  if(!expPanel) return;
+
+  var locPicked=s.lat&&parseFloat(s.lat)!==0;
+
+  expPanel.innerHTML=
+    '<div class="exp-edit-form">'+
+      '<label class="exp-ef-label">景點名稱 <span style="font-weight:400;color:var(--text2);text-transform:none">（點此在地圖上定位）</span></label>'+
+      '<input class="exp-ef-inp" id="ief-name" value="'+escHtml(s.name||'')+'"/>'+
+      '<input type="hidden" id="ief-lat" value="'+(s.lat||0)+'"/>'+
+      '<input type="hidden" id="ief-lng" value="'+(s.lng||0)+'"/>'+
+      '<div class="exp-ef-row">'+
+        '<div class="exp-ef-field"><label class="exp-ef-label">抵達時間</label><input class="exp-ef-inp" id="ief-arrive" value="'+escHtml(s.arrive||'')+'" placeholder="09:00"/></div>'+
+        '<div class="exp-ef-field"><label class="exp-ef-label">離開時間</label><input class="exp-ef-inp" id="ief-depart" value="'+escHtml(s.depart||'')+'" placeholder="12:00"/></div>'+
+      '</div>'+
+      '<div class="exp-ef-row">'+
+        '<div class="exp-ef-field"><label class="exp-ef-label">前往交通</label>'+
+          '<select class="exp-ef-inp" id="ief-transit-mode" style="cursor:pointer">'+
+            '<option value=""'+((!s.transit||!s.transit.mode)?' selected':'')+'>（無）</option>'+
+            '<option value="car"'+((s.transit&&s.transit.mode==='car')?' selected':'')+'>🚗 開車</option>'+
+            '<option value="walk"'+((s.transit&&s.transit.mode==='walk')?' selected':'')+'>🚶 步行</option>'+
+            '<option value="bus"'+((s.transit&&s.transit.mode==='bus')?' selected':'')+'>🚌 公車</option>'+
+            '<option value="train"'+((s.transit&&s.transit.mode==='train')?' selected':'')+'>🚆 火車</option>'+
+          '</select>'+
+        '</div>'+
+        '<div class="exp-ef-field"><label class="exp-ef-label">所需時間（分）</label><input class="exp-ef-inp" id="ief-transit-mins" type="number" inputmode="numeric" min="0" value="'+(s.transit&&s.transit.minutes?s.transit.minutes:'')+'" placeholder="0"/></div>'+
+      '</div>'+
+      '<label class="exp-ef-label">天數標籤</label>'+
+      '<input class="exp-ef-inp" id="ief-day" value="'+escHtml(s.day||'')+'" placeholder="Day 1"/>'+
+      '<label class="exp-ef-label">備註</label>'+
+      '<input class="exp-ef-inp" id="ief-note" value="'+escHtml(s.note||'')+'" placeholder="（選填）"/>'+
+
+      '<label class="exp-ef-label" style="margin-top:6px"><i class="ti ti-checkbox"></i> 活動清單</label>'+
+      '<div id="ief-act-list">'+renderActsEditable(s)+'</div>'+
+      '<div class="add-row" style="margin-bottom:10px"><input class="add-inp" id="ief-act-inp" placeholder="新增活動…"/><button class="add-ok" id="ief-act-add"><i class="ti ti-plus"></i></button></div>'+
+
+      '<label class="exp-ef-label"><i class="ti ti-alert-triangle" style="color:#F9AB00"></i> 注意事項</label>'+
+      '<div id="ief-note-list">'+renderNotesEditable(s)+'</div>'+
+      '<div class="add-row" style="margin-bottom:10px"><input class="add-inp" id="ief-note-inp" placeholder="新增注意事項…"/><button class="add-ok" id="ief-note-add"><i class="ti ti-plus"></i></button></div>'+
+
+      '<label class="exp-ef-label"><i class="ti ti-coin"></i> 預計花費（每人）</label>'+
+      '<input class="exp-ef-inp" id="ief-budget" value="'+escHtml((s.budget||'NT$ 0').replace(/[^0-9]/g,''))+'" placeholder="0" inputmode="numeric"/>'+
+
+      '<div style="display:flex;align-items:center;gap:6px">'+
+        '<button class="exp-ef-save" id="ief-save">✓ 儲存</button>'+
+        '<button class="exp-ef-cancel" id="ief-cancel">取消</button>'+
+        '<button class="exp-ef-del" id="ief-del" style="margin-left:auto"><i class="ti ti-trash" aria-hidden="true"></i></button>'+
+      '</div>'+
+    '</div>';
+
+  document.getElementById('ief-name').addEventListener('focus',function(){
+    startMapPick(i, true);
+  });
+  document.getElementById('ief-save').addEventListener('click',function(){ saveInlineEdit(i); });
+  document.getElementById('ief-cancel').addEventListener('click',function(){ closeInlineEdit(i); });
+  document.getElementById('ief-del').addEventListener('click',function(){
+    var s=S.stops[i]; if(!s) return;
+    showCustomConfirm('🗑️','刪除景點？','「'+s.name+'」將從行程中移除，此動作無法復原。','確定刪除',function(){
+      closeInlineEdit(i);
+      deleteStop(s._key);
+    });
+  });
+
+  // Activities: toggle/delete/add (local state, persisted on 儲存)
+  function wireActEvents(){
+    expPanel.querySelectorAll('[data-type="ief-act"]').forEach(function(el){
+      el.addEventListener('click',function(){
+        var ai=parseInt(this.dataset.ai);
+        s.activities[ai].done=!s.activities[ai].done;
+        document.getElementById('ief-act-list').innerHTML=renderActsEditable(s);
+        wireActEvents();
+      });
+    });
+    expPanel.querySelectorAll('[data-type="ief-act-del"]').forEach(function(el){
+      el.addEventListener('click',function(){
+        var ai=parseInt(this.dataset.ai);
+        s.activities.splice(ai,1);
+        document.getElementById('ief-act-list').innerHTML=renderActsEditable(s);
+        wireActEvents();
+      });
+    });
+  }
+  function wireNoteEvents(){
+    expPanel.querySelectorAll('[data-type="ief-note-del"]').forEach(function(el){
+      el.addEventListener('click',function(){
+        var ni=parseInt(this.dataset.ni);
+        s.notes.splice(ni,1);
+        document.getElementById('ief-note-list').innerHTML=renderNotesEditable(s);
+        wireNoteEvents();
+      });
+    });
+  }
+  wireActEvents();
+  wireNoteEvents();
+
+  document.getElementById('ief-act-add').addEventListener('click',function(){
+    var inp=document.getElementById('ief-act-inp'),v=inp.value.trim(); if(!v)return;
+    if(!s.activities) s.activities=[];
+    s.activities.push({label:v,done:false});
+    inp.value='';
+    document.getElementById('ief-act-list').innerHTML=renderActsEditable(s);
+    wireActEvents();
+  });
+  document.getElementById('ief-note-add').addEventListener('click',function(){
+    var inp=document.getElementById('ief-note-inp'),v=inp.value.trim(); if(!v)return;
+    if(!s.notes) s.notes=[];
+    s.notes.push(v);
+    inp.value='';
+    document.getElementById('ief-note-list').innerHTML=renderNotesEditable(s);
+    wireNoteEvents();
+  });
+}
+
+function escHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function closeInlineEdit(i){
+  _inlineEditIdx=-1;
+  cancelMapPick();
+  // Re-render the stop expand panel with view content
+  var s=S.stops[i];
+  if(!s) return;
+  var expPanel=document.getElementById('se-'+i);
+  if(!expPanel) return;
+  // Rebuild view content
+  var actsHtml='';
+  if(s.activities&&s.activities.length){
+    s.activities.forEach(function(a,ai){
+      actsHtml+='<div class="exp-act-row">'+
+        '<div class="exp-chk'+(a.done?' done':'')+'" data-i="'+i+'" data-ai="'+ai+'" data-type="act"></div>'+
+        '<span class="exp-lbl'+(a.done?' done':'')+'">'+a.label+'</span></div>';
+    });
+  }
+  var notesHtml='';
+  if(s.notes&&s.notes.length){
+    s.notes.forEach(function(n){
+      notesHtml+='<div class="exp-note-row"><div class="exp-dot"></div><span>'+n+'</span></div>';
+    });
+  }
+  expPanel.innerHTML=
+    '<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-checkbox"></i>活動清單'+
+      '<button class="exp-edit-btn" data-i="'+i+'" style="margin-left:auto"><i class="ti ti-pencil"></i> 編輯細節</button>'+
+    '</div>'+(actsHtml||'<div style="font-size:11px;color:var(--text2);padding:2px 0">（尚無活動）</div>')+'</div>'+
+    (notesHtml?'<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-alert-triangle" style="color:#F9AB00"></i>注意事項</div>'+notesHtml+'</div>':'');
+  // Re-attach checkbox listeners
+  expPanel.querySelectorAll('.exp-chk[data-type="act"]').forEach(function(el){
+    el.addEventListener('click',function(){
+      S.currentStop=parseInt(this.dataset.i);
+      tAct(parseInt(this.dataset.ai));
+    });
+  });
+}
+
+function saveInlineEdit(i){
+  var s=S.stops[i]; if(!s||!s._key) return;
+  var name=(document.getElementById('ief-name')||{}).value;
+  if(!name||!name.trim()){showToast('請輸入景點名稱',1500);return;}
+  name=name.trim();
+  _scrollToStopKey=s._key;
+  var arrive=(document.getElementById('ief-arrive')||{}).value||'';
+  var depart=(document.getElementById('ief-depart')||{}).value||'';
+  var day=(document.getElementById('ief-day')||{}).value||'';
+  var note=(document.getElementById('ief-note')||{}).value||'';
+  var transitMode=(document.getElementById('ief-transit-mode')||{}).value||'';
+  var transitMins=parseInt((document.getElementById('ief-transit-mins')||{}).value)||0;
+  var budgetRaw=(document.getElementById('ief-budget')||{}).value||'0';
+  var budgetNum=parseInt(budgetRaw.replace(/[^0-9]/g,''))||0;
+  var budget='NT$ '+budgetNum.toLocaleString();
+  var newLat=parseFloat((document.getElementById('ief-lat')||{}).value)||0;
+  var newLng=parseFloat((document.getElementById('ief-lng')||{}).value)||0;
+  // Activities/notes were edited in-memory on s.activities / s.notes
+  var activities=s.activities||[];
+  var notes=s.notes||[];
+
+  function doSaveInline(lat,lng){
+    var path='tripgo/groups/'+S.groupCode+'/stops/'+s._key;
+    window.FB.set(path+'/name',name);
+    window.FB.set(path+'/arrive',arrive.trim());
+    window.FB.set(path+'/depart',depart.trim());
+    window.FB.set(path+'/day',day.trim());
+    window.FB.set(path+'/note',note.trim());
+    window.FB.set(path+'/budget',budget);
+    window.FB.set(path+'/activities',activities);
+    window.FB.set(path+'/notes',notes);
+    if(transitMode&&transitMins>0)
+      window.FB.set(path+'/transit',{mode:transitMode,minutes:transitMins});
+    else
+      window.FB.set(path+'/transit',null);
+    if(lat&&lat!==0){window.FB.set(path+'/lat',lat);window.FB.set(path+'/lng',lng);}
+    cancelMapPick();
+    showToast('✅ 已儲存',1500);
+    // Let Firebase onValue re-render stops automatically
+  }
+
+  cancelMapPick();
+  if(newLat!==0){
+    doSaveInline(newLat,newLng);
+  } else {
+    // Auto-locate with group center bias
+    var center=getGroupCenter();
+    if(plSvc&&center){
+      plSvc.textSearch({query:name,location:center,radius:100000},function(results,status){
+        if(status===google.maps.places.PlacesServiceStatus.OK&&results&&results.length>0){
+          var loc=results[0].geometry.location;
+          doSaveInline(loc.lat(),loc.lng());
+          showToast('✅ 已儲存，位置已自動定位',2000);
+        } else doSaveInline(0,0);
+      });
+    } else doSaveInline(0,0);
+  }
+}
+
+// ── Map Pick Mode ──
+function startMapPick(stopIdx, autoNav){
+  _mapPickStopIdx=(stopIdx==null?-1:stopIdx);
+  _mapPickActive=true;
+  document.getElementById('map-pick-banner').classList.add('show');
+  // Scroll map into view
+  var mw=document.getElementById('map-wrap');
+  if(mw) mw.scrollIntoView({behavior:'smooth',block:'start'});
+  // Show pick cursor on map
+  if(map) map.setOptions({draggableCursor:'crosshair'});
+
+  // If this stop already has coordinates, navigate there immediately and drop a pin
+  if(autoNav){
+    var latInp=document.getElementById('ief-lat');
+    var lngInp=document.getElementById('ief-lng');
+    var lat=latInp?parseFloat(latInp.value):0;
+    var lng=lngInp?parseFloat(lngInp.value):0;
+    if(lat&&lat!==0&&map){
+      map.panTo({lat:lat,lng:lng}); map.setZoom(16);
+      var s=S.stops[stopIdx];
+      dropStopPin({lat:lat,lng:lng}, s?s.name:'');
+      showToast('📍 點地圖上其他地點可重新選取',2000);
+      return;
+    }
+  }
+  showToast('📍 點選地圖上的景點，或用上方搜尋欄輸入地名',2500);
+}
+
+function cancelMapPick(){
+  _mapPickStopIdx=-1;
+  _mapPickActive=false;
+  document.getElementById('map-pick-banner').classList.remove('show');
+  if(map) map.setOptions({draggableCursor:''});
+}
+
+function applyMapPickResult(lat,lng,name){
+  if(!_mapPickActive) return;
+  var latInp=document.getElementById('ief-lat');
+  var lngInp=document.getElementById('ief-lng');
+  var nameInp=document.getElementById('ief-name');
+  if(latInp) latInp.value=lat;
+  if(lngInp) lngInp.value=lng;
+  // Always auto-fill name field with the newly picked place's name
+  if(name&&nameInp) nameInp.value=name;
+  cancelMapPick();
+  dropStopPin({lat:lat,lng:lng}, name||'選定位置');
+  map.panTo({lat:lat,lng:lng}); map.setZoom(16);
+  showToast('✅ 已更新位置'+(name?'：'+name:''),1800);
+}
+
 window.addEventListener('load',function(){
+
   // Join screen
   document.getElementById('btn-join').addEventListener('click',function(){goSub('join');});
   document.getElementById('btn-create').addEventListener('click',function(){goSub('create');});
@@ -2755,7 +3997,14 @@ window.addEventListener('load',function(){
   document.addEventListener('click',function(){document.getElementById('js-gear-menu').classList.remove('show');});
 
   // Main app topbar
-  document.getElementById('btn-members').addEventListener('click',function(){openModal('M-members');});
+  document.getElementById('btn-members').addEventListener('click',function(){
+    openModal('M-members');
+    // Show rename row only for organizer
+    var row=document.getElementById('rename-trip-row');
+    if(row){ row.style.display=S.isOrg?'block':'none'; }
+    var inp=document.getElementById('rename-inp');
+    if(inp) inp.value=document.getElementById('tb-trip').textContent||'';
+  });
   document.getElementById('btn-invite').addEventListener('click',function(){openModal('M-invite');});
   document.getElementById('tb-trip').addEventListener('click',openTripSwitcher);
   document.getElementById('btn-tsw-close').addEventListener('click',closeTripSwitcher);
@@ -2764,6 +4013,13 @@ window.addEventListener('load',function(){
 
   // Map controls
   document.getElementById('btn-locate').addEventListener('click',goToMe);
+  document.getElementById('map-pick-cancel').addEventListener('click',cancelMapPick);
+  initRowDragListeners();
+  // Periodically refresh "X分鐘前" labels and marker staleness, even without new data
+  setInterval(function(){
+    if(document.getElementById('pane-locations')&&document.getElementById('pane-locations').classList.contains('on')) renderLocList();
+    if(map) updateMemberMarkers();
+  },30000);
   document.getElementById('btn-clear-route').addEventListener('click',clearRoute);
   document.getElementById('btn-pc-close').addEventListener('click',closePc);
   document.getElementById('pca-nav').addEventListener('click',pcNav);
@@ -2784,11 +4040,12 @@ window.addEventListener('load',function(){
   });
 
   // Itinerary
-  document.getElementById('btn-add-stop').addEventListener('click',openAddStop);
+  document.getElementById('btn-add-stop').addEventListener('click',openNewStopForm);
   document.getElementById('btn-asp-cancel').addEventListener('click',closeAddStop);
   document.getElementById('btn-asp-save').addEventListener('click',saveStop);
   document.getElementById('btn-det-back').addEventListener('click',closeDetail);
   document.getElementById('det-edit-btn').addEventListener('click',toggleEditMode);
+  // det-e-name focus handler removed (openDetMap deprecated)
   document.getElementById('det-del-btn').addEventListener('click',function(){
     var s=S.stops[S.currentStop]; if(!s) return;
     showCustomConfirm('🗑️','刪除景點？','「'+s.name+'」將從行程中移除。','確定刪除',function(){
@@ -2824,11 +4081,21 @@ window.addEventListener('load',function(){
   document.getElementById('btn-copy-code').addEventListener('click',copyCode);
   document.getElementById('btn-add-member').addEventListener('click',addMember);
   document.getElementById('btn-admin-close').addEventListener('click',closeAdminPanel);
+  document.getElementById('btn-admin-trips').addEventListener('click',loadAllTrips);
+  document.getElementById('btn-admin-trash').addEventListener('click',loadTrashBin);
   document.getElementById('btn-members-close').addEventListener('click',function(){closeModal('M-members');});
+  document.getElementById('btn-rename-ok').addEventListener('click',function(){
+    var v=document.getElementById('rename-inp').value.trim();
+    if(!v){showToast('請輸入旅遊名稱',1500);return;}
+    window.FB.set('tripgo/groups/'+S.groupCode+'/tripName',v);
+    document.getElementById('tb-trip').textContent=v;
+    updateStoredTrip(S.groupCode,S.myUid,S.myName,v,S.isOrg);
+    showToast('✅ 旅遊名稱已更新',2000);
+    closeModal('M-members');
+  });
   ['M-members','M-invite','M-expense','M-seg-expense'].forEach(function(id){
     document.getElementById(id).addEventListener('click',function(e){ if(e.target===this) closeModal(id); });
   });
-  document.getElementById('btn-admin-refresh').addEventListener('click',loadAllTrips);
   document.getElementById('fs-exit').addEventListener('click',toggleFullscreen);
   document.getElementById('btn-change-pw').addEventListener('click',changeAdminPassword);
   document.getElementById('M-admin-panel').addEventListener('click',function(e){if(e.target===this)closeAdminPanel();});
