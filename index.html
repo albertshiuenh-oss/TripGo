@@ -1957,7 +1957,8 @@ function startApp(code, uid, name, tripName, isOrg){
       .sort(function(a,b){return a[0]<b[0]?-1:1;})
       .map(function(e){return Object.assign({_key:e[0]},e[1]);}):[];
     S.stops=sortStopsForDisplay(raw);
-    renderStops();
+    // If the user currently has a panel open (viewing or editing), restore it after render
+    renderStops(); // renderStops itself restores _expandedStopIdx / _inlineEditIdx
   });
   var firstMsg=true;
   FB.onChildAdded('tripgo/groups/'+code+'/chat',function(snap){
@@ -2051,9 +2052,8 @@ function applyLiveTransit(stopIdx, liveMins){
   if(s.transit.liveMins===liveMins) return; // no change, skip re-render
   s.transit.liveMins=liveMins; // patch in-memory only, not saved to Firebase
   clearTimeout(_liveTransitTimer);
-  // If user is currently editing, only update the badge DOM element directly
-  // instead of full re-render (which would close their edit form)
-  if(_inlineEditIdx>=0){
+  // If any panel is currently expanded, update badge in-place only (no re-render)
+  if(_inlineEditIdx>=0||_expandedStopIdx>=0){
     // Just update the badge element in place without full re-render
     var badgeEl=document.getElementById('stn-'+stopIdx);
     if(badgeEl){
@@ -2180,7 +2180,7 @@ function renderStops(){
         '<div class="stop-cb'+(sel?' on':'')+'" id="cb-'+i+'"></div>' +
         '<div class="stop-txt" id="st-'+i+'">' +
           '<div class="stop-name">'+s.name+nextTag+'</div>' +
-          '<div class="stop-time">'+((s.arrive||'')+(s.depart?' ~ '+s.depart:'')+(s.note?' · '+s.note.substring(0,25):''))+'</div>' +
+          '<div class="stop-time">'+((s.day?s.day+' ':'')+(s.arrive||'')+(s.depart?' ~ '+s.depart:'')+(s.note?' · '+s.note.substring(0,25):''))+'</div>' +
         '</div>' +
         (MS_MODE?'':
           tbadge+
@@ -2202,13 +2202,18 @@ function renderStops(){
 
   S.stops.forEach(function(s,i){ attachSwipe(i); attachLongpress(i); attachDragHandle(i); });
 
-  // ── Restore inline edit state if a user was editing when re-render fired ──
-  if(_inlineEditIdx>=0 && _inlineEditIdx<S.stops.length){
-    var expPanel=document.getElementById('se-'+_inlineEditIdx);
+  // ── Restore expand/edit state after re-render ──
+  var toRestore=_inlineEditIdx>=0?_inlineEditIdx:_expandedStopIdx;
+  if(toRestore>=0 && toRestore<S.stops.length){
+    var expPanel=document.getElementById('se-'+toRestore);
     if(expPanel){
       expPanel.classList.add('open');
       expPanel.style.display='block';
-      renderInlineEditForm(_inlineEditIdx);
+      var arrEl2=document.getElementById('sa-'+toRestore);
+      if(arrEl2) arrEl2.style.transform='rotate(180deg)';
+      var activeTxt2=document.getElementById('st-'+toRestore);
+      if(activeTxt2) activeTxt2.classList.add('active');
+      if(_inlineEditIdx>=0) renderInlineEditForm(_inlineEditIdx);
     }
   }
   // Fetch live transit time for the next stop (debounced, cached 5 min)
@@ -2333,6 +2338,7 @@ function tapStop(i){
   document.querySelectorAll('.stop-arr').forEach(function(el){ el.style.transform=''; });
 
   if(isOpen){
+    _expandedStopIdx=-1; _inlineEditIdx=-1;
     if(stopMarker){stopMarker.setMap(null);stopMarker=null;}
     closePc();
     return;
@@ -2345,6 +2351,7 @@ function tapStop(i){
   if(arrEl) arrEl.style.transform='rotate(180deg)';
 
   S.currentStop=i;
+  _expandedStopIdx=i; // track which panel is open
 
   // ── Request token: any stale async callback will be ignored ──
   var token=++_tapToken;
@@ -3800,7 +3807,7 @@ function getGroupCenter(){
 // ════════════════════════════════
 // INLINE EDIT + MAP PICK MODE
 // ════════════════════════════════
-var _mapPickStopIdx=-1, _inlineEditIdx=-1, _mapPickActive=false;
+var _mapPickStopIdx=-1, _inlineEditIdx=-1, _mapPickActive=false, _expandedStopIdx=-1;
 
 function openInlineEdit(i){
   var s=S.stops[i]; if(!s) return;
