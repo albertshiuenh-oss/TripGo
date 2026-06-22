@@ -546,12 +546,15 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .transit-diff-red{color:#A32D2D}
 .transit-refresh{
   display:inline-flex;align-items:center;justify-content:center;
-  font-size:11px;color:var(--text2);cursor:pointer;
-  width:22px;height:22px;border-radius:50%;
-  margin-left:1px;flex-shrink:0;
-  transition:color .15s;
+  font-size:13px;color:#185FA5;cursor:pointer;
+  background:#E6F1FB;border-radius:99px;
+  padding:3px 8px;gap:3px;
+  flex-shrink:0;white-space:nowrap;
+  font-family:var(--font-sans);font-weight:600;
+  transition:background .15s;
 }
-.transit-refresh:active,.transit-refresh:hover{color:#185FA5}
+.transit-refresh::after{content:'即時';font-size:9px;font-weight:600;color:#185FA5}
+.transit-refresh:active,.transit-refresh:hover{background:#C5DCF6}
 .stop-arr{touch-action:none;cursor:grab}
 .stop-transit{
   display:inline-flex;align-items:center;gap:5px;
