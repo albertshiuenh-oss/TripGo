@@ -511,7 +511,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 #map-pick-banner.show{display:flex}
 #map-pick-cancel{background:rgba(255,255,255,.25);border:none;border-radius:6px;
   padding:4px 10px;color:#fff;font-size:11px;cursor:pointer}
-.stop-past{opacity:.55;filter:grayscale(60%)}
+/* .stop-past removed */
 .stop-next-row{background:var(--bg2);border-radius:8px}
 .next-stop-tag{
   font-size:9px;font-weight:700;
@@ -2050,8 +2050,29 @@ function applyLiveTransit(stopIdx, liveMins){
   if(!s||!s.transit) return;
   if(s.transit.liveMins===liveMins) return; // no change, skip re-render
   s.transit.liveMins=liveMins; // patch in-memory only, not saved to Firebase
-  // Re-render WITHOUT retriggering another live fetch (timer already cleared)
-  clearTimeout(_liveTransitTimer); // prevent the debounced fetch from firing again
+  clearTimeout(_liveTransitTimer);
+  // If user is currently editing, only update the badge DOM element directly
+  // instead of full re-render (which would close their edit form)
+  if(_inlineEditIdx>=0){
+    // Just update the badge element in place without full re-render
+    var badgeEl=document.getElementById('stn-'+stopIdx);
+    if(badgeEl){
+      var diff=liveMins-(s.transit.minutes||0);
+      var ticon=s.transit.mode==='walk'?'ti-walk':s.transit.mode==='bus'?'ti-bus':s.transit.mode==='train'?'ti-train':'ti-car';
+      var cls=diff<=-5?'stop-transit-green':diff>=5?'stop-transit-red':'stop-transit-black';
+      var diffStr=diff<=-5?' <span class="transit-diff transit-diff-green">-'+Math.abs(diff)+'min</span>':
+                  diff>=5?' <span class="transit-diff transit-diff-red">+'+diff+'min</span>':'';
+      badgeEl.className=cls;
+      badgeEl.innerHTML='<i class="ti '+ticon+'" aria-hidden="true"></i> '+liveMins+'min';
+      var parent=badgeEl.parentNode;
+      if(parent){
+        var old=parent.querySelector('.transit-diff');
+        if(old) old.remove();
+        if(diff<=-5||diff>=5) badgeEl.insertAdjacentHTML('afterend',diffStr);
+      }
+    }
+    return; // skip full re-render
+  }
   renderStops();
 }
 
@@ -2133,9 +2154,8 @@ function renderStops(){
         notesHtml+='<div class="exp-note-row"><div class="exp-dot"></div><span>'+n+'</span></div>';
       });
     }
-    var isPast=nextIdx>=0&&i<nextIdx;
     var isNext=i===nextIdx;
-    var pastCls=isPast?' stop-past':'';
+    var pastCls='';  // past-fading removed
     var nextTag=isNext?'<span class="next-stop-tag">下一站</span>':'';
     // Transit badge with live-vs-planned coloring
     var tbadge='';
@@ -2181,6 +2201,16 @@ function renderStops(){
   el.addEventListener('click', onStopListClick, {once:true});
 
   S.stops.forEach(function(s,i){ attachSwipe(i); attachLongpress(i); attachDragHandle(i); });
+
+  // ── Restore inline edit state if a user was editing when re-render fired ──
+  if(_inlineEditIdx>=0 && _inlineEditIdx<S.stops.length){
+    var expPanel=document.getElementById('se-'+_inlineEditIdx);
+    if(expPanel){
+      expPanel.classList.add('open');
+      expPanel.style.display='block';
+      renderInlineEditForm(_inlineEditIdx);
+    }
+  }
   // Fetch live transit time for the next stop (debounced, cached 5 min)
   if(nextIdx>=0){
     clearTimeout(_liveTransitTimer);
