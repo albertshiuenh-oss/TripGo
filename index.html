@@ -544,6 +544,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .transit-diff{font-size:10px;font-weight:700;flex-shrink:0}
 .transit-diff-green{color:#1B5E20}
 .transit-diff-red{color:#A32D2D}
+.transit-refresh{
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:11px;color:var(--text2);cursor:pointer;
+  width:22px;height:22px;border-radius:50%;
+  margin-left:1px;flex-shrink:0;
+  transition:color .15s;
+}
+.transit-refresh:active,.transit-refresh:hover{color:#185FA5}
 .stop-arr{touch-action:none;cursor:grab}
 .stop-transit{
   display:inline-flex;align-items:center;gap:5px;
@@ -2009,9 +2017,9 @@ function fetchLiveTransit(stopIdx){
     var prev=S.stops[stopIdx-1];
     if(prev&&prev.lat&&prev.lat!==0) origin={lat:prev.lat, lng:prev.lng};
   }
-  if(!origin&&S.myLoc) origin={lat:S.myLoc.lat, lng:S.myLoc.lng};
+  if(!origin&&S.myLat) origin={lat:S.myLat, lng:S.myLng};
   if(!origin) return; // can't compute without origin
-  if(!window.dsvc) return;
+  if(!dsvc) return;
   var mode=s.transit.mode||'car';
   var travelMode=mode==='walk'?google.maps.TravelMode.WALKING:
                  mode==='bus'||mode==='train'?google.maps.TravelMode.TRANSIT:
@@ -2024,7 +2032,7 @@ function fetchLiveTransit(stopIdx){
   if(travelMode===google.maps.TravelMode.DRIVING){
     req.drivingOptions={departureTime:new Date(), trafficModel:'bestguess'};
   }
-  window.dsvc.route(req, function(result, status){
+  dsvc.route(req, function(result, status){
     if(status!==google.maps.DirectionsStatus.OK) return;
     var leg=result.routes[0].legs[0];
     // Use duration_in_traffic if available (driving), else duration
@@ -2136,9 +2144,9 @@ function renderStops(){
         if(diff<=-5){ bdgCls='stop-transit-green'; diffStr='<span class="transit-diff transit-diff-green">-'+Math.abs(diff)+'min</span>'; }
         else if(diff>=5){ bdgCls='stop-transit-red'; diffStr='<span class="transit-diff transit-diff-red">+'+diff+'min</span>'; }
         else { bdgCls='stop-transit-black'; }
-        tbadge='<span class="'+bdgCls+'" id="stn-'+i+'" data-i="'+i+'"><i class="ti '+ticon+'" aria-hidden="true"></i> '+liveMins+'min</span>'+diffStr;
+        tbadge='<span class="'+bdgCls+'" id="stn-'+i+'" data-i="'+i+'"><i class="ti '+ticon+'" aria-hidden="true"></i> '+liveMins+'min</span>'+diffStr+'<span class="transit-refresh" data-i="'+i+'" title="重新整理即時路況"><i class="ti ti-refresh" aria-hidden="true"></i></span>';
       } else {
-        tbadge='<span class="stop-transit" id="stn-'+i+'" data-i="'+i+'"><i class="ti '+ticon+'" aria-hidden="true"></i> '+planned+'min</span>';
+        tbadge='<span class="stop-transit" id="stn-'+i+'" data-i="'+i+'"><i class="ti '+ticon+'" aria-hidden="true"></i> '+planned+'min</span>'+(isNext?'<span class="transit-refresh" data-i="'+i+'" title="查即時路況"><i class="ti ti-refresh" aria-hidden="true"></i></span>':'');
       }
     }
     html+='<div class="stop-wrap'+pastCls+'" id="sw-'+i+'">' +
@@ -2208,6 +2216,19 @@ function onStopListClick(e){
   // Transit badge click → navigate to that stop
   var trnav=e.target.closest('.stop-transit');
   if(trnav){ var i=parseInt(trnav.dataset.i); navStop(i); return; }
+
+  // Refresh button: re-fetch live transit for this stop
+  var ref=e.target.closest('.transit-refresh');
+  if(ref){
+    var i=parseInt(ref.dataset.i);
+    // Clear cache for this stop so it re-fetches
+    var s=S.stops[i]; if(s){
+      Object.keys(_liveTransitCache).forEach(function(k){ if(k.startsWith(i+':')) delete _liveTransitCache[k]; });
+      showToast('🔄 查詢即時路況…',1500);
+      fetchLiveTransit(i);
+    }
+    return;
+  }
 
   // Arrow -> detail (unless a drag just happened on this arrow)
   var arr=e.target.closest('.stop-arr');
