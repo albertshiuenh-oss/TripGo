@@ -2354,10 +2354,14 @@ function tapStop(i){
   var expPanel=document.getElementById('se-'+i);
   var isOpen=expPanel&&expPanel.classList.contains('open');
 
-  // Collapse all panels & highlights
-  document.querySelectorAll('.stop-expand.open').forEach(function(p){ p.classList.remove('open'); });
+  // Collapse ALL panels (remove class AND inline style — inline style takes precedence)
+  document.querySelectorAll('.stop-expand').forEach(function(p){
+    p.classList.remove('open');
+    p.style.display='';   // clear inline style so CSS display:none takes over
+  });
   document.querySelectorAll('.stop-txt.active').forEach(function(el){ el.classList.remove('active'); });
   document.querySelectorAll('.stop-arr').forEach(function(el){ el.style.transform=''; });
+  _inlineEditIdx=-1;  // cancel any open edit form in the previously expanded stop
 
   if(isOpen){
     _expandedStopIdx=-1; _inlineEditIdx=-1;
@@ -4060,45 +4064,45 @@ function saveInlineEdit(i){
   var budget='NT$ '+budgetNum.toLocaleString();
   var newLat=parseFloat((document.getElementById('ief-lat')||{}).value)||0;
   var newLng=parseFloat((document.getElementById('ief-lng')||{}).value)||0;
-  // Activities/notes were edited in-memory on s.activities / s.notes
   var activities=s.activities||[];
   var notes=s.notes||[];
+  var path='tripgo/groups/'+S.groupCode+'/stops/'+s._key;
 
-  function doSaveInline(lat,lng){
-    var path='tripgo/groups/'+S.groupCode+'/stops/'+s._key;
-    window.FB.set(path+'/name',name);
-    window.FB.set(path+'/arrive',arrive.trim());
-    window.FB.set(path+'/depart',depart.trim());
-    window.FB.set(path+'/day',day.trim());
-    window.FB.set(path+'/note',note.trim());
-    window.FB.set(path+'/budget',budget);
-    window.FB.set(path+'/activities',activities);
-    window.FB.set(path+'/notes',notes);
-    if(transitMode&&transitMins>0)
-      window.FB.set(path+'/transit',{mode:transitMode,minutes:transitMins});
-    else
-      window.FB.set(path+'/transit',null);
-    if(lat&&lat!==0){window.FB.set(path+'/lat',lat);window.FB.set(path+'/lng',lng);}
-    cancelMapPick();
-    closeInlineEdit(i, true);  // collapse form completely after save
-    showToast('✅ 已儲存',1500);
-  }
-
+  // ── Close form IMMEDIATELY — don't wait for async coordinate lookup ──
   cancelMapPick();
+  closeInlineEdit(i, true);
+  showToast('✅ 已儲存',1500);
+
+  // ── Write all fields to Firebase (sync) ──
+  window.FB.set(path+'/name',name);
+  window.FB.set(path+'/arrive',arrive.trim());
+  window.FB.set(path+'/depart',depart.trim());
+  window.FB.set(path+'/day',day.trim());
+  window.FB.set(path+'/note',note.trim());
+  window.FB.set(path+'/budget',budget);
+  window.FB.set(path+'/activities',activities);
+  window.FB.set(path+'/notes',notes);
+  if(transitMode&&transitMins>0)
+    window.FB.set(path+'/transit',{mode:transitMode,minutes:transitMins});
+  else
+    window.FB.set(path+'/transit',null);
+
+  // ── Handle coordinates ──
   if(newLat!==0){
-    doSaveInline(newLat,newLng);
+    window.FB.set(path+'/lat',newLat);
+    window.FB.set(path+'/lng',newLng);
   } else {
-    // Auto-locate with group center bias
+    // Background auto-locate — silent, UI already closed
     var center=getGroupCenter();
     if(plSvc&&center){
       plSvc.textSearch({query:name,location:center,radius:100000},function(results,status){
         if(status===google.maps.places.PlacesServiceStatus.OK&&results&&results.length>0){
           var loc=results[0].geometry.location;
-          doSaveInline(loc.lat(),loc.lng());
-          showToast('✅ 已儲存，位置已自動定位',2000); // doSaveInline already calls closeInlineEdit
-        } else doSaveInline(0,0);
+          window.FB.set(path+'/lat',loc.lat());
+          window.FB.set(path+'/lng',loc.lng());
+        }
       });
-    } else doSaveInline(0,0);
+    }
   }
 }
 
