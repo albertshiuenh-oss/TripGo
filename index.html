@@ -9,16 +9,33 @@
 <title>TripGo</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css"/>
 <style>
-/* ── Reset ── */
-*{box-sizing:border-box;margin:0;padding:0;
-  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-  -webkit-tap-highlight-color:transparent}
+/* ── 頂級精品風格 Reset & 全域變數 ── */
+*{
+  box-sizing: border-box; margin: 0; padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
 :root{
+  /* ── 原有變數（保留相容性）── */
   --blue:#2B5F8E;--green:#34A853;--red:#EA4335;--yellow:#F9AB00;
   --gray:#5F6368;--bg:#fff;--bg2:#F8F9FA;--border:#DADCE0;
   --text:#202124;--text2:#5F6368;
+  /* ── 新精品設計語言 ── */
+  --blue-luxe: #1E293B;
+  --accent-gold: #D4AF37;
+  --accent-blue: #4F46E5;
+  --green-lux: #10B981;
+  --red-lux: #EF4444;
+  --bg-lux: #F8FAFC;
+  --card-bg: #FFFFFF;
+  --text-main: #0F172A;
+  --text-sub: #64748B;
+  --border-lux: #E2E8F0;
+  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 12px 34px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 20px 40px rgba(15, 23, 42, 0.12);
 }
-html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--blue-luxe);color:var(--text-main)}
 
 /* ── Join Screen ── */
 #S-join{
@@ -200,13 +217,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   background:var(--bg2);
 }
 #S-app.show{display:flex}
+/* ── 頂部導覽列高級化 ── */
 .topbar{
   display:flex;align-items:center;gap:8px;
-  padding:10px 14px;background:#fff;
-  border-bottom:1px solid var(--border);flex-shrink:0;
+  padding: 14px 20px; background: var(--card-bg);
+  border-bottom: 1px solid var(--border-lux);flex-shrink:0;
 }
 .tb-logo{
-  font-size:15px;font-weight:700;color:var(--blue);
+  font-size: 18px; font-weight: 800; color: var(--blue-luxe); letter-spacing: -0.5px;
   display:flex;align-items:center;gap:4px;flex-shrink:0;cursor:pointer;
   user-select:none;
 }
@@ -238,23 +256,53 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 }
 
 
-/* ── Layout ── */
+/* ── iOS 滑動抽屜（Bottom Sheet）核心佈局 ── */
 .main{
-  flex:1;display:flex;overflow:hidden;
-  flex-direction:column;
+  flex: 1; display: flex; overflow: hidden; flex-direction: column; position: relative;
 }
-@media(orientation:landscape){.main{flex-direction:row}}
-#map-wrap{
-  position:relative;
-  height:42vh;flex-shrink:0;
-  background:#E8E8E8;
-  transition:height .25s ease;
-}
-#map-wrap.map-mini{height:5vh}
-@media(orientation:landscape){
-  #map-wrap{height:100%;width:58%;flex-shrink:0}
+
+#map-wrap {
+  position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; background: #E2E8F0;
 }
 #gmap{width:100%;height:100%}
+
+/* 手機版 Bottom Sheet 容器 */
+#right-panel{
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 100;
+  background: var(--card-bg);
+  border-radius: 24px 24px 0 0;
+  box-shadow: var(--shadow-lg);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  height: 85vh;
+  transform: translateY(calc(85vh - 110px));
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.12);
+}
+
+/* iOS 原生膠囊把手 */
+.bottom-sheet-handle-bar {
+  width: 100%; height: 28px; display: flex; align-items: center; justify-content: center;
+  background: var(--card-bg); cursor: grab; flex-shrink: 0; z-index: 10;
+}
+.bottom-sheet-handle-bar::after {
+  content: ''; width: 40px; height: 5px; background: #CBD5E1; border-radius: 99px;
+}
+
+/* 響應式：平板/桌機橫盤還原為側邊欄 */
+@media (min-width: 768px), (orientation: landscape) {
+  .main { flex-direction: row; }
+  #map-wrap { position: relative; width: 60%; height: 100%; inset: auto; }
+  #right-panel {
+    position: relative; width: 40%; height: 100% !important;
+    transform: none !important; border-radius: 0; box-shadow: -2px 0 20px rgba(0,0,0,0.05);
+    transition: none; flex-shrink: 0;
+  }
+  .bottom-sheet-handle-bar { display: none; }
+}
+/* 直立：底部抽屜模式下地圖保持全螢幕，不需縮小 */
+@media(orientation:landscape),(min-width:768px){
+  #map-wrap.map-mini{height:5vh}
+}
 
 /* ── Map Controls ── */
 .map-search{
@@ -349,21 +397,16 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 
 /* ── Divider ── */
 /* ── Divider ── */
-.divider{
-  position:relative;
-  flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;
-  /* Portrait: horizontal bar */
-  height:14px;
-  background:var(--border);
-  cursor:row-resize;
-  z-index:3;
-}
-@media(orientation:landscape){
+/* 分隔桿：直立底部抽屜模式下隱藏，橫盤側邊欄模式下顯示 */
+.divider{ display:none; }
+@media(orientation:landscape),(min-width:768px){
   .divider{
+    position:relative;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
     width:14px;height:auto;
     background:var(--border);
     cursor:col-resize;
+    z-index:3;
   }
 }
 /* The pill handle */
@@ -386,22 +429,15 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   transform:scale(1.5);
 }
 
-/* ── Right Panel ── */
-#right-panel{
-  flex:1;display:flex;flex-direction:column;
-  overflow:hidden;background:#fff;
-}
-.tabs{
-  display:flex;background:#fff;flex-shrink:0;
-}
+/* ── 分頁籤高級化 ── */
+.tabs{ display: flex; padding: 4px; gap: 4px; background: #F1F5F9; border-radius: 12px; margin: 10px 14px; flex-shrink:0; }
 .tab{
-  flex:1;height:28px;border:none;background:none;
-  cursor:pointer;font-size:17px;color:var(--text2);
+  flex:1;height:36px;border:none;background:none;border-radius:8px;
+  cursor:pointer;font-size:14px;font-weight:600;color:var(--text-sub);
   display:flex;align-items:center;justify-content:center;
-  position:relative;margin:3px 2px;border-radius:7px;
+  position:relative;transition:all 0.2s;
 }
-.tab.on{background:#E6F1FB;color:#185FA5}
-.tabs{display:flex;padding:0 4px;gap:3px}
+.tab.on{ background: var(--card-bg); color: var(--accent-blue); box-shadow: var(--shadow-sm); }
 .tab-dollar{font-size:15px;font-weight:700}
 .tab-dot{
   position:absolute;top:1px;right:calc(50% - 12px);
@@ -415,7 +451,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 #pane-chat.on{display:flex}
 .pane{display:none;flex:1;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch}
 .pane.on{display:flex;flex-direction:column}
-#pane-itinerary{position:relative;overflow-y:auto;flex:1;min-height:0}
+#pane-itinerary{position:relative;overflow-y:auto;flex:1;min-height:0;padding:8px 16px 40px;}
 
 /* ── Itinerary ── */
 .stop-empty{
@@ -427,15 +463,31 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   letter-spacing:.5px;text-transform:uppercase;
   padding:10px 16px 4px;
 }
+/* ── 精品行程卡片 ── */
 .stop-wrap{
-  position:relative;overflow:hidden;
+  position:relative;overflow:hidden;margin-bottom: 8px;
 }
+
+/* 目前狀態：高對比焦點光暈 */
+.stop-wrap.current-active .stop-row{
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15), var(--shadow-md);
+  background: linear-gradient(180deg, #FFFFFF, #F8FAFC);
+}
+/* 下一站狀態：優雅預告卡片 */
+.stop-wrap.next-active .stop-row{
+  border-color: #A5B4FC;
+  background: #F8FAFC;
+  border-style: dashed;
+}
+
 .stop-row{
   position:relative;z-index:2;
-  display:flex;align-items:center;gap:8px;
-  padding:11px 14px;background:#fff;
-  border-bottom:1px solid var(--bg2);
-  transition:transform .2s;
+  display:flex;align-items:center;gap:12px;
+  padding:16px; background: var(--card-bg);
+  border: 1px solid var(--border-lux); border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .stop-cb{
   width:18px;height:18px;border-radius:5px;
@@ -447,10 +499,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .stop-cb.on::after{content:'✓';color:#fff;font-size:11px}
 .multiselect .stop-cb{display:flex}
 .stop-txt{flex:1;cursor:pointer;min-width:0}
-.stop-name{font-size:16px;font-weight:600;color:var(--text);
+.stop-name{ font-size: 16px; font-weight: 600; color: var(--text-main); letter-spacing: -0.3px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.stop-txt.active .stop-name{color:var(--blue);font-weight:700}
-.stop-time{font-size:11px;color:var(--text2);margin-top:2px}
+.stop-txt.active .stop-name{ color: var(--accent-blue); font-weight: 700; }
+.stop-time{ font-size: 12px; color: var(--text-sub); margin-top: 4px; font-variant-numeric: tabular-nums; }
 .stop-nav{
   font-size:10px;padding:4px 8px;border-radius:8px;
   border:1px solid var(--border);background:#fff;
@@ -521,24 +573,27 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   white-space:nowrap;
 }
 .stop-transit-green{
-  display:inline-flex;align-items:center;gap:4px;
-  background:#E8F5E9;color:#1B5E20;
+  display:inline-flex;align-items:center;gap:6px;
+  background:#E6F4EA;color:#065F46;
   border-radius:99px;font-size:12px;font-weight:600;
-  padding:4px 11px;flex-shrink:0;cursor:pointer;
+  padding:6px 14px;flex-shrink:0;cursor:pointer;
+  box-shadow: var(--shadow-sm); transition: transform 0.2s;
 }
 .stop-transit-green i{font-size:16px}
 .stop-transit-black{
-  display:inline-flex;align-items:center;gap:4px;
-  background:#EBEBEB;color:#1A1A1A;
+  display:inline-flex;align-items:center;gap:6px;
+  background:#F1F5F9;color:#334155;
   border-radius:99px;font-size:12px;font-weight:600;
-  padding:4px 11px;flex-shrink:0;cursor:pointer;
+  padding:6px 14px;flex-shrink:0;cursor:pointer;
+  box-shadow: var(--shadow-sm); transition: transform 0.2s;
 }
 .stop-transit-black i{font-size:16px}
 .stop-transit-red{
-  display:inline-flex;align-items:center;gap:4px;
-  background:#FCEBEB;color:#A32D2D;
+  display:inline-flex;align-items:center;gap:6px;
+  background:#FEE2E2;color:#991B1B;
   border-radius:99px;font-size:12px;font-weight:600;
-  padding:4px 11px;flex-shrink:0;cursor:pointer;
+  padding:6px 14px;flex-shrink:0;cursor:pointer;
+  box-shadow: var(--shadow-sm); transition: transform 0.2s;
 }
 .stop-transit-red i{font-size:16px}
 .transit-diff{font-size:10px;font-weight:700;flex-shrink:0}
@@ -583,13 +638,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   border:2px dashed var(--border);border-radius:12px;
   background:none;cursor:pointer;font-size:13px;color:var(--blue);
 }
-.bud-bar{padding:12px 14px;border-top:1px solid var(--border)}
+/* ── 奢華預算追蹤條 ── */
+.bud-bar{ padding: 16px 20px; background: var(--card-bg); border-top: 1px solid var(--border-lux); }
 .bud-top{display:flex;justify-content:space-between;
-  font-size:11px;color:var(--text2);margin-bottom:4px}
-.bud-track{height:4px;background:var(--border);border-radius:2px;margin-bottom:2px}
-.bud-fill{height:4px;background:var(--blue);border-radius:2px;transition:width .4s}
-.bud-vals{display:flex;justify-content:space-between;font-size:10px;color:var(--text2)}
-.bud-used{font-weight:700;color:var(--blue)}
+  font-size:11px;color:var(--text-sub);margin-bottom:6px}
+.bud-track{ height: 6px; background: #E2E8F0; border-radius: 99px; margin-bottom:2px; overflow:hidden; }
+.bud-fill{ height: 100%; background: linear-gradient(90deg, var(--accent-blue), #818CF8); border-radius: 99px; transition:width .4s; }
+.bud-vals{display:flex;justify-content:space-between;font-size:10px;color:var(--text-sub)}
+.bud-used{font-weight:700;color:var(--accent-blue)}
 
 /* ── Detail Panel ── */
 #detail{
@@ -1131,6 +1187,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
     </div>
     <div class="divider" id="divider"><div class="divider-dot"></div></div>
     <div id="right-panel">
+      <div class="bottom-sheet-handle-bar" id="js-sheet-handle"></div>
       <div class="tabs">
         <button class="tab on" data-pane="itinerary" aria-label="行程"><i class="ti ti-route"></i></button>
         <button class="tab" data-pane="chat" aria-label="群組"><i class="ti ti-message"></i><span class="tab-dot" id="chat-unread-dot"></span></button>
@@ -1557,12 +1614,13 @@ window.initMap = function(){
 };
 
 function setMapHeight(){
-  var topH = (document.querySelector('.topbar')||{}).offsetHeight||44;
   var mw = document.getElementById('map-wrap'); if(!mw) return;
   if(window.innerHeight > window.innerWidth){
-    mw.style.height = Math.max(Math.floor((window.innerHeight-topH)*0.42),140)+'px';
+    // 直立：底部抽屜模式，地圖用 CSS position:absolute;inset:0 自動全螢幕，不設 inline style
+    mw.style.height = '';
     mw.style.width = '';
   } else {
+    // 橫盤：傳統並排佈局，手動設定寬度
     mw.style.height = '';
     mw.style.width = Math.floor(window.innerWidth*0.58)+'px';
   }
@@ -4166,6 +4224,75 @@ function applyMapPickResult(lat,lng,name){
   showToast('✅ 已更新位置'+(name?'：'+name:''),1800);
 }
 
+// ── iOS Bottom Sheet 手勢與段位切換系統 ──
+function initBottomSheet() {
+  var sheet = document.getElementById('right-panel');
+  var handle = document.getElementById('js-sheet-handle');
+  if (!sheet || !handle) return;
+
+  var PANEL_HEIGHT = window.innerHeight * 0.85;
+  var STATE_FULL = 0;
+  var STATE_HALF = PANEL_HEIGHT * 0.45;
+  var STATE_COLLAPSED = PANEL_HEIGHT - 70;
+  var currentStates = [STATE_FULL, STATE_HALF, STATE_COLLAPSED];
+  var currentStateIdx = 1;
+
+  var startY = 0;
+  var currentY = 0;
+  var isDragging = false;
+  var initialTransformY = STATE_HALF;
+
+  sheet.style.transform = 'translateY(' + STATE_HALF + 'px)';
+
+  // 點擊把手在半開/全開之間切換
+  handle.addEventListener('click', function() {
+    if (isDragging) return;
+    currentStateIdx = (currentStateIdx === 0) ? 1 : 0;
+    sheet.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1)';
+    sheet.style.transform = 'translateY(' + currentStates[currentStateIdx] + 'px)';
+  });
+
+  // 觸控手勢開始
+  handle.addEventListener('touchstart', function(e) {
+    startY = e.touches[0].clientY;
+    var matrix = window.getComputedStyle(sheet).transform;
+    if (matrix && matrix !== 'none') {
+      initialTransformY = parseFloat(matrix.split(',')[5]);
+    }
+    isDragging = true;
+    sheet.style.transition = 'none';
+  }, { passive: true });
+
+  // 觸控手勢移動
+  window.addEventListener('touchmove', function(e) {
+    if (!isDragging) return;
+    currentY = e.touches[0].clientY;
+    var deltaY = currentY - startY;
+    var newTranslateY = initialTransformY + deltaY;
+    if (newTranslateY < 0) newTranslateY = 0;
+    if (newTranslateY > STATE_COLLAPSED) newTranslateY = STATE_COLLAPSED;
+    sheet.style.transform = 'translateY(' + newTranslateY + 'px)';
+  }, { passive: true });
+
+  // 觸控手勢結束：智慧型段位吸附
+  window.addEventListener('touchend', function() {
+    if (!isDragging) return;
+    isDragging = false;
+    var matrix = window.getComputedStyle(sheet).transform;
+    var finalTranslateY = (matrix && matrix !== 'none') ? parseFloat(matrix.split(',')[5]) : STATE_HALF;
+    if (isNaN(finalTranslateY)) finalTranslateY = STATE_HALF;
+    var closestStateIdx = 1;
+    var minDiff = Infinity;
+    currentStates.forEach(function(state, idx) {
+      var diff = Math.abs(finalTranslateY - state);
+      if (diff < minDiff) { minDiff = diff; closestStateIdx = idx; }
+    });
+    currentStateIdx = closestStateIdx;
+    sheet.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2)';
+    sheet.style.transform = 'translateY(' + currentStates[currentStateIdx] + 'px)';
+  });
+}
+
 window.addEventListener('load',function(){
 
   // Join screen
@@ -4290,6 +4417,7 @@ window.addEventListener('load',function(){
   // Init
   initLogoListeners();
   initDivider();
+  initBottomSheet();
   goHome();
 
   // Restore name
