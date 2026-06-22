@@ -1656,30 +1656,39 @@ function updateMemberMarkers(){
   window._memberLabels=[];
   if(!map) return;
   buildMemberLabelOverlayClass();
+
+  // ── Fix ②: Only show markers for actual group members (filter out admin / outsiders) ──
+  var memberUids={};
+  (S.members||[]).forEach(function(m){ memberUids[m.id]=true; });
+
   Object.entries(S.allLocs).forEach(function(entry){
     var uid=entry[0], loc=entry[1];
-    if(!loc||uid===S.myUid) return;
-    var ageMs=loc.at?(Date.now()-loc.at):Infinity;
-    var isStale=ageMs>30*60*1000;
+    if(!loc) return;
+    if(uid===S.myUid) return; // self shown as blue dot (myMarker) not orange dot
+    if(!memberUids[uid]) return; // skip non-members (e.g. admin not in group)
+
     var initials=getInitials(loc.name);
+    var ago=formatTimeAgo(loc.at);
+    var isStale=loc.at&&(Date.now()-loc.at)>30*60*1000;
+
+    // ── Fix ①: always 100% orange + black text; staleness shown only in time label ──
     memberMarkers[uid]=new google.maps.Marker({
       position:{lat:loc.lat,lng:loc.lng},map:map,
       icon:{path:google.maps.SymbolPath.CIRCLE,scale:12,
-        fillColor:'#F9AB00',fillOpacity:isStale?0.35:1,
-        strokeColor:'#fff',strokeOpacity:isStale?0.5:1,strokeWeight:2,
+        fillColor:'#F9AB00',fillOpacity:1,
+        strokeColor:isStale?'#bbb':'#fff',strokeOpacity:1,strokeWeight:2,
         labelOrigin:new google.maps.Point(0,0)},
-      label:{text:initials,color:isStale?'rgba(0,0,0,.35)':'#000',fontSize:'9px',fontWeight:'800'},
-      title:loc.name+' · '+formatTimeAgo(loc.at)
+      label:{text:initials,color:'#000',fontSize:'9px',fontWeight:'800'},
+      title:loc.name+' · '+ago+(isStale?' (可能過時)':'')
     });
     memberMarkers[uid].addListener('click',function(){
-      showToast(loc.name+' · '+formatTimeAgo(loc.at),2000);
+      showToast(loc.name+' · '+ago+(isStale?' · 可能過時':''),2500);
     });
-    // OverlayView label — reliable CSS div positioned next to the marker
     if(MemberLabelOverlay){
       var ov=new MemberLabelOverlay(
         new google.maps.LatLng(loc.lat, loc.lng),
-        formatTimeAgo(loc.at),
-        isStale
+        ago+(isStale?' ⚠️':''),
+        false  // no fading — staleness shown via ⚠️ suffix
       );
       ov.setMap(map);
       window._memberLabels.push(ov);
@@ -1944,6 +1953,7 @@ function startApp(code, uid, name, tripName, isOrg){
     S.members=snap.val()?Object.values(snap.val()):[];
     _prevMemberCount=S.members.length;
     renderAvatars(); renderMembers(); renderPayerSelect(); renderLocList();
+    updateMemberMarkers(); // re-apply memberUids filter now that S.members is updated
     if(!_firstMembers&&S.members.length>prev){
       var locPane=document.getElementById('pane-locations');
       if(!(locPane&&locPane.classList.contains('on'))){
@@ -3113,7 +3123,7 @@ function renderLocList(){
   S.members.forEach(function(m,i){
     var loc=S.allLocs[m.id], ago=formatTimeAgo(loc&&loc.at);
     html+='<div class="loc-row">'+
-      '<div class="loc-av av'+(i%7)+'">'+m.name.substring(0,2).toUpperCase()+'</div>'+
+      '<div class="loc-av av'+(i%7)+'">'+getInitials(m.name)+'</div>'+
       '<div style="flex:1"><div class="loc-nm">'+(m.role==='organizer'?'👑 ':'')+m.name+'</div>'+
       '<div class="loc-st">'+(loc?'📍 '+ago:'未分享位置')+'</div></div>'+
       (loc?'<button class="loc-see" data-uid="'+m.id+'">查看</button>':'')+
