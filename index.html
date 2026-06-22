@@ -3995,9 +3995,20 @@ function escHtml(s){
   return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-function closeInlineEdit(i){
+function closeInlineEdit(i, collapse){
   _inlineEditIdx=-1;
   cancelMapPick();
+  // If collapse=true (called from save), fully close the panel
+  if(collapse){
+    _expandedStopIdx=-1;
+    var expPanel=document.getElementById('se-'+i);
+    if(expPanel){ expPanel.classList.remove('open'); expPanel.style.display='none'; }
+    var arrEl=document.getElementById('sa-'+i);
+    if(arrEl) arrEl.style.transform='';
+    var txt=document.getElementById('st-'+i);
+    if(txt) txt.classList.remove('active');
+    return;
+  }
   // Re-render the stop expand panel with view content
   var s=S.stops[i];
   if(!s) return;
@@ -4069,8 +4080,8 @@ function saveInlineEdit(i){
       window.FB.set(path+'/transit',null);
     if(lat&&lat!==0){window.FB.set(path+'/lat',lat);window.FB.set(path+'/lng',lng);}
     cancelMapPick();
+    closeInlineEdit(i, true);  // collapse form completely after save
     showToast('✅ 已儲存',1500);
-    // Let Firebase onValue re-render stops automatically
   }
 
   cancelMapPick();
@@ -4084,7 +4095,7 @@ function saveInlineEdit(i){
         if(status===google.maps.places.PlacesServiceStatus.OK&&results&&results.length>0){
           var loc=results[0].geometry.location;
           doSaveInline(loc.lat(),loc.lng());
-          showToast('✅ 已儲存，位置已自動定位',2000);
+          showToast('✅ 已儲存，位置已自動定位',2000); // doSaveInline already calls closeInlineEdit
         } else doSaveInline(0,0);
       });
     } else doSaveInline(0,0);
