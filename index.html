@@ -2178,13 +2178,8 @@ function renderStops(){
   el.addEventListener('click', onStopListClick, {once:true});
 
   S.stops.forEach(function(s,i){ attachSwipe(i); attachLongpress(i); attachDragHandle(i); });
-  // Auto-scroll so the next upcoming stop sits at the top of the visible list
+  // Fetch live transit time for the next stop (debounced, cached 5 min)
   if(nextIdx>=0){
-    setTimeout(function(){
-      var el=document.getElementById('sw-'+nextIdx);
-      if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
-    },80);
-    // Fetch live transit time for the next stop (debounced, cached 5 min)
     clearTimeout(_liveTransitTimer);
     _liveTransitTimer=setTimeout(function(){ fetchLiveTransit(nextIdx); },800);
   }
