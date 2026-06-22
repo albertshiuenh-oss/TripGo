@@ -2048,8 +2048,11 @@ function fetchLiveTransit(stopIdx){
 function applyLiveTransit(stopIdx, liveMins){
   var s=S.stops[stopIdx];
   if(!s||!s.transit) return;
+  if(s.transit.liveMins===liveMins) return; // no change, skip re-render
   s.transit.liveMins=liveMins; // patch in-memory only, not saved to Firebase
-  renderStops(); // re-render to pick up the new liveMins value
+  // Re-render WITHOUT retriggering another live fetch (timer already cleared)
+  clearTimeout(_liveTransitTimer); // prevent the debounced fetch from firing again
+  renderStops();
 }
 
 function findNextStopIdx(){
@@ -2342,25 +2345,6 @@ function tapStop(i){
         showPlaceCardFixed(results[0].place_id);
       } else showSimplePc(s);
     });
-  }
-}
-
-function openStopDetail(i){
-  if(MS_MODE){ toggleSel(i); return; }
-  var s=S.stops[i]; if(!s) return;
-  S.currentStop=i;
-  document.getElementById('det-title').textContent=s.name;
-  document.getElementById('det-time').textContent=(s.arrive||'')+(s.depart?' → '+s.depart:'');
-  document.getElementById('det-bud').textContent=s.budget||'NT$ 0';
-  renderActs(s); renderNotes(s);
-  document.getElementById('detail').classList.add('show');
-  // Move map to this stop (always, since opening detail = user wants to see it)
-  tapStop(i);
-  if(S.isOrg){
-    _editMode=false;
-    toggleEditMode();
-  } else {
-    exitEditMode();
   }
 }
 
@@ -2896,67 +2880,6 @@ function saveNewStop(newActs, newNotes){
   }
 }
 
-// ── Add Stop (legacy full-screen, kept for reference but unused) ──
-var S_aspLat=0, S_aspLng=0;
-function openAddStop(){
-  document.getElementById('add-stop-screen').classList.add('show');
-  ['ns-name','ns-arrive','ns-depart','ns-note','ns-day'].forEach(function(id){ var e=document.getElementById(id);if(e)e.value=''; });
-  document.getElementById('asp-inp').value='';
-  document.getElementById('asp-place-info').classList.remove('show');
-  document.getElementById('asp-drop').style.display='none';
-  S_aspLat=0; S_aspLng=0;
-  var center={lat:S.myLat,lng:S.myLng};
-  setTimeout(function(){
-    if(!aspMap){
-      aspMap=new google.maps.Map(document.getElementById('asp-gmap'),{
-        center:center,zoom:12,
-        mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false
-      });
-      aspPlSvc=new google.maps.places.PlacesService(aspMap);
-      aspMap.addListener('click',function(e){
-        if(e.placeId){e.stop();aspSelectPid(e.placeId);}
-        else aspDropPin(e.latLng);
-      });
-    } else {
-      aspMap.panTo(center);
-    }
-    [100,400].forEach(function(ms){ setTimeout(function(){google.maps.event.trigger(aspMap,'resize');},ms); });
-    // Init Autocomplete widget
-    var inp=document.getElementById('asp-inp');
-    if(inp && !inp._ac){
-      setTimeout(function(){
-        var ac=new google.maps.places.Autocomplete(inp,{
-          fields:['name','geometry','formatted_address','rating']
-        });
-        inp._ac=ac;
-        ac.addListener('place_changed',function(){
-          var place=ac.getPlace();
-          if(!place||!place.geometry) return;
-          aspDropPin(place.geometry.location);
-          document.getElementById('ns-name').value=place.name||'';
-          document.getElementById('asp-pname').textContent=place.name||'';
-          document.getElementById('asp-paddr').textContent=place.formatted_address||'';
-          document.getElementById('asp-place-info').classList.add('show');
-          S_aspLat=place.geometry.location.lat();
-          S_aspLng=place.geometry.location.lng();
-          // Show confirm card
-          var dd=document.getElementById('asp-drop');
-          dd.innerHTML='<div style="padding:10px 14px;border-bottom:1px solid var(--border)">'+
-            '<div style="font-size:13px;font-weight:700;color:var(--text)">'+place.name+'</div>'+
-            '<div style="font-size:11px;color:var(--gray);margin-top:2px">'+(place.formatted_address||'')+'</div>'+
-            (place.rating?'<div style="font-size:11px;color:#F9AB00;margin-top:2px">★ '+place.rating+'</div>':'')+
-            '</div>'+
-            '<div style="padding:10px 14px">'+
-            '<button id="asp-add-btn" style="width:100%;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">'+
-            '<i class="ti ti-map-pin-plus" style="font-size:16px"></i> 加入行程</button></div>';
-          dd.style.display='block';
-          var btn=document.getElementById('asp-add-btn');
-          if(btn) btn.addEventListener('click',function(){ dd.style.display='none'; saveStop(); });
-        });
-      },100);
-    }
-  },200);
-}
 function closeAddStop(){ document.getElementById('add-stop-screen').classList.remove('show'); }
 function aspSelectPid(pid){
   if(!aspPlSvc) return;
