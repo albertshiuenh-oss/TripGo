@@ -248,7 +248,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   position:relative;
   height:42vh;flex-shrink:0;
   background:#E8E8E8;
+  transition:height .25s ease;
 }
+#map-wrap.map-mini{height:5vh}
 @media(orientation:landscape){
   #map-wrap{height:100%;width:58%;flex-shrink:0}
 }
@@ -394,16 +396,28 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   background:#fff;flex-shrink:0;
 }
 .tab{
-  flex:1;padding:12px 4px;border:none;background:none;
-  cursor:pointer;font-size:12px;color:var(--text2);
-  display:flex;flex-direction:column;align-items:center;gap:2px;
+  flex:1;height:28px;border:none;background:none;
+  cursor:pointer;font-size:17px;color:var(--text2);
+  display:flex;align-items:center;justify-content:center;
+  position:relative;margin:3px 2px;border-radius:7px;
 }
-.tab.on{color:var(--blue)}
+.tab.on{background:#E6F1FB;color:#185FA5}
+.tabs{display:flex;padding:0 4px;gap:3px}
+.tab-dollar{font-size:15px;font-weight:700}
+.tab-dot{
+  position:absolute;top:1px;right:calc(50% - 12px);
+  width:7px;height:7px;border-radius:50%;
+  background:#E24B4A;border:1.5px solid #fff;
+  display:none;
+}
+.tab-dot.show{display:block}
 .tab.on::after{
   content:'';display:block;height:2px;width:100%;
   background:var(--blue);position:relative;top:12px;
 }
 .pane{display:none;flex:1;overflow-y:auto;padding-bottom:80px}
+#pane-chat{display:none;flex-direction:column;overflow:hidden;padding-bottom:0}
+#pane-chat.on{display:flex}
 .pane.on{display:block}
 #pane-itinerary{position:relative}
 
@@ -437,7 +451,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .stop-cb.on::after{content:'✓';color:#fff;font-size:11px}
 .multiselect .stop-cb{display:flex}
 .stop-txt{flex:1;cursor:pointer;min-width:0}
-.stop-name{font-size:14px;font-weight:600;color:var(--text);
+.stop-name{font-size:16px;font-weight:600;color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stop-txt.active .stop-name{color:var(--blue);font-weight:700}
 .stop-time{font-size:11px;color:var(--text2);margin-top:2px}
@@ -653,7 +667,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .msg-nm{font-size:10px;color:var(--text2);margin-bottom:2px}
 .msg-t{font-size:9px;color:var(--text2);align-self:flex-end;flex-shrink:0}
 .chat-input-wrap{
-  position:sticky;bottom:0;background:#fff;
+  flex-shrink:0;background:#fff;
   border-top:1px solid var(--border);padding:8px 10px;
 }
 .sticker-tray{display:none;padding:8px;font-size:26px;
@@ -1077,10 +1091,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
     <div class="divider" id="divider"><div class="divider-dot"></div></div>
     <div id="right-panel">
       <div class="tabs">
-        <button class="tab on" data-pane="itinerary"><i class="ti ti-route"></i><span>行程</span></button>
-        <button class="tab" data-pane="chat"><i class="ti ti-message"></i><span>群組</span></button>
-        <button class="tab" data-pane="expense"><i class="ti ti-receipt"></i><span>費用</span></button>
-        <button class="tab" data-pane="locations"><i class="ti ti-users"></i><span>團員</span></button>
+        <button class="tab on" data-pane="itinerary" aria-label="行程"><i class="ti ti-route"></i></button>
+        <button class="tab" data-pane="chat" aria-label="群組"><i class="ti ti-message"></i><span class="tab-dot" id="chat-unread-dot"></span></button>
+        <button class="tab" data-pane="expense" aria-label="費用"><span class="tab-dollar">$</span></button>
+        <button class="tab" data-pane="locations" aria-label="團員"><i class="ti ti-users"></i></button>
       </div>
       <!-- Itinerary pane -->
       <div class="pane on" id="pane-itinerary">
@@ -1128,7 +1142,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <!-- Chat pane -->
       <div class="pane" id="pane-chat">
         <div id="chat-st" style="font-size:11px;color:var(--text2);text-align:center;padding:8px">載入訊息中…</div>
-        <div id="msg-scroll" style="overflow-y:auto;flex:1;padding:10px 14px;max-height:calc(100% - 120px)"><div id="msg-list"></div></div>
+        <div id="msg-scroll" style="overflow-y:auto;flex:1;padding:10px 14px;min-height:0"><div id="msg-list"></div></div>
         <div class="chat-input-wrap">
           <div class="sticker-tray" id="sticker-tray">
             <span data-s="😀">😀</span><span data-s="😂">😂</span><span data-s="😍">😍</span>
@@ -1542,6 +1556,17 @@ function startLocShare(code, uid, name){
       {lat:pos.coords.latitude,lng:pos.coords.longitude,name:name,at:Date.now()});
   },null,{enableHighAccuracy:true,maximumAge:10000});
 }
+function formatTimeAgo(ts){
+  if(!ts) return '未分享';
+  var s=Math.round((Date.now()-ts)/1000);
+  if(s<60) return s+'秒前';
+  var m=Math.round(s/60);
+  if(m<60) return m+'分前';
+  var h=Math.round(m/60);
+  if(h<24) return h+'小時前';
+  var d=Math.round(h/24);
+  return d+'天前';
+}
 function getInitials(name){
   if(!name) return '?';
   var parts=name.trim().split(/\s+/);
@@ -1555,17 +1580,20 @@ function updateMemberMarkers(){
   Object.entries(S.allLocs).forEach(function(entry){
     var uid=entry[0], loc=entry[1];
     if(!loc||uid===S.myUid||!map) return;
+    // Stale = data older than 30 minutes -> fade marker to signal it may be outdated
+    var ageMs=loc.at?(Date.now()-loc.at):Infinity;
+    var isStale=ageMs>30*60*1000;
     memberMarkers[uid]=new google.maps.Marker({
       position:{lat:loc.lat,lng:loc.lng},map:map,
       icon:{path:google.maps.SymbolPath.CIRCLE,scale:12,
-        fillColor:'#F9AB00',fillOpacity:1,
-        strokeColor:'#fff',strokeOpacity:1,strokeWeight:2,
+        fillColor:'#F9AB00',fillOpacity:isStale?0.4:1,
+        strokeColor:'#fff',strokeOpacity:isStale?0.6:1,strokeWeight:2,
         labelOrigin:new google.maps.Point(0,0)},
-      label:{text:getInitials(loc.name),color:'#fff',fontSize:'10px',fontWeight:'700'},
-      title:loc.name
+      label:{text:getInitials(loc.name),color:isStale?'rgba(255,255,255,.7)':'#fff',fontSize:'10px',fontWeight:'700'},
+      title:loc.name+' · '+formatTimeAgo(loc.at)
     });
     memberMarkers[uid].addListener('click',function(){
-      showToast(loc.name,1500);
+      showToast(loc.name+' · '+formatTimeAgo(loc.at),2000);
     });
   });
 }
@@ -1836,7 +1864,15 @@ function startApp(code, uid, name, tripName, isOrg){
   FB.onChildAdded('tripgo/groups/'+code+'/chat',function(snap){
     var m=snap.val();
     appendMsg(m.uid,m.name,m.text,m.sticker,m.time);
-    if(!firstMsg) document.getElementById('msg-scroll').scrollTop=9999;
+    if(!firstMsg){
+      document.getElementById('msg-scroll').scrollTop=9999;
+      // Show unread red dot if we're not currently looking at the chat pane (and it's not our own message)
+      var chatPane=document.getElementById('pane-chat');
+      var onChatNow=chatPane&&chatPane.classList.contains('on');
+      if(!onChatNow&&m.uid!==S.myUid){
+        var dot=document.getElementById('chat-unread-dot'); if(dot) dot.classList.add('show');
+      }
+    }
   });
   setTimeout(function(){ firstMsg=false; var el=document.getElementById('chat-st'); if(el)el.style.display='none'; },2000);
   FB.onValue('tripgo/groups/'+code+'/expenses',function(snap){
@@ -2804,8 +2840,7 @@ function renderLocList(){
   var el=document.getElementById('loc-list'); if(!el) return;
   var html='';
   S.members.forEach(function(m,i){
-    var loc=S.allLocs[m.id], ago='未分享';
-    if(loc&&loc.at){var s=Math.round((Date.now()-loc.at)/1000);ago=s<60?s+'秒前':Math.round(s/60)+'分前';}
+    var loc=S.allLocs[m.id], ago=formatTimeAgo(loc&&loc.at);
     html+='<div class="loc-row">'+
       '<div class="loc-av av'+(i%7)+'">'+m.name.substring(0,2).toUpperCase()+'</div>'+
       '<div style="flex:1"><div class="loc-nm">'+(m.role==='organizer'?'👑 ':'')+m.name+'</div>'+
@@ -2825,12 +2860,28 @@ function renderLocList(){
 // ════════════════════════════════
 // UI HELPERS
 // ════════════════════════════════
+var _lastChatReadAt=0;
 function showPane(name){
   document.querySelectorAll('.pane').forEach(function(p){p.classList.remove('on');});
   var pane=document.getElementById('pane-'+name); if(pane) pane.classList.add('on');
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('on');});
   var tab=document.querySelector('.tab[data-pane="'+name+'"]'); if(tab) tab.classList.add('on');
   if(name==='locations'){ renderLocList(); fitMapToMembers(); }
+
+  // Chat pane: collapse the map to make room for conversation (manual drag still works once inside)
+  var mw=document.getElementById('map-wrap');
+  if(mw){
+    mw.style.height=''; mw.style.width=''; // clear any leftover manual drag size from a previous pane
+    if(name==='chat'){ mw.classList.add('map-mini'); }
+    else { mw.classList.remove('map-mini'); }
+    if(map) setTimeout(function(){ google.maps.event.trigger(map,'resize'); },260);
+  }
+
+  if(name==='chat'){
+    _lastChatReadAt=Date.now();
+    var dot=document.getElementById('chat-unread-dot'); if(dot) dot.classList.remove('show');
+    try{ localStorage.setItem('tg_chat_read_'+(S.groupCode||''), String(_lastChatReadAt)); }catch(e){}
+  }
 }
 function fitMapToMembers(){
   if(!map) return;
@@ -3838,6 +3889,11 @@ window.addEventListener('load',function(){
   document.getElementById('btn-locate').addEventListener('click',goToMe);
   document.getElementById('map-pick-cancel').addEventListener('click',cancelMapPick);
   initRowDragListeners();
+  // Periodically refresh "X分鐘前" labels and marker staleness, even without new data
+  setInterval(function(){
+    if(document.getElementById('pane-locations')&&document.getElementById('pane-locations').classList.contains('on')) renderLocList();
+    if(map) updateMemberMarkers();
+  },30000);
   document.getElementById('btn-clear-route').addEventListener('click',clearRoute);
   document.getElementById('btn-pc-close').addEventListener('click',closePc);
   document.getElementById('pca-nav').addEventListener('click',pcNav);
