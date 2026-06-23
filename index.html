@@ -2088,14 +2088,30 @@ function applyLiveTransit(stopIdx, liveMins){
 
 function findNextStopIdx(){
   var now=new Date();
-  var hhmm=now.getHours()*60+now.getMinutes();
+  var todayStr=now.getFullYear()+'-'+
+    (now.getMonth()+1<10?'0':'')+(now.getMonth()+1)+'-'+
+    (now.getDate()<10?'0':'')+now.getDate(); // YYYY-MM-DD
+  var nowMins=now.getHours()*60+now.getMinutes();
+
   for(var i=0;i<S.stops.length;i++){
     var s=S.stops[i];
     var t=timeToMinutes(s.arrive);
     if(t==null) continue; // no time → skip
-    if(t>hhmm) return i;
+
+    // Convert day label to date for comparison
+    var stopDate=labelToDate(s.day||''); // 'Jun 22' → '2026-06-22'
+
+    if(stopDate){
+      // Both date and time available: future if stopDate > today, or same day and time > now
+      if(stopDate>todayStr) return i;          // tomorrow or later → next stop
+      if(stopDate<todayStr) continue;          // past day → skip
+      if(t>nowMins) return i;                  // same day, future time → next stop
+    } else {
+      // No date label — fall back to time-only comparison (within-day trip)
+      if(t>nowMins) return i;
+    }
   }
-  return -1; // all done
+  return -1; // all stops are in the past
 }
 
 // ── Parse "HH:MM" into minutes-since-midnight (null if invalid) ──
