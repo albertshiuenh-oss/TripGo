@@ -1627,7 +1627,16 @@ function setMapHeight(){
   if(map) google.maps.event.trigger(map,'resize');
 }
 window.addEventListener('resize', setMapHeight);
-window.addEventListener('orientationchange', function(){ setTimeout(setMapHeight,300); });
+window.addEventListener('orientationchange', function(){
+  setTimeout(function(){
+    setMapHeight();
+    // 重新計算底部抽屜段位（視窗高度改變）
+    _bsRecalc();
+    if (window.innerHeight > window.innerWidth) {
+      _bsSnap(_bs.idx); // 保持原來的段位，但用新計算的像素值
+    }
+  }, 350);
+});
 
 function getMyLoc(){
   if(!navigator.geolocation) return;
@@ -2306,6 +2315,23 @@ function renderStops(){
       if(_inlineEditIdx>=0) renderInlineEditForm(_inlineEditIdx);
     }
   }
+  // ── 標記目前景點（current-active）與下一站（next-active）視覺狀態 ──
+  S.stops.forEach(function(s, i) {
+    var wrap = document.getElementById('sw-' + i);
+    if (!wrap) return;
+    wrap.classList.remove('current-active', 'next-active');
+    if (i === nextIdx) {
+      // 下一站：虛線預告框
+      wrap.classList.add('next-active');
+    } else if (nextIdx > 0 && i === nextIdx - 1) {
+      // 目前景點：藍光暈（nextIdx 前一站 = 你現在所在）
+      wrap.classList.add('current-active');
+    } else if (nextIdx === -1 && S.stops.length > 0 && i === S.stops.length - 1) {
+      // 所有時間已過：最後一站標為 current（行程接近尾聲）
+      wrap.classList.add('current-active');
+    }
+  });
+
   // Fetch live transit time for the next stop (debounced, cached 5 min)
   if(nextIdx>=0){
     clearTimeout(_liveTransitTimer);
@@ -3227,6 +3253,9 @@ function showPane(name){
   if(name==='locations'){
     var dot=document.getElementById('members-unread-dot'); if(dot) dot.classList.remove('show');
   }
+
+  // 直立模式：切換分頁時若面板收合，自動展開到半開（確保內容可見）
+  bsExpandToHalf();
 }
 function fitMapToMembers(){
   if(!map) return;
@@ -4224,72 +4253,79 @@ function applyMapPickResult(lat,lng,name){
   showToast('✅ 已更新位置'+(name?'：'+name:''),1800);
 }
 
-// ── iOS Bottom Sheet 手勢與段位切換系統 ──
+// ── iOS Bottom Sheet 全域狀態（供 showPane / orientationchange 共用）──
+var _bs = { sheet: null, handle: null, states: [0, 0, 0], idx: 1, dragging: false };
+
+function _bsRecalc() {
+  var ph = window.innerHeight * 0.85;
+  _bs.states = [0, ph * 0.45, ph - 70];
+}
+
+function _bsSnap(idx) {
+  _bs.idx = idx;
+  if (!_bs.sheet) return;
+  _bs.sheet.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1)';
+  _bs.sheet.style.transform = 'translateY(' + _bs.states[idx] + 'px)';
+}
+
+// 供外部呼叫：若目前收合則展開到半開（直立模式限定）
+function bsExpandToHalf() {
+  if (!_bs.sheet) return;
+  if (window.innerHeight <= window.innerWidth) return; // 橫盤不需要
+  var matrix = window.getComputedStyle(_bs.sheet).transform;
+  var cur = (matrix && matrix !== 'none') ? parseFloat(matrix.split(',')[5]) : _bs.states[1];
+  if (isNaN(cur) || cur > _bs.states[1] + 20) _bsSnap(1);
+}
+
 function initBottomSheet() {
-  var sheet = document.getElementById('right-panel');
-  var handle = document.getElementById('js-sheet-handle');
-  if (!sheet || !handle) return;
+  _bs.sheet = document.getElementById('right-panel');
+  _bs.handle = document.getElementById('js-sheet-handle');
+  if (!_bs.sheet || !_bs.handle) return;
 
-  var PANEL_HEIGHT = window.innerHeight * 0.85;
-  var STATE_FULL = 0;
-  var STATE_HALF = PANEL_HEIGHT * 0.45;
-  var STATE_COLLAPSED = PANEL_HEIGHT - 70;
-  var currentStates = [STATE_FULL, STATE_HALF, STATE_COLLAPSED];
-  var currentStateIdx = 1;
-
-  var startY = 0;
-  var currentY = 0;
-  var isDragging = false;
-  var initialTransformY = STATE_HALF;
-
-  sheet.style.transform = 'translateY(' + STATE_HALF + 'px)';
+  _bsRecalc();
+  _bs.idx = 1;
+  // 設定初始半開位置（無動畫）
+  _bs.sheet.style.transition = 'none';
+  _bs.sheet.style.transform = 'translateY(' + _bs.states[1] + 'px)';
 
   // 點擊把手在半開/全開之間切換
-  handle.addEventListener('click', function() {
-    if (isDragging) return;
-    currentStateIdx = (currentStateIdx === 0) ? 1 : 0;
-    sheet.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1)';
-    sheet.style.transform = 'translateY(' + currentStates[currentStateIdx] + 'px)';
+  _bs.handle.addEventListener('click', function() {
+    if (_bs.dragging) return;
+    _bsSnap(_bs.idx === 0 ? 1 : 0);
   });
 
   // 觸控手勢開始
-  handle.addEventListener('touchstart', function(e) {
-    startY = e.touches[0].clientY;
-    var matrix = window.getComputedStyle(sheet).transform;
-    if (matrix && matrix !== 'none') {
-      initialTransformY = parseFloat(matrix.split(',')[5]);
-    }
-    isDragging = true;
-    sheet.style.transition = 'none';
+  var _startY = 0, _initialY = 0;
+  _bs.handle.addEventListener('touchstart', function(e) {
+    _startY = e.touches[0].clientY;
+    var matrix = window.getComputedStyle(_bs.sheet).transform;
+    _initialY = (matrix && matrix !== 'none') ? parseFloat(matrix.split(',')[5]) : _bs.states[1];
+    if (isNaN(_initialY)) _initialY = _bs.states[1];
+    _bs.dragging = true;
+    _bs.sheet.style.transition = 'none';
   }, { passive: true });
 
   // 觸控手勢移動
   window.addEventListener('touchmove', function(e) {
-    if (!isDragging) return;
-    currentY = e.touches[0].clientY;
-    var deltaY = currentY - startY;
-    var newTranslateY = initialTransformY + deltaY;
-    if (newTranslateY < 0) newTranslateY = 0;
-    if (newTranslateY > STATE_COLLAPSED) newTranslateY = STATE_COLLAPSED;
-    sheet.style.transform = 'translateY(' + newTranslateY + 'px)';
+    if (!_bs.dragging) return;
+    var newY = _initialY + (e.touches[0].clientY - _startY);
+    newY = Math.max(0, Math.min(newY, _bs.states[2]));
+    _bs.sheet.style.transform = 'translateY(' + newY + 'px)';
   }, { passive: true });
 
   // 觸控手勢結束：智慧型段位吸附
   window.addEventListener('touchend', function() {
-    if (!isDragging) return;
-    isDragging = false;
-    var matrix = window.getComputedStyle(sheet).transform;
-    var finalTranslateY = (matrix && matrix !== 'none') ? parseFloat(matrix.split(',')[5]) : STATE_HALF;
-    if (isNaN(finalTranslateY)) finalTranslateY = STATE_HALF;
-    var closestStateIdx = 1;
-    var minDiff = Infinity;
-    currentStates.forEach(function(state, idx) {
-      var diff = Math.abs(finalTranslateY - state);
-      if (diff < minDiff) { minDiff = diff; closestStateIdx = idx; }
+    if (!_bs.dragging) return;
+    _bs.dragging = false;
+    var matrix = window.getComputedStyle(_bs.sheet).transform;
+    var finalY = (matrix && matrix !== 'none') ? parseFloat(matrix.split(',')[5]) : _bs.states[1];
+    if (isNaN(finalY)) finalY = _bs.states[1];
+    var closest = 1, minDiff = Infinity;
+    _bs.states.forEach(function(state, i) {
+      var diff = Math.abs(finalY - state);
+      if (diff < minDiff) { minDiff = diff; closest = i; }
     });
-    currentStateIdx = closestStateIdx;
-    sheet.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2)';
-    sheet.style.transform = 'translateY(' + currentStates[currentStateIdx] + 'px)';
+    _bsSnap(closest);
   });
 }
 
