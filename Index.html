@@ -177,6 +177,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   background:#E6F4EA;color:#1E7A3C;font-size:11px;cursor:pointer;font-weight:600}
 .adm-perm-del-btn{padding:4px 10px;border-radius:6px;border:none;
   background:#FCE8E6;color:var(--red);font-size:11px;cursor:pointer;font-weight:600}
+.adm-token-card{background:var(--bg2);border-radius:10px;padding:10px 12px;margin-bottom:6px}
+.adm-token-code{font-family:monospace;font-size:13px;font-weight:700;color:var(--blue);letter-spacing:1px}
+.adm-token-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px}
+.adm-token-badge.ok{background:#E6F4EA;color:#1E7A3C}
+.adm-token-badge.used{background:var(--bg2);color:var(--text2);border:1px solid var(--border)}
+.adm-token-del{background:none;border:none;color:var(--text2);cursor:pointer;font-size:13px;padding:2px 4px;margin-left:auto}
+.adm-token-del:hover{color:var(--red)}
 .adm-trip-enter{
   width:100%;margin-top:8px;padding:8px;border:none;border-radius:8px;
   background:var(--blue);color:#fff;font-size:12px;font-weight:700;cursor:pointer;
@@ -392,8 +399,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   overflow:hidden;background:#fff;
 }
 .tabs{
-  display:flex;border-bottom:1px solid var(--border);
-  background:#fff;flex-shrink:0;
+  display:flex;background:#fff;flex-shrink:0;
 }
 .tab{
   flex:1;height:28px;border:none;background:none;
@@ -411,15 +417,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   display:none;
 }
 .tab-dot.show{display:block}
-.tab.on::after{
-  content:'';display:block;height:2px;width:100%;
-  background:var(--blue);position:relative;top:12px;
-}
-.pane{display:none;flex:1;overflow-y:auto;padding-bottom:80px}
+/* /* .tab.on::after removed */
 #pane-chat{display:none;flex-direction:column;overflow:hidden;padding-bottom:0}
 #pane-chat.on{display:flex}
-.pane.on{display:block}
-#pane-itinerary{position:relative}
+.pane{display:none;flex:1;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch}
+.pane.on{display:flex;flex-direction:column}
+#pane-itinerary{position:relative;overflow-y:auto;flex:1;min-height:0}
 
 /* ── Itinerary ── */
 .stop-empty{
@@ -469,6 +472,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   display:none;background:var(--bg2);
   border-bottom:1px solid var(--border);
   padding:12px 14px;
+  overflow:visible;
 }
 .stop-expand.open{display:block}
 .exp-section{margin-bottom:10px}
@@ -490,8 +494,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   background:#fff;color:var(--blue);cursor:pointer;
 }
 .exp-del-btn{
-  font-size:10px;padding:4px 10px;border-radius:99px;border:none;
-  background:#FCEBEB;color:#A32D2D;cursor:pointer;
+  font-size:11px;padding:5px 12px;border-radius:8px;border:1px solid var(--red);
+  background:#fff;color:var(--red);cursor:pointer;
   display:inline-flex;align-items:center;gap:4px;flex-shrink:0;
 }
 .exp-edit-form{background:#fff;border-radius:10px;padding:12px;border:1px solid var(--border);margin-top:8px}
@@ -514,7 +518,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 #map-pick-banner.show{display:flex}
 #map-pick-cancel{background:rgba(255,255,255,.25);border:none;border-radius:6px;
   padding:4px 10px;color:#fff;font-size:11px;cursor:pointer}
-.stop-past{opacity:.55;filter:grayscale(60%)}
+/* .stop-past removed */
 .stop-next-row{background:var(--bg2);border-radius:8px}
 .next-stop-tag{
   font-size:9px;font-weight:700;
@@ -547,6 +551,17 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .transit-diff{font-size:10px;font-weight:700;flex-shrink:0}
 .transit-diff-green{color:#1B5E20}
 .transit-diff-red{color:#A32D2D}
+.transit-refresh{
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:12px;color:#185FA5;cursor:pointer;
+  background:#E6F1FB;border-radius:99px;
+  padding:3px 8px;gap:3px;
+  flex-shrink:0;white-space:nowrap;
+  font-family:var(--font-sans);font-weight:600;
+  transition:background .15s;
+}
+.transit-refresh::after{content:''}
+.transit-refresh:active,.transit-refresh:hover{background:#C5DCF6}
 .stop-arr{touch-action:none;cursor:grab}
 .stop-transit{
   display:inline-flex;align-items:center;gap:5px;
@@ -981,6 +996,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div id="js-gear-menu">
     <button class="jgm-item" onclick="openAdmin()"><i class="ti ti-shield" style="color:var(--blue)"></i> 管理員設定</button>
     <div class="jgm-sep"></div>
+    <button class="jgm-item" onclick="openTokenInput()"><i class="ti ti-key" style="color:var(--blue)"></i> 輸入建立授權碼</button>
+    <div class="jgm-sep"></div>
     <button class="jgm-item red" onclick="clearSession()"><i class="ti ti-trash"></i> 清除舊資料</button>
     <div class="jgm-sep"></div>
     <button class="jgm-item" onclick="location.reload(true)"><i class="ti ti-refresh" style="color:var(--blue)"></i> 強制重新整理</button>
@@ -1056,12 +1073,37 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
     <div id="adm-trash-list" style="display:none"></div>
 
     <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🗝️ 建立授權碼管理</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <input class="adm-input" id="adm-token-note" placeholder="備註（選填，例：給小明用）" style="flex:1;padding:9px 12px;font-size:13px"/>
+        <button id="btn-gen-token" style="padding:9px 14px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">產生授權碼</button>
+      </div>
+      <div id="adm-token-list"><div style="font-size:12px;color:var(--text2)">載入中…</div></div>
+    </div>
+
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
       <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🔑 修改管理員密碼</div>
       <div class="adm-field"><label class="adm-label">目前密碼</label><input class="adm-input" id="adm-cur-pw" type="password" placeholder="輸入目前密碼"/></div>
       <div class="adm-field"><label class="adm-label">新密碼</label><input class="adm-input" id="adm-new-pw" type="password" placeholder="輸入新密碼（至少6字元）"/></div>
       <div class="adm-field"><label class="adm-label">確認新密碼</label><input class="adm-input" id="adm-new-pw2" type="password" placeholder="再輸入一次新密碼"/></div>
       <div class="adm-err" id="adm-pw-err"></div>
       <button id="btn-change-pw" style="width:100%;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">更新密碼</button>
+    </div>
+  </div>
+</div>
+
+<!-- Token Input Modal -->
+<div id="M-token-input" onclick="if(event.target===this)closeTokenInput()" style="position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.5);display:none;align-items:flex-end;justify-content:center">
+  <div class="adm-box">
+    <div class="adm-title">🔑 輸入建立授權碼</div>
+    <div class="adm-field">
+      <label class="adm-label">授權碼</label>
+      <input class="adm-input" id="tok-code-inp" placeholder="BUILD-XXXX" maxlength="10" autocomplete="off" style="text-transform:uppercase;letter-spacing:1px"/>
+    </div>
+    <div class="adm-err" id="tok-err"></div>
+    <div class="adm-btns">
+      <button class="adm-cancel" onclick="closeTokenInput()">取消</button>
+      <button class="adm-ok" onclick="doTokenInput()">驗證</button>
     </div>
   </div>
 </div>
@@ -1610,45 +1652,81 @@ function getInitials(name){
   if(parts.length>=2) return (parts[0][0]+parts[1][0]).toUpperCase();
   return parts[0].substring(0,2).toUpperCase();
 }
+// ── Member label overlay: renders a small CSS div next to each marker ──
+var MemberLabelOverlay=null;
+function buildMemberLabelOverlayClass(){
+  if(MemberLabelOverlay||!google) return;
+  MemberLabelOverlay=function(pos,text,isStale){
+    this.pos=pos; this.text=text; this.isStale=isStale; this.div=null;
+  };
+  MemberLabelOverlay.prototype=Object.create(google.maps.OverlayView.prototype);
+  MemberLabelOverlay.prototype.onAdd=function(){
+    var d=document.createElement('div');
+    d.style.cssText='position:absolute;background:rgba(0,0,0,.72);color:#fff;font-size:9px;font-weight:600;border-radius:4px;padding:1px 5px;white-space:nowrap;pointer-events:none;'+(this.isStale?'opacity:.4;':'');
+    d.textContent=this.text;
+    this.div=d;
+    this.getPanes().floatPane.appendChild(d);
+  };
+  MemberLabelOverlay.prototype.draw=function(){
+    var proj=this.getProjection();
+    if(!proj||!this.div) return;
+    var pt=proj.fromLatLngToDivPixel(this.pos);
+    this.div.style.left=(pt.x+16)+'px';
+    this.div.style.top=(pt.y-8)+'px';
+  };
+  MemberLabelOverlay.prototype.onRemove=function(){
+    if(this.div&&this.div.parentNode) this.div.parentNode.removeChild(this.div);
+    this.div=null;
+  };
+}
+
 function updateMemberMarkers(){
   Object.keys(memberMarkers).forEach(function(uid){
     memberMarkers[uid].setMap(null); delete memberMarkers[uid];
   });
-  // Also remove old time labels
-  if(window._memberLabelMarkers){
-    window._memberLabelMarkers.forEach(function(m){ m.setMap(null); });
+  if(window._memberLabels){
+    window._memberLabels.forEach(function(ov){ ov.setMap(null); });
   }
-  window._memberLabelMarkers=[];
+  window._memberLabels=[];
+  if(!map) return;
+  buildMemberLabelOverlayClass();
+
+  // ── Fix ②: Only show markers for actual group members (filter out admin / outsiders) ──
+  var memberUids={};
+  (S.members||[]).forEach(function(m){ memberUids[m.id]=true; });
+
   Object.entries(S.allLocs).forEach(function(entry){
     var uid=entry[0], loc=entry[1];
-    if(!loc||uid===S.myUid||!map) return;
-    var ageMs=loc.at?(Date.now()-loc.at):Infinity;
-    var isStale=ageMs>30*60*1000;
+    if(!loc) return;
+    if(uid===S.myUid) return; // self shown as blue dot (myMarker) not orange dot
+    if(!memberUids[uid]) return; // skip non-members (e.g. admin not in group)
+
     var initials=getInitials(loc.name);
-    // Orange solid circle + black text
+    var ago=formatTimeAgo(loc.at);
+    var isStale=loc.at&&(Date.now()-loc.at)>30*60*1000;
+
+    // ── Fix ①: always 100% orange + black text; staleness shown only in time label ──
     memberMarkers[uid]=new google.maps.Marker({
       position:{lat:loc.lat,lng:loc.lng},map:map,
       icon:{path:google.maps.SymbolPath.CIRCLE,scale:12,
-        fillColor:'#F9AB00',fillOpacity:isStale?0.35:1,
-        strokeColor:'#fff',strokeOpacity:isStale?0.5:1,strokeWeight:2,
+        fillColor:'#F9AB00',fillOpacity:1,
+        strokeColor:isStale?'#bbb':'#fff',strokeOpacity:1,strokeWeight:2,
         labelOrigin:new google.maps.Point(0,0)},
-      label:{text:initials,color:isStale?'rgba(0,0,0,.4)':'#000',fontSize:'9px',fontWeight:'800'},
-      title:loc.name+' · '+formatTimeAgo(loc.at)
+      label:{text:initials,color:'#000',fontSize:'9px',fontWeight:'800'},
+      title:loc.name+' · '+ago+(isStale?' (可能過時)':'')
     });
-    // Floating time-ago label next to the dot
-    var ago=formatTimeAgo(loc.at);
-    var labelMarker=new google.maps.Marker({
-      position:{lat:loc.lat,lng:loc.lng},map:map,
-      icon:{url:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',scaledSize:new google.maps.Size(1,1)},
-      label:{text:ago,color:isStale?'rgba(80,80,80,.5)':'rgba(30,30,30,.85)',fontSize:'9px',fontWeight:'600',
-        className:'member-time-label'},
-      title:loc.name,
-      clickable:false
-    });
-    window._memberLabelMarkers.push(labelMarker);
     memberMarkers[uid].addListener('click',function(){
-      showToast(loc.name+' · '+formatTimeAgo(loc.at),2000);
+      showToast(loc.name+' · '+ago+(isStale?' · 可能過時':''),2500);
     });
+    if(MemberLabelOverlay){
+      var ov=new MemberLabelOverlay(
+        new google.maps.LatLng(loc.lat, loc.lng),
+        ago+(isStale?' ⚠️':''),
+        false  // no fading — staleness shown via ⚠️ suffix
+      );
+      ov.setMap(map);
+      window._memberLabels.push(ov);
+    }
   });
 }
 
@@ -1909,6 +1987,7 @@ function startApp(code, uid, name, tripName, isOrg){
     S.members=snap.val()?Object.values(snap.val()):[];
     _prevMemberCount=S.members.length;
     renderAvatars(); renderMembers(); renderPayerSelect(); renderLocList();
+    updateMemberMarkers(); // re-apply memberUids filter now that S.members is updated
     if(!_firstMembers&&S.members.length>prev){
       var locPane=document.getElementById('pane-locations');
       if(!(locPane&&locPane.classList.contains('on'))){
@@ -1922,8 +2001,18 @@ function startApp(code, uid, name, tripName, isOrg){
       .sort(function(a,b){return a[0]<b[0]?-1:1;})
       .map(function(e){return Object.assign({_key:e[0]},e[1]);}):[];
     S.stops=sortStopsForDisplay(raw);
-    renderStops();
+    // If the user currently has a panel open (viewing or editing), restore it after render
+    renderStops(); // renderStops itself restores _expandedStopIdx / _inlineEditIdx
   });
+  // ── 切換群組時清空聊天室，防止舊訊息殘留 & onChildAdded 重播造成重複 ──
+  var _chatList=document.getElementById('msg-list');
+  if(_chatList) _chatList.innerHTML='';
+  var _chatSt=document.getElementById('chat-st');
+  if(_chatSt){ _chatSt.style.display='block'; _chatSt.textContent='載入訊息中…'; }
+  // 讀取此群組上次已讀時間戳（未讀紅點用）
+  _lastChatReadAt=0;
+  try{ _lastChatReadAt=parseInt(localStorage.getItem('tg_chat_read_'+code)||'0')||0; }catch(e){}
+
   var firstMsg=true;
   FB.onChildAdded('tripgo/groups/'+code+'/chat',function(snap){
     var m=snap.val();
@@ -1967,19 +2056,130 @@ function startApp(code, uid, name, tripName, isOrg){
 var _scrollToStopKey=null;
 
 // ── Find index of next upcoming stop (first stop whose arrive time is in the future) ──
+// ── Fetch live transit time for the next stop via Directions API ──
+var _liveTransitCache={}, _liveTransitTimer=null;
+function fetchLiveTransit(stopIdx){
+  var s=S.stops[stopIdx];
+  if(!s||!s.transit||!s.transit.minutes) return; // no planned transit = nothing to compare
+  if(!s.lat||!s.lng||s.lat===0) return; // no destination coords
+  var cacheKey=stopIdx+':'+s._key;
+  if(_liveTransitCache[cacheKey]&&(Date.now()-_liveTransitCache[cacheKey].at)<5*60*1000) {
+    // Cache valid for 5 minutes — apply and re-render
+    applyLiveTransit(stopIdx, _liveTransitCache[cacheKey].mins);
+    return;
+  }
+  // Find origin: previous stop coords or current user location
+  var origin=null;
+  if(stopIdx>0){
+    var prev=S.stops[stopIdx-1];
+    if(prev&&prev.lat&&prev.lat!==0) origin={lat:prev.lat, lng:prev.lng};
+  }
+  if(!origin&&S.myLat) origin={lat:S.myLat, lng:S.myLng};
+  if(!origin) return; // can't compute without origin
+  if(!dsvc) return;
+  var mode=s.transit.mode||'car';
+  var travelMode=mode==='walk'?google.maps.TravelMode.WALKING:
+                 mode==='bus'||mode==='train'?google.maps.TravelMode.TRANSIT:
+                 google.maps.TravelMode.DRIVING;
+  var req={
+    origin: origin,
+    destination: {lat:s.lat, lng:s.lng},
+    travelMode: travelMode,
+  };
+  if(travelMode===google.maps.TravelMode.DRIVING){
+    req.drivingOptions={departureTime:new Date(), trafficModel:'bestguess'};
+  }
+  dsvc.route(req, function(result, status){
+    if(status!==google.maps.DirectionsStatus.OK) return;
+    var leg=result.routes[0].legs[0];
+    // Use duration_in_traffic if available (driving), else duration
+    var secs=(leg.duration_in_traffic||leg.duration).value;
+    var mins=Math.round(secs/60);
+    _liveTransitCache[cacheKey]={mins:mins, at:Date.now()};
+    applyLiveTransit(stopIdx, mins);
+  });
+}
+function applyLiveTransit(stopIdx, liveMins){
+  var s=S.stops[stopIdx];
+  if(!s||!s.transit) return;
+  if(s.transit.liveMins===liveMins) return; // no change, skip re-render
+  s.transit.liveMins=liveMins; // patch in-memory only, not saved to Firebase
+  clearTimeout(_liveTransitTimer);
+  // If any panel is currently expanded, update badge in-place only (no re-render)
+  if(_inlineEditIdx>=0||_expandedStopIdx>=0){
+    // Just update the badge element in place without full re-render
+    var badgeEl=document.getElementById('stn-'+stopIdx);
+    if(badgeEl){
+      var diff=liveMins-(s.transit.minutes||0);
+      var ticon=s.transit.mode==='walk'?'ti-walk':s.transit.mode==='bus'?'ti-bus':s.transit.mode==='train'?'ti-train':'ti-car';
+      var cls=diff<=-5?'stop-transit-green':diff>=5?'stop-transit-red':'stop-transit-black';
+      var diffStr=diff<=-5?' <span class="transit-diff transit-diff-green">-'+Math.abs(diff)+'min</span>':
+                  diff>=5?' <span class="transit-diff transit-diff-red">+'+diff+'min</span>':'';
+      badgeEl.className=cls;
+      badgeEl.innerHTML='<i class="ti '+ticon+'" aria-hidden="true"></i> '+liveMins+'min';
+      var parent=badgeEl.parentNode;
+      if(parent){
+        var old=parent.querySelector('.transit-diff');
+        if(old) old.remove();
+        if(diff<=-5||diff>=5) badgeEl.insertAdjacentHTML('afterend',diffStr);
+      }
+    }
+    return; // skip full re-render
+  }
+  renderStops();
+}
+
 function findNextStopIdx(){
   var now=new Date();
-  var hhmm=now.getHours()*60+now.getMinutes();
+  var todayStr=now.getFullYear()+'-'+
+    (now.getMonth()+1<10?'0':'')+(now.getMonth()+1)+'-'+
+    (now.getDate()<10?'0':'')+now.getDate(); // YYYY-MM-DD
+  var nowMins=now.getHours()*60+now.getMinutes();
+
   for(var i=0;i<S.stops.length;i++){
     var s=S.stops[i];
     var t=timeToMinutes(s.arrive);
     if(t==null) continue; // no time → skip
-    if(t>hhmm) return i;
+
+    // Convert day label to date for comparison
+    var stopDate=labelToDate(s.day||''); // 'Jun 22' → '2026-06-22'
+
+    if(stopDate){
+      // Both date and time available: future if stopDate > today, or same day and time > now
+      if(stopDate>todayStr) return i;          // tomorrow or later → next stop
+      if(stopDate<todayStr) continue;          // past day → skip
+      if(t>nowMins) return i;                  // same day, future time → next stop
+    } else {
+      // No date label — fall back to time-only comparison (within-day trip)
+      if(t>nowMins) return i;
+    }
   }
-  return -1; // all done
+  return -1; // all stops are in the past
 }
 
 // ── Parse "HH:MM" into minutes-since-midnight (null if invalid) ──
+// ── Date helpers: convert between date picker value (YYYY-MM-DD) and display label ──
+function dateToLabel(val){
+  // val = "2026-06-22" → "Jun 22"
+  if(!val) return '';
+  var d=new Date(val+'T00:00:00');
+  if(isNaN(d.getTime())) return val;
+  var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return months[d.getMonth()]+' '+d.getDate();
+}
+function labelToDate(label){
+  // "Jun 22" → "2026-06-22" (assume current year if ambiguous)
+  if(!label) return '';
+  // Already ISO format
+  if(/^\d{4}-\d{2}-\d{2}$/.test(label)) return label;
+  var months={Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12};
+  var m=/^([A-Za-z]{3})\s+(\d{1,2})(?:,?\s*(\d{4}))?$/.exec(label);
+  if(!m) return '';
+  var mon=months[m[1]]; if(!mon) return '';
+  var yr=m[3]?parseInt(m[3]):new Date().getFullYear();
+  return yr+'-'+(mon<10?'0':'')+mon+'-'+(parseInt(m[2])<10?'0':'')+m[2];
+}
+
 function timeToMinutes(t){
   if(!t) return null;
   var m=/^(\d{1,2}):(\d{2})/.exec(String(t).trim());
@@ -1998,7 +2198,7 @@ function sortStopsForDisplay(raw){
   var result=[];
   dayOrder.forEach(function(d){
     var items=groups[d];
-    var hasManualOrder=items.some(function(s){return s.order!=null;});
+    var hasManualOrder=items.length>1&&items.every(function(s){return s.order!=null;});
     var sorted;
     if(hasManualOrder){
       sorted=items.slice().sort(function(a,b){
@@ -2045,9 +2245,8 @@ function renderStops(){
         notesHtml+='<div class="exp-note-row"><div class="exp-dot"></div><span>'+n+'</span></div>';
       });
     }
-    var isPast=nextIdx>=0&&i<nextIdx;
     var isNext=i===nextIdx;
-    var pastCls=isPast?' stop-past':'';
+    var pastCls='';  // past-fading removed
     var nextTag=isNext?'<span class="next-stop-tag">下一站</span>':'';
     // Transit badge with live-vs-planned coloring
     var tbadge='';
@@ -2062,9 +2261,9 @@ function renderStops(){
         if(diff<=-5){ bdgCls='stop-transit-green'; diffStr='<span class="transit-diff transit-diff-green">-'+Math.abs(diff)+'min</span>'; }
         else if(diff>=5){ bdgCls='stop-transit-red'; diffStr='<span class="transit-diff transit-diff-red">+'+diff+'min</span>'; }
         else { bdgCls='stop-transit-black'; }
-        tbadge='<span class="'+bdgCls+'" id="stn-'+i+'" data-i="'+i+'"><i class="ti '+ticon+'" aria-hidden="true"></i> '+liveMins+'min</span>'+diffStr;
+        tbadge='<span class="'+bdgCls+'" id="stn-'+i+'" data-i="'+i+'"><i class="ti '+ticon+'" aria-hidden="true"></i> '+liveMins+'min</span>'+diffStr+'<span class="transit-refresh" data-i="'+i+'" title="重新整理即時路況"><i class="ti ti-refresh" aria-hidden="true"></i></span>';
       } else {
-        tbadge='<span class="stop-transit" id="stn-'+i+'" data-i="'+i+'"><i class="ti '+ticon+'" aria-hidden="true"></i> '+planned+'min</span>';
+        tbadge='<span class="stop-transit" id="stn-'+i+'" data-i="'+i+'"><i class="ti '+ticon+'" aria-hidden="true"></i> '+planned+'min</span>'+(isNext?'<span class="transit-refresh" data-i="'+i+'" title="查即時路況"><i class="ti ti-refresh" aria-hidden="true"></i></span>':'');
       }
     }
     html+='<div class="stop-wrap'+pastCls+'" id="sw-'+i+'">' +
@@ -2072,7 +2271,7 @@ function renderStops(){
         '<div class="stop-cb'+(sel?' on':'')+'" id="cb-'+i+'"></div>' +
         '<div class="stop-txt" id="st-'+i+'">' +
           '<div class="stop-name">'+s.name+nextTag+'</div>' +
-          '<div class="stop-time">'+((s.arrive||'')+(s.depart?' ~ '+s.depart:'')+(s.note?' · '+s.note.substring(0,25):''))+'</div>' +
+          '<div class="stop-time">'+((s.day?s.day+' ':'')+(s.arrive||'')+(s.depart?' ~ '+s.depart:'')+(s.note?' · '+s.note.substring(0,25):''))+'</div>' +
         '</div>' +
         (MS_MODE?'':
           tbadge+
@@ -2080,7 +2279,7 @@ function renderStops(){
         ) +
       '</div>' +
       '<div class="stop-expand" id="se-'+i+'">' +
-        '<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-checkbox" aria-hidden="true"></i>活動清單<button class="exp-edit-btn" data-i="'+i+'" style="margin-left:auto"><i class="ti ti-pencil" aria-hidden="true"></i> 編輯細節</button><button class="exp-del-btn" data-i="'+i+'" style="margin-left:6px"><i class="ti ti-trash" aria-hidden="true"></i> 刪除</button></div>'+(actsHtml||'<div style="font-size:11px;color:var(--text2);padding:2px 0">（尚無活動）</div>')+'</div>' +
+        '<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-checkbox" aria-hidden="true"></i>活動清單<button class="exp-edit-btn" data-i="'+i+'" style="margin-left:auto"><i class="ti ti-pencil" aria-hidden="true"></i> 編輯</button><button class="exp-del-btn" data-i="'+i+'" style="margin-left:6px"><i class="ti ti-trash" aria-hidden="true"></i> 刪除</button></div>'+(actsHtml||'')+'</div>' +
         (notesHtml?'<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-alert-triangle" style="color:#F9AB00" aria-hidden="true"></i>注意事項</div>'+notesHtml+'</div>':'') +
 
         '</div>' +
@@ -2093,12 +2292,25 @@ function renderStops(){
   el.addEventListener('click', onStopListClick, {once:true});
 
   S.stops.forEach(function(s,i){ attachSwipe(i); attachLongpress(i); attachDragHandle(i); });
-  // Auto-scroll so the next upcoming stop sits at the top of the visible list
+
+  // ── Restore expand/edit state after re-render ──
+  var toRestore=_inlineEditIdx>=0?_inlineEditIdx:_expandedStopIdx;
+  if(toRestore>=0 && toRestore<S.stops.length){
+    var expPanel=document.getElementById('se-'+toRestore);
+    if(expPanel){
+      expPanel.classList.add('open');
+      expPanel.style.display='block';
+      var arrEl2=document.getElementById('sa-'+toRestore);
+      if(arrEl2) arrEl2.style.transform='rotate(180deg)';
+      var activeTxt2=document.getElementById('st-'+toRestore);
+      if(activeTxt2) activeTxt2.classList.add('active');
+      if(_inlineEditIdx>=0) renderInlineEditForm(_inlineEditIdx);
+    }
+  }
+  // Fetch live transit time for the next stop (debounced, cached 5 min)
   if(nextIdx>=0){
-    setTimeout(function(){
-      var el=document.getElementById('sw-'+nextIdx);
-      if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
-    },80);
+    clearTimeout(_liveTransitTimer);
+    _liveTransitTimer=setTimeout(function(){ fetchLiveTransit(nextIdx); },800);
   }
 
   // ── Scroll back to the stop that was just updated ──
@@ -2131,6 +2343,19 @@ function onStopListClick(e){
   // Transit badge click → navigate to that stop
   var trnav=e.target.closest('.stop-transit');
   if(trnav){ var i=parseInt(trnav.dataset.i); navStop(i); return; }
+
+  // Refresh button: re-fetch live transit for this stop
+  var ref=e.target.closest('.transit-refresh');
+  if(ref){
+    var i=parseInt(ref.dataset.i);
+    // Clear cache for this stop so it re-fetches
+    var s=S.stops[i]; if(s){
+      Object.keys(_liveTransitCache).forEach(function(k){ if(k.startsWith(i+':')) delete _liveTransitCache[k]; });
+      showToast('🔄 查詢即時路況…',1500);
+      fetchLiveTransit(i);
+    }
+    return;
+  }
 
   // Arrow -> detail (unless a drag just happened on this arrow)
   var arr=e.target.closest('.stop-arr');
@@ -2198,12 +2423,17 @@ function tapStop(i){
   var expPanel=document.getElementById('se-'+i);
   var isOpen=expPanel&&expPanel.classList.contains('open');
 
-  // Collapse all panels & highlights
-  document.querySelectorAll('.stop-expand.open').forEach(function(p){ p.classList.remove('open'); });
+  // Collapse ALL panels (remove class AND inline style — inline style takes precedence)
+  document.querySelectorAll('.stop-expand').forEach(function(p){
+    p.classList.remove('open');
+    p.style.display='';   // clear inline style so CSS display:none takes over
+  });
   document.querySelectorAll('.stop-txt.active').forEach(function(el){ el.classList.remove('active'); });
   document.querySelectorAll('.stop-arr').forEach(function(el){ el.style.transform=''; });
+  _inlineEditIdx=-1;  // cancel any open edit form in the previously expanded stop
 
   if(isOpen){
+    _expandedStopIdx=-1; _inlineEditIdx=-1;
     if(stopMarker){stopMarker.setMap(null);stopMarker=null;}
     closePc();
     return;
@@ -2216,6 +2446,7 @@ function tapStop(i){
   if(arrEl) arrEl.style.transform='rotate(180deg)';
 
   S.currentStop=i;
+  _expandedStopIdx=i; // track which panel is open
 
   // ── Request token: any stale async callback will be ignored ──
   var token=++_tapToken;
@@ -2246,25 +2477,6 @@ function tapStop(i){
         showPlaceCardFixed(results[0].place_id);
       } else showSimplePc(s);
     });
-  }
-}
-
-function openStopDetail(i){
-  if(MS_MODE){ toggleSel(i); return; }
-  var s=S.stops[i]; if(!s) return;
-  S.currentStop=i;
-  document.getElementById('det-title').textContent=s.name;
-  document.getElementById('det-time').textContent=(s.arrive||'')+(s.depart?' → '+s.depart:'');
-  document.getElementById('det-bud').textContent=s.budget||'NT$ 0';
-  renderActs(s); renderNotes(s);
-  document.getElementById('detail').classList.add('show');
-  // Move map to this stop (always, since opening detail = user wants to see it)
-  tapStop(i);
-  if(S.isOrg){
-    _editMode=false;
-    toggleEditMode();
-  } else {
-    exitEditMode();
   }
 }
 
@@ -2667,47 +2879,116 @@ function renderNewStopForm(prefill){
         '<div class="exp-ef-field"><label class="exp-ef-label">抵達時間</label><input class="exp-ef-inp" id="ief-arrive" placeholder="09:00"/></div>'+
         '<div class="exp-ef-field"><label class="exp-ef-label">離開時間</label><input class="exp-ef-inp" id="ief-depart" placeholder="12:00"/></div>'+
       '</div>'+
-      '<label class="exp-ef-label">天數標籤</label>'+
-      '<input class="exp-ef-inp" id="ief-day" placeholder="Day 1"/>'+
+      '<div class="exp-ef-row">'+
+        '<div class="exp-ef-field"><label class="exp-ef-label">前往交通</label>'+
+          '<select class="exp-ef-inp" id="ief-transit-mode" style="cursor:pointer">'+
+            '<option value="">（無）</option>'+
+            '<option value="car">🚗 開車</option>'+
+            '<option value="walk">🚶 步行</option>'+
+            '<option value="bus">🚌 公車</option>'+
+            '<option value="train">🚆 火車</option>'+
+          '</select>'+
+        '</div>'+
+        '<div class="exp-ef-field"><label class="exp-ef-label">所需時間（分）</label><input class="exp-ef-inp" id="ief-transit-mins" type="number" inputmode="numeric" min="0" placeholder="0"/></div>'+
+      '</div>'+
+      '<label class="exp-ef-label">日期</label>'+
+      '<input class="exp-ef-inp" id="ief-day" type="date" style="cursor:pointer"/>'+
       '<label class="exp-ef-label">備註</label>'+
       '<input class="exp-ef-inp" id="ief-note" placeholder="（選填）"/>'+
-      '<div>'+
+      '<label class="exp-ef-label"><i class="ti ti-checkbox" style="font-size:13px" aria-hidden="true"></i> 活動清單</label>'+
+      '<div id="ief-acts-wrap" style="margin-bottom:8px">'+
+        '<div style="display:flex;gap:6px">'+
+          '<input class="exp-ef-inp" id="ief-act-input" placeholder="新增活動..." style="margin-bottom:0;flex:1"/>'+
+          '<button id="ief-act-add" style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:0 14px;font-size:18px;cursor:pointer;flex-shrink:0">+</button>'+
+        '</div>'+
+        '<div id="ief-acts-list" style="margin-top:6px"></div>'+
+      '</div>'+
+      '<label class="exp-ef-label"><i class="ti ti-alert-triangle" style="font-size:13px;color:#F9AB00" aria-hidden="true"></i> 注意事項</label>'+
+      '<div id="ief-notes-wrap" style="margin-bottom:8px">'+
+        '<div style="display:flex;gap:6px">'+
+          '<input class="exp-ef-inp" id="ief-note2-input" placeholder="新增注意事項..." style="margin-bottom:0;flex:1"/>'+
+          '<button id="ief-note2-add" style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:0 14px;font-size:18px;cursor:pointer;flex-shrink:0">+</button>'+
+        '</div>'+
+        '<div id="ief-notes-list" style="margin-top:6px"></div>'+
+      '</div>'+
+      '<label class="exp-ef-label">⑤ 預計花費（每人）</label>'+
+      '<input class="exp-ef-inp" id="ief-budget" placeholder="NT$ 0"/>'+
+      '<div style="display:flex;align-items:center;gap:6px;margin-top:4px">'+
         '<button class="exp-ef-save" id="ief-save">✓ 新增景點</button>'+
         '<button class="exp-ef-cancel" id="ief-cancel">取消</button>'+
       '</div>'+
     '</div>';
 
-  document.getElementById('ief-name').addEventListener('focus',function(){
-    startMapPick(null, true); // autoNav=true: if prefill already has coords, jump there
+  // Temp arrays for acts and notes in new-stop form
+  var _newActs=[], _newNotes=[];
+  function renderNewActs(){
+    document.getElementById('ief-acts-list').innerHTML=_newActs.map(function(a,i){
+      return '<div style="display:flex;align-items:center;gap:6px;padding:3px 0">'+
+        '<span style="flex:1;font-size:12px">'+escHtml(a)+'</span>'+
+        '<button data-ai="'+i+'" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px">✕</button>'+
+      '</div>';
+    }).join('');
+    document.querySelectorAll('#ief-acts-list button').forEach(function(b){
+      b.addEventListener('click',function(){ _newActs.splice(parseInt(this.dataset.ai),1); renderNewActs(); });
+    });
+  }
+  function renderNewNotes(){
+    document.getElementById('ief-notes-list').innerHTML=_newNotes.map(function(n,i){
+      return '<div style="display:flex;align-items:center;gap:6px;padding:3px 0">'+
+        '<span style="flex:1;font-size:12px;color:var(--red)">'+escHtml(n)+'</span>'+
+        '<button data-ni="'+i+'" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px">✕</button>'+
+      '</div>';
+    }).join('');
+    document.querySelectorAll('#ief-notes-list button').forEach(function(b){
+      b.addEventListener('click',function(){ _newNotes.splice(parseInt(this.dataset.ni),1); renderNewNotes(); });
+    });
+  }
+  document.getElementById('ief-act-add').addEventListener('click',function(){
+    var v=document.getElementById('ief-act-input').value.trim();
+    if(v){ _newActs.push(v); document.getElementById('ief-act-input').value=''; renderNewActs(); }
   });
-  document.getElementById('ief-save').addEventListener('click', saveNewStop);
+  document.getElementById('ief-note2-add').addEventListener('click',function(){
+    var v=document.getElementById('ief-note2-input').value.trim();
+    if(v){ _newNotes.push(v); document.getElementById('ief-note2-input').value=''; renderNewNotes(); }
+  });
+
+  document.getElementById('ief-name').addEventListener('focus',function(){
+    startMapPick(null, true);
+  });
+  document.getElementById('ief-save').addEventListener('click',function(){ saveNewStop(_newActs, _newNotes); });
   document.getElementById('ief-cancel').addEventListener('click', closeNewStopForm);
 
-  // If prefilled with coords (e.g. from map's 加景點 button), drop a pin right away
   if(prefill.lat&&prefill.lat!==0&&map){
     map.panTo({lat:prefill.lat,lng:prefill.lng}); map.setZoom(16);
     dropStopPin({lat:prefill.lat,lng:prefill.lng}, prefill.name||'');
   }
 }
 
-function saveNewStop(){
+function saveNewStop(newActs, newNotes){
   var name=(document.getElementById('ief-name')||{}).value;
   if(!name||!name.trim()){ showToast('請輸入景點名稱',1500); return; }
   name=name.trim();
   var arrive=(document.getElementById('ief-arrive')||{}).value||'';
   var depart=(document.getElementById('ief-depart')||{}).value||'';
-  var day=(document.getElementById('ief-day')||{}).value||'';
+  var day=dateToLabel((document.getElementById('ief-day')||{}).value||'');
   var note=(document.getElementById('ief-note')||{}).value||'';
+  var budget=(document.getElementById('ief-budget')||{}).value||'NT$ 0';
+  var transitMode=(document.getElementById('ief-transit-mode')||{}).value||'';
+  var transitMins=parseInt((document.getElementById('ief-transit-mins')||{}).value)||0;
   var lat=parseFloat((document.getElementById('ief-lat')||{}).value)||0;
   var lng=parseFloat((document.getElementById('ief-lng')||{}).value)||0;
+  var acts=newActs||[], notes2=newNotes||[];
 
   function doCreate(lat,lng){
-    var pushRef=window.FB.push('tripgo/groups/'+S.groupCode+'/stops',{
+    var obj={
       name:name, arrive:arrive.trim(), depart:depart.trim(),
-      day:day.trim(), note:note.trim(),
+      day:day.trim(), note:note.trim(), budget:budget.trim()||'NT$ 0',
       lat:lat||0, lng:lng||0,
-      activities:[], notes:[], budget:'NT$ 0', createdAt:Date.now()
-    });
+      activities:acts.length?acts:[], notes:notes2.length?notes2:[],
+      createdAt:Date.now()
+    };
+    if(transitMode&&transitMins>0) obj.transit={mode:transitMode,minutes:transitMins};
+    var pushRef=window.FB.push('tripgo/groups/'+S.groupCode+'/stops',obj);
     if(pushRef&&pushRef.key) _scrollToStopKey=pushRef.key;
     cancelMapPick();
     closeNewStopForm();
@@ -2731,67 +3012,6 @@ function saveNewStop(){
   }
 }
 
-// ── Add Stop (legacy full-screen, kept for reference but unused) ──
-var S_aspLat=0, S_aspLng=0;
-function openAddStop(){
-  document.getElementById('add-stop-screen').classList.add('show');
-  ['ns-name','ns-arrive','ns-depart','ns-note','ns-day'].forEach(function(id){ var e=document.getElementById(id);if(e)e.value=''; });
-  document.getElementById('asp-inp').value='';
-  document.getElementById('asp-place-info').classList.remove('show');
-  document.getElementById('asp-drop').style.display='none';
-  S_aspLat=0; S_aspLng=0;
-  var center={lat:S.myLat,lng:S.myLng};
-  setTimeout(function(){
-    if(!aspMap){
-      aspMap=new google.maps.Map(document.getElementById('asp-gmap'),{
-        center:center,zoom:12,
-        mapTypeControl:false,streetViewControl:false,fullscreenControl:false,zoomControl:false
-      });
-      aspPlSvc=new google.maps.places.PlacesService(aspMap);
-      aspMap.addListener('click',function(e){
-        if(e.placeId){e.stop();aspSelectPid(e.placeId);}
-        else aspDropPin(e.latLng);
-      });
-    } else {
-      aspMap.panTo(center);
-    }
-    [100,400].forEach(function(ms){ setTimeout(function(){google.maps.event.trigger(aspMap,'resize');},ms); });
-    // Init Autocomplete widget
-    var inp=document.getElementById('asp-inp');
-    if(inp && !inp._ac){
-      setTimeout(function(){
-        var ac=new google.maps.places.Autocomplete(inp,{
-          fields:['name','geometry','formatted_address','rating']
-        });
-        inp._ac=ac;
-        ac.addListener('place_changed',function(){
-          var place=ac.getPlace();
-          if(!place||!place.geometry) return;
-          aspDropPin(place.geometry.location);
-          document.getElementById('ns-name').value=place.name||'';
-          document.getElementById('asp-pname').textContent=place.name||'';
-          document.getElementById('asp-paddr').textContent=place.formatted_address||'';
-          document.getElementById('asp-place-info').classList.add('show');
-          S_aspLat=place.geometry.location.lat();
-          S_aspLng=place.geometry.location.lng();
-          // Show confirm card
-          var dd=document.getElementById('asp-drop');
-          dd.innerHTML='<div style="padding:10px 14px;border-bottom:1px solid var(--border)">'+
-            '<div style="font-size:13px;font-weight:700;color:var(--text)">'+place.name+'</div>'+
-            '<div style="font-size:11px;color:var(--gray);margin-top:2px">'+(place.formatted_address||'')+'</div>'+
-            (place.rating?'<div style="font-size:11px;color:#F9AB00;margin-top:2px">★ '+place.rating+'</div>':'')+
-            '</div>'+
-            '<div style="padding:10px 14px">'+
-            '<button id="asp-add-btn" style="width:100%;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">'+
-            '<i class="ti ti-map-pin-plus" style="font-size:16px"></i> 加入行程</button></div>';
-          dd.style.display='block';
-          var btn=document.getElementById('asp-add-btn');
-          if(btn) btn.addEventListener('click',function(){ dd.style.display='none'; saveStop(); });
-        });
-      },100);
-    }
-  },200);
-}
 function closeAddStop(){ document.getElementById('add-stop-screen').classList.remove('show'); }
 function aspSelectPid(pid){
   if(!aspPlSvc) return;
@@ -2962,7 +3182,7 @@ function renderLocList(){
   S.members.forEach(function(m,i){
     var loc=S.allLocs[m.id], ago=formatTimeAgo(loc&&loc.at);
     html+='<div class="loc-row">'+
-      '<div class="loc-av av'+(i%7)+'">'+m.name.substring(0,2).toUpperCase()+'</div>'+
+      '<div class="loc-av av'+(i%7)+'">'+getInitials(m.name)+'</div>'+
       '<div style="flex:1"><div class="loc-nm">'+(m.role==='organizer'?'👑 ':'')+m.name+'</div>'+
       '<div class="loc-st">'+(loc?'📍 '+ago:'未分享位置')+'</div></div>'+
       (loc?'<button class="loc-see" data-uid="'+m.id+'">查看</button>':'')+
@@ -3116,6 +3336,7 @@ async function doJoin(){
   }catch(e){err.textContent='❌ 加入失敗：'+e.message;}
 }
 async function doCreate(){
+  if(!_isAdmin){ showToast('⚠️ 僅管理員可建立群組',2200); return; }
   var name=document.getElementById('inp-create-name').value.trim();
   var tripName=document.getElementById('inp-trip-name').value.trim()||'旅遊群組';
   var err=document.getElementById('js-err');
@@ -3140,6 +3361,8 @@ function toggleGear(e){
 function openAdmin(){ document.getElementById('js-gear-menu').classList.remove('show'); document.getElementById('M-admin').classList.add('show'); }
 function closeAdmin(){ document.getElementById('M-admin').classList.remove('show'); }
 var DEFAULT_ADMIN_EMAIL='hau747@hotmail.com', DEFAULT_ADMIN_PW='0937381897';
+var _isAdmin = false; // 本 session 是否已完成管理員驗證
+var _hasCreateToken = false; // 透過授權碼取得建立群組權限
 function getAdminPw(cb){
   if(!window.FB||!window.FB.ready){ cb(DEFAULT_ADMIN_PW); return; }
   window.FB.get('tripgo/admin/password').then(function(snap){
@@ -3155,6 +3378,7 @@ function doAdmin(){
   getAdminPw(function(correctPw){
     if(pw===correctPw){
       err.textContent=''; closeAdmin();
+      _isAdmin = true; updateCreateBtnVisibility();
       openAdminPanel();
     } else { err.textContent='Email 或密碼錯誤'; }
   });
@@ -3163,8 +3387,106 @@ function openAdminPanel(){
   document.getElementById('M-admin-panel').classList.add('show');
   autoPurgeTrash(); // clean up items older than 7 days
   loadAllTrips();
+  loadTokenList();
 }
 function closeAdminPanel(){ document.getElementById('M-admin-panel').classList.remove('show'); }
+function updateCreateBtnVisibility(){
+  var disp = (_isAdmin || _hasCreateToken) ? '' : 'none';
+  var b1 = document.getElementById('btn-create');
+  var b2 = document.getElementById('btn-tsw-create');
+  if(b1) b1.style.display = disp;
+  if(b2) b2.style.display = disp;
+}
+
+// ── 建立授權碼（管理員產生）──
+function genTokenCode(){
+  var chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  var c='BUILD-';
+  for(var i=0;i<4;i++) c+=chars[Math.floor(Math.random()*chars.length)];
+  return c;
+}
+function adminGenToken(){
+  var note=document.getElementById('adm-token-note').value.trim();
+  if(!window.FB||!window.FB.ready){showToast('⏳ 連線中，請稍後',1500);return;}
+  var code=genTokenCode();
+  window.FB.set('tripgo/create_tokens/'+code,{note:note||'',createdAt:Date.now(),usedAt:null,usedBy:''})
+    .then(function(){
+      document.getElementById('adm-token-note').value='';
+      if(navigator.clipboard) navigator.clipboard.writeText(code).catch(function(){});
+      showToast('✅ 已產生並複製：'+code,2800);
+      loadTokenList();
+    }).catch(function(e){showToast('❌ 產生失敗：'+e.message,2000);});
+}
+function loadTokenList(){
+  var list=document.getElementById('adm-token-list');
+  if(!list) return;
+  if(!window.FB||!window.FB.ready){list.innerHTML='<div style="font-size:12px;color:var(--text2)">⏳ 連線中</div>';return;}
+  window.FB.get('tripgo/create_tokens').then(function(snap){
+    if(!snap.exists()||!snap.val()){
+      list.innerHTML='<div style="font-size:12px;color:var(--text2)">尚無授權碼</div>';return;
+    }
+    var tokens=snap.val();
+    var html='';
+    Object.entries(tokens).forEach(function(e){
+      var code=e[0],t=e[1];
+      var used=!!(t.usedAt);
+      html+='<div class="adm-token-card">'+
+        '<div style="display:flex;align-items:center;gap:8px">'+
+          '<span class="adm-token-code">'+code+'</span>'+
+          '<span class="adm-token-badge '+(used?'used':'ok')+'">'+(used?'已使用':'未使用')+'</span>'+
+          (used&&t.usedBy?'<span style="font-size:10px;color:var(--text2)">by '+t.usedBy+'</span>':'')+
+          '<button class="adm-token-del" data-code="'+code+'" title="撤銷"><i class="ti ti-trash"></i></button>'+
+        '</div>'+
+        (t.note?'<div style="font-size:11px;color:var(--text2);margin-top:4px">📝 '+t.note+'</div>':'')+
+      '</div>';
+    });
+    list.innerHTML=html||'<div style="font-size:12px;color:var(--text2)">尚無授權碼</div>';
+    list.querySelectorAll('.adm-token-del').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var c=this.dataset.code;
+        showCustomConfirm('🗝️','撤銷授權碼？','授權碼 '+c+' 將永久失效。','確定撤銷',function(){
+          window.FB.remove('tripgo/create_tokens/'+c).then(function(){
+            showToast('✅ 已撤銷 '+c,1500); loadTokenList();
+          });
+        });
+      });
+    });
+  }).catch(function(){list.innerHTML='<div style="font-size:12px;color:var(--red)">讀取失敗</div>';});
+}
+
+// ── 使用者輸入授權碼 ──
+function openTokenInput(){
+  document.getElementById('js-gear-menu').classList.remove('show');
+  var m=document.getElementById('M-token-input');
+  m.style.display='flex';
+  document.getElementById('tok-err').textContent='';
+  document.getElementById('tok-code-inp').value='';
+  setTimeout(function(){document.getElementById('tok-code-inp').focus();},100);
+}
+function closeTokenInput(){
+  document.getElementById('M-token-input').style.display='none';
+}
+async function doTokenInput(){
+  var inp=document.getElementById('tok-code-inp');
+  var code=inp.value.trim().toUpperCase();
+  var err=document.getElementById('tok-err');
+  if(!code){err.textContent='請輸入授權碼';return;}
+  if(!window.FB||!window.FB.ready){err.textContent='⏳ 連線中，請稍後';return;}
+  err.textContent='驗證中…';
+  try{
+    var snap=await window.FB.get('tripgo/create_tokens/'+code);
+    if(!snap.exists()){err.textContent='❌ 授權碼不存在或已撤銷';return;}
+    var t=snap.val();
+    if(t.usedAt){err.textContent='❌ 此授權碼已被使用過';return;}
+    var name=document.getElementById('js-home-name').value.trim()||'（未知）';
+    await window.FB.set('tripgo/create_tokens/'+code+'/usedAt',Date.now());
+    await window.FB.set('tripgo/create_tokens/'+code+'/usedBy',name);
+    _hasCreateToken=true;
+    updateCreateBtnVisibility();
+    closeTokenInput();
+    showToast('✅ 授權碼驗證成功，已解鎖建立群組功能',2800);
+  }catch(e){err.textContent='❌ 驗證失敗：'+e.message;}
+}
 function changeAdminPassword(){
   var cur=document.getElementById('adm-cur-pw').value;
   var n1=document.getElementById('adm-new-pw').value;
@@ -3369,18 +3691,26 @@ function updateStoredTrip(code,uid,name,tripName,isOrg){
   saveStoredTrips(trips.slice(0,20));
 }
 function deleteTrip(code){
-  showCustomConfirm('🗑️','刪除旅程？','刪除後所有成員、行程、聊天都會消失，<b>無法復原</b>。','確定刪除',function(){
-    window.FB.remove('tripgo/groups/'+code);
-    saveStoredTrips(getStoredTrips().filter(function(t){return t.code!==code;}));
-    if(code===S.groupCode){
-      clearStoredSession();
-      document.getElementById('S-app').classList.remove('show');
-      document.getElementById('S-join').classList.remove('hide');
-      goHome();
-    }
-    if(document.getElementById('trip-switcher').classList.contains('show')) openTripSwitcher();
-    showToast('✅ 旅程已刪除',2000);
-    renderTripsPreview(document.getElementById('js-home-name').value||'');
+  showCustomConfirm('🗑️','移至垃圾桶？','旅程將放入垃圾桶，<b>7天後自動永久刪除</b>。如需還原請聯絡管理員。','確定移除',function(){
+    if(!window.FB||!window.FB.ready){showToast('⏳ 連線中，請稍後',1500);return;}
+    window.FB.get('tripgo/groups/'+code).then(function(snap){
+      var data=snap.exists()?snap.val():{};
+      data._trashedAt=Date.now();
+      return window.FB.set('tripgo/trash/'+code,data).then(function(){
+        return window.FB.remove('tripgo/groups/'+code);
+      });
+    }).then(function(){
+      saveStoredTrips(getStoredTrips().filter(function(t){return t.code!==code;}));
+      if(code===S.groupCode){
+        clearStoredSession();
+        document.getElementById('S-app').classList.remove('show');
+        document.getElementById('S-join').classList.remove('hide');
+        goHome();
+      }
+      if(document.getElementById('trip-switcher').classList.contains('show')) openTripSwitcher();
+      showToast('✅ 旅程已移至垃圾桶（7天後永久刪除）',2500);
+      renderTripsPreview(document.getElementById('js-home-name').value||'');
+    }).catch(function(err){showToast('❌ 移除失敗：'+err.message,2000);});
   });
 }
 function leaveTrip(code,uid){
@@ -3682,7 +4012,7 @@ function getGroupCenter(){
 // ════════════════════════════════
 // INLINE EDIT + MAP PICK MODE
 // ════════════════════════════════
-var _mapPickStopIdx=-1, _inlineEditIdx=-1, _mapPickActive=false;
+var _mapPickStopIdx=-1, _inlineEditIdx=-1, _mapPickActive=false, _expandedStopIdx=-1;
 
 function openInlineEdit(i){
   var s=S.stops[i]; if(!s) return;
@@ -3691,12 +4021,21 @@ function openInlineEdit(i){
   var expPanel=document.getElementById('se-'+i);
   if(!expPanel) return;
 
-  // Ensure stop panel is open
+  function afterRender(){
+    // Scroll so the save button is visible
+    setTimeout(function(){
+      var pane=document.getElementById('pane-itinerary');
+      var saveBtn=expPanel.querySelector('.exp-ef-save');
+      if(saveBtn&&pane) pane.scrollTop=pane.scrollTop+(saveBtn.getBoundingClientRect().bottom-pane.getBoundingClientRect().bottom)+16;
+    },150);
+  }
+
   if(!expPanel.classList.contains('open')){
     tapStop(i);
-    setTimeout(function(){ renderInlineEditForm(i); },100);
+    setTimeout(function(){ renderInlineEditForm(i); afterRender(); },100);
   } else {
     renderInlineEditForm(i);
+    afterRender();
   }
 }
 
@@ -3722,6 +4061,7 @@ function renderNotesEditable(s){
 
 function renderInlineEditForm(i){
   var s=S.stops[i]; if(!s) return;
+  closeNewStopForm(); // 避免與新增表單的相同 ID 互相干擾
   var expPanel=document.getElementById('se-'+i);
   if(!expPanel) return;
 
@@ -3749,8 +4089,8 @@ function renderInlineEditForm(i){
         '</div>'+
         '<div class="exp-ef-field"><label class="exp-ef-label">所需時間（分）</label><input class="exp-ef-inp" id="ief-transit-mins" type="number" inputmode="numeric" min="0" value="'+(s.transit&&s.transit.minutes?s.transit.minutes:'')+'" placeholder="0"/></div>'+
       '</div>'+
-      '<label class="exp-ef-label">天數標籤</label>'+
-      '<input class="exp-ef-inp" id="ief-day" value="'+escHtml(s.day||'')+'" placeholder="Day 1"/>'+
+      '<label class="exp-ef-label">日期</label>'+
+      '<input class="exp-ef-inp" id="ief-day" type="date" value="'+labelToDate(s.day||'')+'" style="cursor:pointer"/>'+
       '<label class="exp-ef-label">備註</label>'+
       '<input class="exp-ef-inp" id="ief-note" value="'+escHtml(s.note||'')+'" placeholder="（選填）"/>'+
 
@@ -3839,9 +4179,20 @@ function escHtml(s){
   return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-function closeInlineEdit(i){
+function closeInlineEdit(i, collapse){
   _inlineEditIdx=-1;
   cancelMapPick();
+  // If collapse=true (called from save), fully close the panel
+  if(collapse){
+    _expandedStopIdx=-1;
+    var expPanel=document.getElementById('se-'+i);
+    if(expPanel){ expPanel.classList.remove('open'); expPanel.style.display='none'; }
+    var arrEl=document.getElementById('sa-'+i);
+    if(arrEl) arrEl.style.transform='';
+    var txt=document.getElementById('st-'+i);
+    if(txt) txt.classList.remove('active');
+    return;
+  }
   // Re-render the stop expand panel with view content
   var s=S.stops[i];
   if(!s) return;
@@ -3864,8 +4215,8 @@ function closeInlineEdit(i){
   }
   expPanel.innerHTML=
     '<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-checkbox"></i>活動清單'+
-      '<button class="exp-edit-btn" data-i="'+i+'" style="margin-left:auto"><i class="ti ti-pencil"></i> 編輯細節</button>'+
-    '</div>'+(actsHtml||'<div style="font-size:11px;color:var(--text2);padding:2px 0">（尚無活動）</div>')+'</div>'+
+      '<button class="exp-edit-btn" data-i="'+i+'" style="margin-left:auto"><i class="ti ti-pencil"></i> 編輯</button>'+
+    '</div>'+(actsHtml||'')+'</div>'+
     (notesHtml?'<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-alert-triangle" style="color:#F9AB00"></i>注意事項</div>'+notesHtml+'</div>':'');
   // Re-attach checkbox listeners
   expPanel.querySelectorAll('.exp-chk[data-type="act"]').forEach(function(el){
@@ -3884,7 +4235,7 @@ function saveInlineEdit(i){
   _scrollToStopKey=s._key;
   var arrive=(document.getElementById('ief-arrive')||{}).value||'';
   var depart=(document.getElementById('ief-depart')||{}).value||'';
-  var day=(document.getElementById('ief-day')||{}).value||'';
+  var day=dateToLabel((document.getElementById('ief-day')||{}).value||'');
   var note=(document.getElementById('ief-note')||{}).value||'';
   var transitMode=(document.getElementById('ief-transit-mode')||{}).value||'';
   var transitMins=parseInt((document.getElementById('ief-transit-mins')||{}).value)||0;
@@ -3893,45 +4244,45 @@ function saveInlineEdit(i){
   var budget='NT$ '+budgetNum.toLocaleString();
   var newLat=parseFloat((document.getElementById('ief-lat')||{}).value)||0;
   var newLng=parseFloat((document.getElementById('ief-lng')||{}).value)||0;
-  // Activities/notes were edited in-memory on s.activities / s.notes
   var activities=s.activities||[];
   var notes=s.notes||[];
+  var path='tripgo/groups/'+S.groupCode+'/stops/'+s._key;
 
-  function doSaveInline(lat,lng){
-    var path='tripgo/groups/'+S.groupCode+'/stops/'+s._key;
-    window.FB.set(path+'/name',name);
-    window.FB.set(path+'/arrive',arrive.trim());
-    window.FB.set(path+'/depart',depart.trim());
-    window.FB.set(path+'/day',day.trim());
-    window.FB.set(path+'/note',note.trim());
-    window.FB.set(path+'/budget',budget);
-    window.FB.set(path+'/activities',activities);
-    window.FB.set(path+'/notes',notes);
-    if(transitMode&&transitMins>0)
-      window.FB.set(path+'/transit',{mode:transitMode,minutes:transitMins});
-    else
-      window.FB.set(path+'/transit',null);
-    if(lat&&lat!==0){window.FB.set(path+'/lat',lat);window.FB.set(path+'/lng',lng);}
-    cancelMapPick();
-    showToast('✅ 已儲存',1500);
-    // Let Firebase onValue re-render stops automatically
-  }
-
+  // ── Close form IMMEDIATELY — don't wait for async coordinate lookup ──
   cancelMapPick();
+  closeInlineEdit(i, true);
+  showToast('✅ 已儲存',1500);
+
+  // ── Write all fields to Firebase (sync) ──
+  window.FB.set(path+'/name',name);
+  window.FB.set(path+'/arrive',arrive.trim());
+  window.FB.set(path+'/depart',depart.trim());
+  window.FB.set(path+'/day',day.trim());
+  window.FB.set(path+'/note',note.trim());
+  window.FB.set(path+'/budget',budget);
+  window.FB.set(path+'/activities',activities);
+  window.FB.set(path+'/notes',notes);
+  if(transitMode&&transitMins>0)
+    window.FB.set(path+'/transit',{mode:transitMode,minutes:transitMins});
+  else
+    window.FB.set(path+'/transit',null);
+
+  // ── Handle coordinates ──
   if(newLat!==0){
-    doSaveInline(newLat,newLng);
+    window.FB.set(path+'/lat',newLat);
+    window.FB.set(path+'/lng',newLng);
   } else {
-    // Auto-locate with group center bias
+    // Background auto-locate — silent, UI already closed
     var center=getGroupCenter();
     if(plSvc&&center){
       plSvc.textSearch({query:name,location:center,radius:100000},function(results,status){
         if(status===google.maps.places.PlacesServiceStatus.OK&&results&&results.length>0){
           var loc=results[0].geometry.location;
-          doSaveInline(loc.lat(),loc.lng());
-          showToast('✅ 已儲存，位置已自動定位',2000);
-        } else doSaveInline(0,0);
+          window.FB.set(path+'/lat',loc.lat());
+          window.FB.set(path+'/lng',loc.lng());
+        }
       });
-    } else doSaveInline(0,0);
+    }
   }
 }
 
@@ -3988,6 +4339,7 @@ function applyMapPickResult(lat,lng,name){
 window.addEventListener('load',function(){
 
   // Join screen
+  updateCreateBtnVisibility(); // 非管理員預設隱藏「建立群組」
   document.getElementById('btn-join').addEventListener('click',function(){goSub('join');});
   document.getElementById('btn-create').addEventListener('click',function(){goSub('create');});
   document.getElementById('js-back-btn').addEventListener('click',goHome);
@@ -4081,6 +4433,9 @@ window.addEventListener('load',function(){
   document.getElementById('btn-copy-code').addEventListener('click',copyCode);
   document.getElementById('btn-add-member').addEventListener('click',addMember);
   document.getElementById('btn-admin-close').addEventListener('click',closeAdminPanel);
+  document.getElementById('btn-gen-token').addEventListener('click',adminGenToken);
+  document.getElementById('tok-code-inp').addEventListener('input',function(){this.value=this.value.toUpperCase();});
+  document.getElementById('tok-code-inp').addEventListener('keydown',function(e){if(e.key==='Enter')doTokenInput();});
   document.getElementById('btn-admin-trips').addEventListener('click',loadAllTrips);
   document.getElementById('btn-admin-trash').addEventListener('click',loadTrashBin);
   document.getElementById('btn-members-close').addEventListener('click',function(){closeModal('M-members');});
