@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="100" fill="#1a5f7a"/>
+
+  <!-- Map pin (location marker) -->
+  <!-- Outer teardrop shape -->
+  <path d="M256 88
+    C 196 88, 142 142, 142 202
+    C 142 262, 200 330, 256 408
+    C 312 330, 370 262, 370 202
+    C 370 142, 316 88, 256 88 Z"
+    fill="white"/>
+
+  <!-- Inner circle cutout -->
+  <circle cx="256" cy="202" r="56" fill="#1a5f7a"/>
+
+  <!-- Compass tick marks on the circle rim -->
+  <line x1="256" y1="160" x2="256" y2="146" stroke="white" stroke-width="10" stroke-linecap="round"/>
+  <line x1="256" y1="244" x2="256" y2="258" stroke="white" stroke-width="10" stroke-linecap="round"/>
+  <line x1="200" y1="202" x2="186" y2="202" stroke="white" stroke-width="10" stroke-linecap="round"/>
+  <line x1="312" y1="202" x2="326" y2="202" stroke="white" stroke-width="10" stroke-linecap="round"/>
+</svg>
