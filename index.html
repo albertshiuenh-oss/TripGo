@@ -494,8 +494,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   background:#fff;color:var(--blue);cursor:pointer;
 }
 .exp-del-btn{
-  font-size:10px;padding:4px 10px;border-radius:99px;border:none;
-  background:#FCEBEB;color:#A32D2D;cursor:pointer;
+  font-size:11px;padding:5px 12px;border-radius:8px;border:1px solid var(--red);
+  background:#fff;color:var(--red);cursor:pointer;
   display:inline-flex;align-items:center;gap:4px;flex-shrink:0;
 }
 .exp-edit-form{background:#fff;border-radius:10px;padding:12px;border:1px solid var(--border);margin-top:8px}
@@ -553,14 +553,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .transit-diff-red{color:#A32D2D}
 .transit-refresh{
   display:inline-flex;align-items:center;justify-content:center;
-  font-size:13px;color:#185FA5;cursor:pointer;
+  font-size:12px;color:#185FA5;cursor:pointer;
   background:#E6F1FB;border-radius:99px;
   padding:3px 8px;gap:3px;
   flex-shrink:0;white-space:nowrap;
   font-family:var(--font-sans);font-weight:600;
   transition:background .15s;
 }
-.transit-refresh::after{content:'即時';font-size:9px;font-weight:600;color:#185FA5}
+.transit-refresh::after{content:''}
 .transit-refresh:active,.transit-refresh:hover{background:#C5DCF6}
 .stop-arr{touch-action:none;cursor:grab}
 .stop-transit{
@@ -2279,7 +2279,7 @@ function renderStops(){
         ) +
       '</div>' +
       '<div class="stop-expand" id="se-'+i+'">' +
-        '<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-checkbox" aria-hidden="true"></i>活動清單<button class="exp-edit-btn" data-i="'+i+'" style="margin-left:auto"><i class="ti ti-pencil" aria-hidden="true"></i> 編輯細節</button><button class="exp-del-btn" data-i="'+i+'" style="margin-left:6px"><i class="ti ti-trash" aria-hidden="true"></i> 刪除</button></div>'+(actsHtml||'<div style="font-size:11px;color:var(--text2);padding:2px 0">（尚無活動）</div>')+'</div>' +
+        '<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-checkbox" aria-hidden="true"></i>活動清單<button class="exp-edit-btn" data-i="'+i+'" style="margin-left:auto"><i class="ti ti-pencil" aria-hidden="true"></i> 編輯</button><button class="exp-del-btn" data-i="'+i+'" style="margin-left:6px"><i class="ti ti-trash" aria-hidden="true"></i> 刪除</button></div>'+(actsHtml||'')+'</div>' +
         (notesHtml?'<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-alert-triangle" style="color:#F9AB00" aria-hidden="true"></i>注意事項</div>'+notesHtml+'</div>':'') +
 
         '</div>' +
@@ -4214,8 +4214,8 @@ function closeInlineEdit(i, collapse){
   }
   expPanel.innerHTML=
     '<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-checkbox"></i>活動清單'+
-      '<button class="exp-edit-btn" data-i="'+i+'" style="margin-left:auto"><i class="ti ti-pencil"></i> 編輯細節</button>'+
-    '</div>'+(actsHtml||'<div style="font-size:11px;color:var(--text2);padding:2px 0">（尚無活動）</div>')+'</div>'+
+      '<button class="exp-edit-btn" data-i="'+i+'" style="margin-left:auto"><i class="ti ti-pencil"></i> 編輯</button>'+
+    '</div>'+(actsHtml||'')+'</div>'+
     (notesHtml?'<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-alert-triangle" style="color:#F9AB00"></i>注意事項</div>'+notesHtml+'</div>':'');
   // Re-attach checkbox listeners
   expPanel.querySelectorAll('.exp-chk[data-type="act"]').forEach(function(el){
