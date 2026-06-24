@@ -177,6 +177,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   background:#E6F4EA;color:#1E7A3C;font-size:11px;cursor:pointer;font-weight:600}
 .adm-perm-del-btn{padding:4px 10px;border-radius:6px;border:none;
   background:#FCE8E6;color:var(--red);font-size:11px;cursor:pointer;font-weight:600}
+.adm-token-card{background:var(--bg2);border-radius:10px;padding:10px 12px;margin-bottom:6px}
+.adm-token-code{font-family:monospace;font-size:13px;font-weight:700;color:var(--blue);letter-spacing:1px}
+.adm-token-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px}
+.adm-token-badge.ok{background:#E6F4EA;color:#1E7A3C}
+.adm-token-badge.used{background:var(--bg2);color:var(--text2);border:1px solid var(--border)}
+.adm-token-del{background:none;border:none;color:var(--text2);cursor:pointer;font-size:13px;padding:2px 4px;margin-left:auto}
+.adm-token-del:hover{color:var(--red)}
 .adm-trip-enter{
   width:100%;margin-top:8px;padding:8px;border:none;border-radius:8px;
   background:var(--blue);color:#fff;font-size:12px;font-weight:700;cursor:pointer;
@@ -989,6 +996,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div id="js-gear-menu">
     <button class="jgm-item" onclick="openAdmin()"><i class="ti ti-shield" style="color:var(--blue)"></i> 管理員設定</button>
     <div class="jgm-sep"></div>
+    <button class="jgm-item" onclick="openTokenInput()"><i class="ti ti-key" style="color:var(--blue)"></i> 輸入建立授權碼</button>
+    <div class="jgm-sep"></div>
     <button class="jgm-item red" onclick="clearSession()"><i class="ti ti-trash"></i> 清除舊資料</button>
     <div class="jgm-sep"></div>
     <button class="jgm-item" onclick="location.reload(true)"><i class="ti ti-refresh" style="color:var(--blue)"></i> 強制重新整理</button>
@@ -1064,12 +1073,37 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
     <div id="adm-trash-list" style="display:none"></div>
 
     <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🗝️ 建立授權碼管理</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <input class="adm-input" id="adm-token-note" placeholder="備註（選填，例：給小明用）" style="flex:1;padding:9px 12px;font-size:13px"/>
+        <button id="btn-gen-token" style="padding:9px 14px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">產生授權碼</button>
+      </div>
+      <div id="adm-token-list"><div style="font-size:12px;color:var(--text2)">載入中…</div></div>
+    </div>
+
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
       <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🔑 修改管理員密碼</div>
       <div class="adm-field"><label class="adm-label">目前密碼</label><input class="adm-input" id="adm-cur-pw" type="password" placeholder="輸入目前密碼"/></div>
       <div class="adm-field"><label class="adm-label">新密碼</label><input class="adm-input" id="adm-new-pw" type="password" placeholder="輸入新密碼（至少6字元）"/></div>
       <div class="adm-field"><label class="adm-label">確認新密碼</label><input class="adm-input" id="adm-new-pw2" type="password" placeholder="再輸入一次新密碼"/></div>
       <div class="adm-err" id="adm-pw-err"></div>
       <button id="btn-change-pw" style="width:100%;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">更新密碼</button>
+    </div>
+  </div>
+</div>
+
+<!-- Token Input Modal -->
+<div id="M-token-input" onclick="if(event.target===this)closeTokenInput()" style="position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.5);display:none;align-items:flex-end;justify-content:center">
+  <div class="adm-box">
+    <div class="adm-title">🔑 輸入建立授權碼</div>
+    <div class="adm-field">
+      <label class="adm-label">授權碼</label>
+      <input class="adm-input" id="tok-code-inp" placeholder="BUILD-XXXX" maxlength="10" autocomplete="off" style="text-transform:uppercase;letter-spacing:1px"/>
+    </div>
+    <div class="adm-err" id="tok-err"></div>
+    <div class="adm-btns">
+      <button class="adm-cancel" onclick="closeTokenInput()">取消</button>
+      <button class="adm-ok" onclick="doTokenInput()">驗證</button>
     </div>
   </div>
 </div>
@@ -3293,6 +3327,7 @@ async function doJoin(){
   }catch(e){err.textContent='❌ 加入失敗：'+e.message;}
 }
 async function doCreate(){
+  if(!_isAdmin){ showToast('⚠️ 僅管理員可建立群組',2200); return; }
   var name=document.getElementById('inp-create-name').value.trim();
   var tripName=document.getElementById('inp-trip-name').value.trim()||'旅遊群組';
   var err=document.getElementById('js-err');
@@ -3317,6 +3352,8 @@ function toggleGear(e){
 function openAdmin(){ document.getElementById('js-gear-menu').classList.remove('show'); document.getElementById('M-admin').classList.add('show'); }
 function closeAdmin(){ document.getElementById('M-admin').classList.remove('show'); }
 var DEFAULT_ADMIN_EMAIL='hau747@hotmail.com', DEFAULT_ADMIN_PW='0937381897';
+var _isAdmin = false; // 本 session 是否已完成管理員驗證
+var _hasCreateToken = false; // 透過授權碼取得建立群組權限
 function getAdminPw(cb){
   if(!window.FB||!window.FB.ready){ cb(DEFAULT_ADMIN_PW); return; }
   window.FB.get('tripgo/admin/password').then(function(snap){
@@ -3332,6 +3369,7 @@ function doAdmin(){
   getAdminPw(function(correctPw){
     if(pw===correctPw){
       err.textContent=''; closeAdmin();
+      _isAdmin = true; updateCreateBtnVisibility();
       openAdminPanel();
     } else { err.textContent='Email 或密碼錯誤'; }
   });
@@ -3340,8 +3378,106 @@ function openAdminPanel(){
   document.getElementById('M-admin-panel').classList.add('show');
   autoPurgeTrash(); // clean up items older than 7 days
   loadAllTrips();
+  loadTokenList();
 }
 function closeAdminPanel(){ document.getElementById('M-admin-panel').classList.remove('show'); }
+function updateCreateBtnVisibility(){
+  var disp = (_isAdmin || _hasCreateToken) ? '' : 'none';
+  var b1 = document.getElementById('btn-create');
+  var b2 = document.getElementById('btn-tsw-create');
+  if(b1) b1.style.display = disp;
+  if(b2) b2.style.display = disp;
+}
+
+// ── 建立授權碼（管理員產生）──
+function genTokenCode(){
+  var chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  var c='BUILD-';
+  for(var i=0;i<4;i++) c+=chars[Math.floor(Math.random()*chars.length)];
+  return c;
+}
+function adminGenToken(){
+  var note=document.getElementById('adm-token-note').value.trim();
+  if(!window.FB||!window.FB.ready){showToast('⏳ 連線中，請稍後',1500);return;}
+  var code=genTokenCode();
+  window.FB.set('tripgo/create_tokens/'+code,{note:note||'',createdAt:Date.now(),usedAt:null,usedBy:''})
+    .then(function(){
+      document.getElementById('adm-token-note').value='';
+      if(navigator.clipboard) navigator.clipboard.writeText(code).catch(function(){});
+      showToast('✅ 已產生並複製：'+code,2800);
+      loadTokenList();
+    }).catch(function(e){showToast('❌ 產生失敗：'+e.message,2000);});
+}
+function loadTokenList(){
+  var list=document.getElementById('adm-token-list');
+  if(!list) return;
+  if(!window.FB||!window.FB.ready){list.innerHTML='<div style="font-size:12px;color:var(--text2)">⏳ 連線中</div>';return;}
+  window.FB.get('tripgo/create_tokens').then(function(snap){
+    if(!snap.exists()||!snap.val()){
+      list.innerHTML='<div style="font-size:12px;color:var(--text2)">尚無授權碼</div>';return;
+    }
+    var tokens=snap.val();
+    var html='';
+    Object.entries(tokens).forEach(function(e){
+      var code=e[0],t=e[1];
+      var used=!!(t.usedAt);
+      html+='<div class="adm-token-card">'+
+        '<div style="display:flex;align-items:center;gap:8px">'+
+          '<span class="adm-token-code">'+code+'</span>'+
+          '<span class="adm-token-badge '+(used?'used':'ok')+'">'+(used?'已使用':'未使用')+'</span>'+
+          (used&&t.usedBy?'<span style="font-size:10px;color:var(--text2)">by '+t.usedBy+'</span>':'')+
+          '<button class="adm-token-del" data-code="'+code+'" title="撤銷"><i class="ti ti-trash"></i></button>'+
+        '</div>'+
+        (t.note?'<div style="font-size:11px;color:var(--text2);margin-top:4px">📝 '+t.note+'</div>':'')+
+      '</div>';
+    });
+    list.innerHTML=html||'<div style="font-size:12px;color:var(--text2)">尚無授權碼</div>';
+    list.querySelectorAll('.adm-token-del').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var c=this.dataset.code;
+        showCustomConfirm('🗝️','撤銷授權碼？','授權碼 '+c+' 將永久失效。','確定撤銷',function(){
+          window.FB.remove('tripgo/create_tokens/'+c).then(function(){
+            showToast('✅ 已撤銷 '+c,1500); loadTokenList();
+          });
+        });
+      });
+    });
+  }).catch(function(){list.innerHTML='<div style="font-size:12px;color:var(--red)">讀取失敗</div>';});
+}
+
+// ── 使用者輸入授權碼 ──
+function openTokenInput(){
+  document.getElementById('js-gear-menu').classList.remove('show');
+  var m=document.getElementById('M-token-input');
+  m.style.display='flex';
+  document.getElementById('tok-err').textContent='';
+  document.getElementById('tok-code-inp').value='';
+  setTimeout(function(){document.getElementById('tok-code-inp').focus();},100);
+}
+function closeTokenInput(){
+  document.getElementById('M-token-input').style.display='none';
+}
+async function doTokenInput(){
+  var inp=document.getElementById('tok-code-inp');
+  var code=inp.value.trim().toUpperCase();
+  var err=document.getElementById('tok-err');
+  if(!code){err.textContent='請輸入授權碼';return;}
+  if(!window.FB||!window.FB.ready){err.textContent='⏳ 連線中，請稍後';return;}
+  err.textContent='驗證中…';
+  try{
+    var snap=await window.FB.get('tripgo/create_tokens/'+code);
+    if(!snap.exists()){err.textContent='❌ 授權碼不存在或已撤銷';return;}
+    var t=snap.val();
+    if(t.usedAt){err.textContent='❌ 此授權碼已被使用過';return;}
+    var name=document.getElementById('js-home-name').value.trim()||'（未知）';
+    await window.FB.set('tripgo/create_tokens/'+code+'/usedAt',Date.now());
+    await window.FB.set('tripgo/create_tokens/'+code+'/usedBy',name);
+    _hasCreateToken=true;
+    updateCreateBtnVisibility();
+    closeTokenInput();
+    showToast('✅ 授權碼驗證成功，已解鎖建立群組功能',2800);
+  }catch(e){err.textContent='❌ 驗證失敗：'+e.message;}
+}
 function changeAdminPassword(){
   var cur=document.getElementById('adm-cur-pw').value;
   var n1=document.getElementById('adm-new-pw').value;
@@ -3546,18 +3682,26 @@ function updateStoredTrip(code,uid,name,tripName,isOrg){
   saveStoredTrips(trips.slice(0,20));
 }
 function deleteTrip(code){
-  showCustomConfirm('🗑️','刪除旅程？','刪除後所有成員、行程、聊天都會消失，<b>無法復原</b>。','確定刪除',function(){
-    window.FB.remove('tripgo/groups/'+code);
-    saveStoredTrips(getStoredTrips().filter(function(t){return t.code!==code;}));
-    if(code===S.groupCode){
-      clearStoredSession();
-      document.getElementById('S-app').classList.remove('show');
-      document.getElementById('S-join').classList.remove('hide');
-      goHome();
-    }
-    if(document.getElementById('trip-switcher').classList.contains('show')) openTripSwitcher();
-    showToast('✅ 旅程已刪除',2000);
-    renderTripsPreview(document.getElementById('js-home-name').value||'');
+  showCustomConfirm('🗑️','移至垃圾桶？','旅程將放入垃圾桶，<b>7天後自動永久刪除</b>。如需還原請聯絡管理員。','確定移除',function(){
+    if(!window.FB||!window.FB.ready){showToast('⏳ 連線中，請稍後',1500);return;}
+    window.FB.get('tripgo/groups/'+code).then(function(snap){
+      var data=snap.exists()?snap.val():{};
+      data._trashedAt=Date.now();
+      return window.FB.set('tripgo/trash/'+code,data).then(function(){
+        return window.FB.remove('tripgo/groups/'+code);
+      });
+    }).then(function(){
+      saveStoredTrips(getStoredTrips().filter(function(t){return t.code!==code;}));
+      if(code===S.groupCode){
+        clearStoredSession();
+        document.getElementById('S-app').classList.remove('show');
+        document.getElementById('S-join').classList.remove('hide');
+        goHome();
+      }
+      if(document.getElementById('trip-switcher').classList.contains('show')) openTripSwitcher();
+      showToast('✅ 旅程已移至垃圾桶（7天後永久刪除）',2500);
+      renderTripsPreview(document.getElementById('js-home-name').value||'');
+    }).catch(function(err){showToast('❌ 移除失敗：'+err.message,2000);});
   });
 }
 function leaveTrip(code,uid){
@@ -4185,6 +4329,7 @@ function applyMapPickResult(lat,lng,name){
 window.addEventListener('load',function(){
 
   // Join screen
+  updateCreateBtnVisibility(); // 非管理員預設隱藏「建立群組」
   document.getElementById('btn-join').addEventListener('click',function(){goSub('join');});
   document.getElementById('btn-create').addEventListener('click',function(){goSub('create');});
   document.getElementById('js-back-btn').addEventListener('click',goHome);
@@ -4278,6 +4423,9 @@ window.addEventListener('load',function(){
   document.getElementById('btn-copy-code').addEventListener('click',copyCode);
   document.getElementById('btn-add-member').addEventListener('click',addMember);
   document.getElementById('btn-admin-close').addEventListener('click',closeAdminPanel);
+  document.getElementById('btn-gen-token').addEventListener('click',adminGenToken);
+  document.getElementById('tok-code-inp').addEventListener('input',function(){this.value=this.value.toUpperCase();});
+  document.getElementById('tok-code-inp').addEventListener('keydown',function(e){if(e.key==='Enter')doTokenInput();});
   document.getElementById('btn-admin-trips').addEventListener('click',loadAllTrips);
   document.getElementById('btn-admin-trash').addEventListener('click',loadTrashBin);
   document.getElementById('btn-members-close').addEventListener('click',function(){closeModal('M-members');});
