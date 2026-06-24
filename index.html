@@ -2423,6 +2423,11 @@ function tapStop(i){
   var expPanel=document.getElementById('se-'+i);
   var isOpen=expPanel&&expPanel.classList.contains('open');
 
+  // ── 先清掉舊的 inline edit HTML，防止 ief-* 殘留在 hidden DOM ──
+  if(_inlineEditIdx>=0){
+    closeInlineEdit(_inlineEditIdx); // 重建 view content（edit/delete buttons），清掉 ief-*
+  }
+
   // Collapse ALL panels (remove class AND inline style — inline style takes precedence)
   document.querySelectorAll('.stop-expand').forEach(function(p){
     p.classList.remove('open');
@@ -4061,6 +4066,7 @@ function renderNotesEditable(s){
 
 function renderInlineEditForm(i){
   var s=S.stops[i]; if(!s) return;
+  closeNewStopForm(); // 避免與新增表單的相同 ID 互相干擾
   var expPanel=document.getElementById('se-'+i);
   if(!expPanel) return;
 
@@ -4185,7 +4191,11 @@ function closeInlineEdit(i, collapse){
   if(collapse){
     _expandedStopIdx=-1;
     var expPanel=document.getElementById('se-'+i);
-    if(expPanel){ expPanel.classList.remove('open'); expPanel.style.display='none'; }
+    if(expPanel){
+      expPanel.classList.remove('open');
+      expPanel.style.display='none';
+      expPanel.innerHTML=''; // 清空 ief-* 殘留元素，防止 getElementById 找到 hidden 的 stale 元素
+    }
     var arrEl=document.getElementById('sa-'+i);
     if(arrEl) arrEl.style.transform='';
     var txt=document.getElementById('st-'+i);
@@ -4215,6 +4225,7 @@ function closeInlineEdit(i, collapse){
   expPanel.innerHTML=
     '<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-checkbox"></i>活動清單'+
       '<button class="exp-edit-btn" data-i="'+i+'" style="margin-left:auto"><i class="ti ti-pencil"></i> 編輯</button>'+
+      '<button class="exp-del-btn" data-i="'+i+'" style="margin-left:6px"><i class="ti ti-trash"></i> 刪除</button>'+
     '</div>'+(actsHtml||'')+'</div>'+
     (notesHtml?'<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-alert-triangle" style="color:#F9AB00"></i>注意事項</div>'+notesHtml+'</div>':'');
   // Re-attach checkbox listeners
