@@ -987,6 +987,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 
 
 </style>
+<!-- ═══ PWA ═══ -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1a5f7a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TripGo">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <!-- ═══════════ -->
 </head>
 <body>
 
@@ -4493,5 +4501,16 @@ window.addEventListener('load',function(){
 
 <!-- Google Maps -->
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAqyQyNtBSvK7qLuVR49RqgkKqU1Y2vUjQ&libraries=places&callback=initMap" async defer></script>
+<!-- ═══ PWA: Service Worker ═══ -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(r => console.log('TripGo SW:', r.scope))
+          .catch(e => console.error('TripGo SW error:', e));
+      });
+    }
+  </script>
+  <!-- ══════════════════════════ -->
 </body>
 </html>
