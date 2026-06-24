@@ -2004,6 +2004,15 @@ function startApp(code, uid, name, tripName, isOrg){
     // If the user currently has a panel open (viewing or editing), restore it after render
     renderStops(); // renderStops itself restores _expandedStopIdx / _inlineEditIdx
   });
+  // ── 切換群組時清空聊天室，防止舊訊息殘留 & onChildAdded 重播造成重複 ──
+  var _chatList=document.getElementById('msg-list');
+  if(_chatList) _chatList.innerHTML='';
+  var _chatSt=document.getElementById('chat-st');
+  if(_chatSt){ _chatSt.style.display='block'; _chatSt.textContent='載入訊息中…'; }
+  // 讀取此群組上次已讀時間戳（未讀紅點用）
+  _lastChatReadAt=0;
+  try{ _lastChatReadAt=parseInt(localStorage.getItem('tg_chat_read_'+code)||'0')||0; }catch(e){}
+
   var firstMsg=true;
   FB.onChildAdded('tripgo/groups/'+code+'/chat',function(snap){
     var m=snap.val();
