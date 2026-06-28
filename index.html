@@ -714,6 +714,19 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .sticker-bubble{background:transparent!important;font-size:36px}
 .msg-nm{font-size:10px;color:var(--text2);margin-bottom:2px}
 .msg-t{font-size:9px;color:var(--text2);align-self:flex-end;flex-shrink:0}
+.msg-act-btn{background:none;border:none;font-size:15px;color:var(--text2);cursor:pointer;padding:0 3px;align-self:flex-end;flex-shrink:0;opacity:0;transition:opacity .15s;line-height:1}
+.msg:hover .msg-act-btn,.msg-act-btn.open{opacity:1}
+.msg-menu{position:fixed;background:#fff;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.18);border:1px solid var(--border);z-index:800;min-width:110px;overflow:hidden}
+.msg-menu-item{display:block;width:100%;padding:10px 14px;text-align:left;background:none;border:none;font-size:13px;cursor:pointer;color:var(--text)}
+.msg-menu-item:hover{background:var(--bg2)}
+.msg-menu-item.red{color:var(--red)}
+.chat-edit-bar{display:none;align-items:center;gap:8px;padding:6px 12px;background:#E8F2FB;border-top:1px solid #C5DCF6;font-size:11px;color:var(--blue)}
+.chat-edit-bar span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-edit-cancel{background:none;border:none;font-size:16px;cursor:pointer;color:var(--blue);padding:0 2px}
+.exp-act-btn{background:none;border:none;font-size:13px;cursor:pointer;padding:2px 5px;border-radius:5px;color:var(--text2)}
+.exp-act-btn:hover{background:var(--bg2)}
+.exp-act-btn.red{color:var(--red)}
+.msg-edited{font-size:9px;opacity:.6;margin-left:4px}
 .chat-input-wrap{
   flex-shrink:0;background:#fff;
   border-top:1px solid var(--border);padding:8px 10px;
@@ -987,14 +1000,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 
 
 </style>
-<!-- ═══ PWA ═══ -->
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1a5f7a">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="TripGo">
-  <link rel="apple-touch-icon" href="icon-180.png">
-  <!-- ═══════════ -->
 </head>
 <body>
 
@@ -1232,6 +1237,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
             <span data-s="👍">👍</span><span data-s="🙏">🙏</span><span data-s="🎉">🎉</span>
             <span data-s="😮">😮</span><span data-s="😭">😭</span><span data-s="🔥">🔥</span><span data-s="❤️">❤️</span>
           </div>
+          <div class="chat-edit-bar" id="chat-edit-bar">
+            <i class="ti ti-pencil" style="flex-shrink:0"></i>
+            <span id="chat-edit-preview">編輯中…</span>
+            <button class="chat-edit-cancel" id="chat-edit-cancel" title="取消編輯">✕</button>
+          </div>
           <div class="chat-input-row">
             <button class="chat-sticker-btn" id="btn-sticker">😊</button>
             <input id="chat-inp" placeholder="輸入訊息…"/>
@@ -1306,7 +1316,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 
 <!-- Modals -->
 <div class="modal" id="M-expense"><div class="modal-box">
-  <div class="m-handle"></div><div class="m-title">新增花費</div>
+  <div class="m-handle"></div><div class="m-title" id="m-exp-title">新增花費</div>
+  <input type="hidden" id="m-edit-key" value=""/>
   <div class="m-field"><label class="m-lbl">花費名稱</label><input class="m-inp" id="m-name" placeholder="午餐、門票…"/></div>
   <div class="m-row">
     <div class="m-field"><label class="m-lbl">金額 (NT$)</label><input class="m-inp" id="m-amt" type="number" placeholder="0"/></div>
@@ -1498,6 +1509,16 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       var ref = rtdb.ref(path);
       ref.on('child_added', cb);
       _listeners.push(function(){ ref.off('child_added', cb); });
+    },
+    onChildChanged: function(path, cb){
+      var ref = rtdb.ref(path);
+      ref.on('child_changed', cb);
+      _listeners.push(function(){ ref.off('child_changed', cb); });
+    },
+    onChildRemoved: function(path, cb){
+      var ref = rtdb.ref(path);
+      ref.on('child_removed', cb);
+      _listeners.push(function(){ ref.off('child_removed', cb); });
     },
     clearListeners: clearListeners,
     flush: flush,
@@ -2024,7 +2045,7 @@ function startApp(code, uid, name, tripName, isOrg){
   var firstMsg=true;
   FB.onChildAdded('tripgo/groups/'+code+'/chat',function(snap){
     var m=snap.val();
-    appendMsg(m.uid,m.name,m.text,m.sticker,m.time);
+    appendMsg(m.uid,m.name,m.text,m.sticker,m.time,snap.key);
     if(!firstMsg){
       document.getElementById('msg-scroll').scrollTop=9999;
       // Show unread red dot if we're not currently looking at the chat pane (and it's not our own message)
@@ -2036,6 +2057,18 @@ function startApp(code, uid, name, tripName, isOrg){
     }
   });
   setTimeout(function(){ firstMsg=false; var el=document.getElementById('chat-st'); if(el)el.style.display='none'; },2000);
+  // 即時更新已編輯訊息
+  FB.onChildChanged('tripgo/groups/'+code+'/chat',function(snap){
+    var m=snap.val(); var el=document.querySelector('.msg[data-key="'+snap.key+'"]');
+    if(!el) return;
+    var bubble=el.querySelector('.bubble');
+    if(bubble){ bubble.textContent=m.text||''; if(m.edited&&!el.querySelector('.msg-edited'))bubble.insertAdjacentHTML('afterend','<span class="msg-edited">(已編輯)</span>'); }
+  });
+  // 即時移除已刪除訊息
+  FB.onChildRemoved('tripgo/groups/'+code+'/chat',function(snap){
+    var el=document.querySelector('.msg[data-key="'+snap.key+'"]');
+    if(el) el.remove();
+  });
   var _firstExpense=true;
   FB.onValue('tripgo/groups/'+code+'/expenses',function(snap){
     var prev=Object.keys(S.expenses||{}).length;
@@ -3065,22 +3098,80 @@ function saveStop(){
 // ════════════════════════════════
 // CHAT
 // ════════════════════════════════
-function appendMsg(uid,name,text,isSticker,time){
+function appendMsg(uid,name,text,isSticker,time,key){
   var me=uid===S.myUid;
   var idx=S.members.findIndex(function(m){return m.id===uid;}); var avC='av'+(idx>=0?idx%7:0);
   var list=document.getElementById('msg-list');
   var div=document.createElement('div'); div.className='msg'+(me?' me':'');
+  div.dataset.key=key||''; div.dataset.uid=uid||'';
   div.innerHTML='<div class="av '+avC+'" style="width:22px;height:22px;font-size:8px;flex-shrink:0">'+(uid||'?').substring(0,2).toUpperCase()+'</div>'+
     '<div>'+(me?'':'<div class="msg-nm">'+(name||uid)+'</div>')+
     '<div class="bubble'+(isSticker?' sticker-bubble':'')+'">'+text+'</div></div>'+
     '<span class="msg-t">'+(time||'')+'</span>';
+  // Action button for own messages or admin (not for stickers)
+  if(key && !isSticker && (me||_isAdmin)){
+    var actBtn=document.createElement('button');
+    actBtn.className='msg-act-btn'; actBtn.title='訊息選項'; actBtn.textContent='•••';
+    actBtn.addEventListener('click',function(e){
+      e.stopPropagation();
+      showMsgMenu(key,uid,text,actBtn,me);
+    });
+    div.appendChild(actBtn);
+  }
   list.appendChild(div);
   document.getElementById('msg-scroll').scrollTop=9999;
 }
+var _editingMsgKey=null;
 function sendMsg(){
   var inp=document.getElementById('chat-inp'),text=inp.value.trim();if(!text)return;
-  window.FB.push('tripgo/groups/'+S.groupCode+'/chat',{uid:S.myUid,name:S.myName,text:text,sticker:false,time:getTime()});
+  if(_editingMsgKey){
+    window.FB.set('tripgo/groups/'+S.groupCode+'/chat/'+_editingMsgKey+'/text',text);
+    window.FB.set('tripgo/groups/'+S.groupCode+'/chat/'+_editingMsgKey+'/edited',true);
+    _editingMsgKey=null;
+    var bar=document.getElementById('chat-edit-bar'); if(bar)bar.style.display='none';
+  } else {
+    window.FB.push('tripgo/groups/'+S.groupCode+'/chat',{uid:S.myUid,name:S.myName,text:text,sticker:false,time:getTime()});
+  }
   inp.value=''; document.getElementById('sticker-tray').classList.remove('show');
+}
+function showMsgMenu(key,uid,text,anchor,isOwn){
+  var ex=document.getElementById('_msg-menu'); if(ex)ex.remove();
+  var menu=document.createElement('div'); menu.id='_msg-menu'; menu.className='msg-menu';
+  if(isOwn){
+    var ed=document.createElement('button'); ed.className='msg-menu-item';
+    ed.innerHTML='✏️ 編輯';
+    ed.onclick=function(){menu.remove();startEditMsg(key,text);};
+    menu.appendChild(ed);
+  }
+  var dl=document.createElement('button'); dl.className='msg-menu-item red';
+  dl.innerHTML='🗑 刪除';
+  dl.onclick=function(){
+    menu.remove();
+    showCustomConfirm('🗑','刪除訊息？','此動作無法復原。','確定刪除',function(){
+      window.FB.remove('tripgo/groups/'+S.groupCode+'/chat/'+key);
+    });
+  };
+  menu.appendChild(dl);
+  document.body.appendChild(menu);
+  var r=anchor.getBoundingClientRect();
+  menu.style.top=(r.bottom+4)+'px';
+  menu.style.right=(window.innerWidth-r.right+4)+'px';
+  anchor.classList.add('open');
+  setTimeout(function(){
+    function outside(e){ if(!menu.contains(e.target)){menu.remove();anchor.classList.remove('open');document.removeEventListener('click',outside);} }
+    document.addEventListener('click',outside);
+  },0);
+}
+function startEditMsg(key,text){
+  _editingMsgKey=key;
+  var inp=document.getElementById('chat-inp'); inp.value=text; inp.focus();
+  var bar=document.getElementById('chat-edit-bar'); if(bar)bar.style.display='flex';
+  var pr=document.getElementById('chat-edit-preview'); if(pr)pr.textContent=text.substring(0,40);
+}
+function cancelEditMsg(){
+  _editingMsgKey=null;
+  var inp=document.getElementById('chat-inp'); inp.value='';
+  var bar=document.getElementById('chat-edit-bar'); if(bar)bar.style.display='none';
 }
 function sendSticker(s){
   window.FB.push('tripgo/groups/'+S.groupCode+'/chat',{uid:S.myUid,name:S.myName,text:s,sticker:true,time:getTime()});
@@ -3093,11 +3184,28 @@ function sendSticker(s){
 function renderExpenses(){
   var list=document.getElementById('exp-list'); list.innerHTML='';
   var total=0;
-  Object.values(S.expenses).forEach(function(e){
+  Object.entries(S.expenses).forEach(function(entry){
+    var key=entry[0],e=entry[1];
     total+=e.amt;
+    var canAct=(e.uid?e.uid===S.myUid:e.payer===S.myName)||_isAdmin;
     var card=document.createElement('div'); card.className='exp-card';
-    card.innerHTML='<div class="exp-top"><span class="exp-nm">'+e.name+'</span><span class="exp-amt">NT$ '+e.amt.toLocaleString()+'</span></div>'+
-      '<div class="exp-meta">付款：'+e.payer+' · '+e.split+'人平攤 · 每人 NT$ '+e.per.toLocaleString()+'</div>';
+    card.innerHTML='<div class="exp-top">'+
+      '<span class="exp-nm">'+e.name+'</span>'+
+      '<div style="display:flex;align-items:center;gap:2px">'+
+        '<span class="exp-amt">NT$ '+e.amt.toLocaleString()+'</span>'+
+        (canAct?
+          (e.uid===S.myUid||(!e.uid&&e.payer===S.myName)?'<button class="exp-act-btn" data-act="edit"><i class="ti ti-pencil"></i></button>':'')+ 
+          '<button class="exp-act-btn red" data-act="del"><i class="ti ti-trash"></i></button>'
+          :'')+
+      '</div>'+
+    '</div>'+
+    '<div class="exp-meta">付款：'+e.payer+' · '+e.split+'人平攤 · 每人 NT$ '+e.per.toLocaleString()+'</div>';
+    if(canAct){
+      var editBtn=card.querySelector('[data-act="edit"]');
+      if(editBtn) editBtn.addEventListener('click',function(ev){ev.stopPropagation();editExpense(key,e);});
+      var delBtn=card.querySelector('[data-act="del"]');
+      if(delBtn) delBtn.addEventListener('click',function(ev){ev.stopPropagation();deleteExpense(key);});
+    }
     list.appendChild(card);
   });
   var pct=Math.min(Math.round(total/200000*100),100);
@@ -3127,10 +3235,36 @@ function confirmExpense(){
   var sv=document.getElementById('m-split').value;
   var sn=sv==='all'?S.members.length:parseInt(sv);
   if(!name||!amt){showToast('請填寫名稱和金額',1500);return;}
-  window.FB.push('tripgo/groups/'+S.groupCode+'/expenses',
-    {name:name,amt:amt,payer:payer,split:sn,per:Math.round(amt/sn),time:getTime()});
+  var editKey=document.getElementById('m-edit-key').value;
+  var data={name:name,amt:amt,payer:payer,split:sn,per:Math.round(amt/sn),time:getTime(),uid:S.myUid};
+  if(editKey){
+    var orig=S.expenses[editKey]; if(orig&&orig.uid) data.uid=orig.uid; // 保留原始擁有者
+    window.FB.set('tripgo/groups/'+S.groupCode+'/expenses/'+editKey,data);
+    document.getElementById('m-edit-key').value='';
+  } else {
+    window.FB.push('tripgo/groups/'+S.groupCode+'/expenses',data);
+  }
+  var t=document.getElementById('m-exp-title'),b=document.getElementById('btn-exp-ok');
+  if(t)t.textContent='新增花費'; if(b)b.textContent='確認新增';
   closeModal('M-expense');
   document.getElementById('m-name').value=''; document.getElementById('m-amt').value='';
+}
+function editExpense(key,e){
+  document.getElementById('m-edit-key').value=key;
+  document.getElementById('m-name').value=e.name||'';
+  document.getElementById('m-amt').value=e.amt||'';
+  renderPayerSelect();
+  document.getElementById('m-payer').value=e.payer||'';
+  var sp=document.getElementById('m-split');
+  sp.value=(e.split===S.members.length)?'all':String(e.split);
+  var t=document.getElementById('m-exp-title'),b=document.getElementById('btn-exp-ok');
+  if(t)t.textContent='編輯花費'; if(b)b.textContent='確認修改';
+  openModal('M-expense');
+}
+function deleteExpense(key){
+  showCustomConfirm('🗑','刪除此筆費用？','刪除後無法復原。','確定刪除',function(){
+    window.FB.remove('tripgo/groups/'+S.groupCode+'/expenses/'+key);
+  });
 }
 function renderPayerSelect(){
   var sel=document.getElementById('m-payer'); sel.innerHTML='';
@@ -4438,6 +4572,7 @@ window.addEventListener('load',function(){
   // Chat
   document.getElementById('btn-sticker').addEventListener('click',function(){document.getElementById('sticker-tray').classList.toggle('show');});
   document.getElementById('btn-send').addEventListener('click',sendMsg);
+  document.getElementById('chat-edit-cancel').addEventListener('click',cancelEditMsg);
   document.getElementById('chat-inp').addEventListener('keydown',function(e){if(e.key==='Enter')sendMsg();});
   document.getElementById('sticker-tray').querySelectorAll('[data-s]').forEach(function(s){
     s.addEventListener('click',function(){sendSticker(this.dataset.s);});
@@ -4445,7 +4580,12 @@ window.addEventListener('load',function(){
 
   // Expense
   document.getElementById('btn-add-exp').addEventListener('click',function(){openModal('M-expense');});
-  document.getElementById('btn-exp-cancel').addEventListener('click',function(){closeModal('M-expense');});
+  document.getElementById('btn-exp-cancel').addEventListener('click',function(){
+    document.getElementById('m-edit-key').value='';
+    var t=document.getElementById('m-exp-title'),b=document.getElementById('btn-exp-ok');
+    if(t)t.textContent='新增花費'; if(b)b.textContent='確認新增';
+    closeModal('M-expense');
+  });
   document.getElementById('btn-exp-ok').addEventListener('click',confirmExpense);
   document.getElementById('btn-invite-close').addEventListener('click',function(){closeModal('M-invite');});
   document.getElementById('btn-copy-code').addEventListener('click',copyCode);
@@ -4501,16 +4641,5 @@ window.addEventListener('load',function(){
 
 <!-- Google Maps -->
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAqyQyNtBSvK7qLuVR49RqgkKqU1Y2vUjQ&libraries=places&callback=initMap" async defer></script>
-<!-- ═══ PWA: Service Worker ═══ -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js')
-          .then(r => console.log('TripGo SW:', r.scope))
-          .catch(e => console.error('TripGo SW error:', e));
-      });
-    }
-  </script>
-  <!-- ══════════════════════════ -->
 </body>
 </html>
