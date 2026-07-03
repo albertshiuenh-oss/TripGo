@@ -3187,25 +3187,19 @@ function renderExpenses(){
   Object.entries(S.expenses).forEach(function(entry){
     var key=entry[0],e=entry[1];
     total+=e.amt;
-    var canAct=(e.uid?e.uid===S.myUid:e.payer===S.myName)||_isAdmin;
+    // 私人群組：群組成員均可編輯/刪除任何費用；管理員同等權限
     var card=document.createElement('div'); card.className='exp-card';
     card.innerHTML='<div class="exp-top">'+
       '<span class="exp-nm">'+e.name+'</span>'+
       '<div style="display:flex;align-items:center;gap:2px">'+
         '<span class="exp-amt">NT$ '+e.amt.toLocaleString()+'</span>'+
-        (canAct?
-          (e.uid===S.myUid||(!e.uid&&e.payer===S.myName)?'<button class="exp-act-btn" data-act="edit"><i class="ti ti-pencil"></i></button>':'')+ 
-          '<button class="exp-act-btn red" data-act="del"><i class="ti ti-trash"></i></button>'
-          :'')+
+        '<button class="exp-act-btn" data-act="edit"><i class="ti ti-pencil"></i></button>'+
+        '<button class="exp-act-btn red" data-act="del"><i class="ti ti-trash"></i></button>'+
       '</div>'+
     '</div>'+
     '<div class="exp-meta">付款：'+e.payer+' · '+e.split+'人平攤 · 每人 NT$ '+e.per.toLocaleString()+'</div>';
-    if(canAct){
-      var editBtn=card.querySelector('[data-act="edit"]');
-      if(editBtn) editBtn.addEventListener('click',function(ev){ev.stopPropagation();editExpense(key,e);});
-      var delBtn=card.querySelector('[data-act="del"]');
-      if(delBtn) delBtn.addEventListener('click',function(ev){ev.stopPropagation();deleteExpense(key);});
-    }
+    card.querySelector('[data-act="edit"]').addEventListener('click',function(ev){ev.stopPropagation();editExpense(key,e);});
+    card.querySelector('[data-act="del"]').addEventListener('click',function(ev){ev.stopPropagation();deleteExpense(key);});
     list.appendChild(card);
   });
   var pct=Math.min(Math.round(total/200000*100),100);
