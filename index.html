@@ -2018,10 +2018,10 @@ function startApp(code, uid, name, tripName, isOrg){
   FB.onValue('tripgo/groups/'+code+'/members',function(snap){
     var prev=_prevMemberCount;
     S.members=snap.val()?Object.values(snap.val()):[];
-    _prevMemberCount=S.members.length;
+    _prevMemberCount=uniqueMembers().length;
     renderAvatars(); renderMembers(); renderPayerSelect(); renderLocList();
     updateMemberMarkers(); // re-apply memberUids filter now that S.members is updated
-    if(!_firstMembers&&S.members.length>prev){
+    if(!_firstMembers&&uniqueMembers().length>prev){
       var locPane=document.getElementById('pane-locations');
       if(!(locPane&&locPane.classList.contains('on'))){
         var memDot=document.getElementById('members-unread-dot'); if(memDot) memDot.classList.add('show');
@@ -2758,7 +2758,7 @@ function msExpense(){
   var names=sel.map(function(i){return S.stops[i].name;});
   var matched=Object.values(S.expenses).filter(function(e){return names.some(function(n){return e.stopName&&e.stopName===n;});});
   var paid={},share={},total=0;
-  S.members.forEach(function(m){paid[m.name]=0;share[m.name]=0;});
+  uniqueMembers().forEach(function(m){paid[m.name]=0;share[m.name]=0;});
   matched.forEach(function(e){ total+=e.amt; paid[e.payer]=(paid[e.payer]||0)+e.amt; Object.keys(share).slice(0,e.split).forEach(function(n){share[n]=(share[n]||0)+e.per;}); });
   var html='<div style="font-size:11px;color:var(--text2);margin-bottom:8px">景點：'+names.join('、')+'</div>';
   if(!matched.length){ html+='<div style="font-size:12px;color:var(--gray)">這幾個景點尚無花費記錄</div>'; }
@@ -3217,7 +3217,7 @@ function renderExpenses(){
 }
 function calcSettle(){
   var paid={},share={};
-  S.members.forEach(function(m){paid[m.name]=0;share[m.name]=0;});
+  uniqueMembers().forEach(function(m){paid[m.name]=0;share[m.name]=0;});
   Object.values(S.expenses).forEach(function(e){
     paid[e.payer]=(paid[e.payer]||0)+e.amt;
     Object.keys(share).slice(0,e.split).forEach(function(n){share[n]=(share[n]||0)+e.per;});
@@ -3234,7 +3234,7 @@ function confirmExpense(){
   var amt=parseInt(document.getElementById('m-amt').value)||0;
   var payer=document.getElementById('m-payer').value;
   var sv=document.getElementById('m-split').value;
-  var sn=sv==='all'?S.members.length:parseInt(sv);
+  var sn=sv==='all'?uniqueMembers().length:parseInt(sv);
   if(!name||!amt){showToast('請填寫名稱和金額',1500);return;}
   var editKey=document.getElementById('m-edit-key').value;
   var data={name:name,amt:amt,payer:payer,split:sn,per:Math.round(amt/sn),time:getTime(),uid:S.myUid};
@@ -3260,7 +3260,7 @@ function editExpense(key,e){
     if(payerEl) payerEl.value=e.payer||'';
     var sp=document.getElementById('m-split');
     if(sp){
-      var splitVal=(e.split&&e.split===S.members.length)?'all':(e.split?String(e.split):'all');
+      var splitVal=(e.split&&e.split===uniqueMembers().length)?'all':(e.split?String(e.split):'all');
       sp.value=splitVal;
     }
     var t=document.getElementById('m-exp-title'),b=document.getElementById('btn-exp-ok');
@@ -3273,9 +3273,27 @@ function deleteExpense(key){
     window.FB.remove('tripgo/groups/'+S.groupCode+'/expenses/'+key);
   });
 }
+// 依名字去重，同名多台裝置只算一人（優先保留當前裝置 uid）
+function uniqueMembers(){
+  var seen={}, result=[];
+  S.members.forEach(function(m){
+    if(!seen[m.name]){ seen[m.name]=true; result.push(m); }
+    else if(m.id===S.myUid){
+      var idx=result.findIndex(function(x){return x.name===m.name;});
+      if(idx>=0) result[idx]=m;
+    }
+  });
+  return result;
+}
+function memberDeviceCounts(){
+  var counts={};
+  S.members.forEach(function(m){ counts[m.name]=(counts[m.name]||0)+1; });
+  return counts;
+}
+
 function renderPayerSelect(){
   var sel=document.getElementById('m-payer'); sel.innerHTML='';
-  S.members.forEach(function(m){var o=document.createElement('option');o.value=m.name;o.textContent=m.name;sel.appendChild(o);});
+  uniqueMembers().forEach(function(m){var o=document.createElement('option');o.value=m.name;o.textContent=m.name;sel.appendChild(o);});
 }
 
 // ════════════════════════════════
@@ -3283,20 +3301,21 @@ function renderPayerSelect(){
 // ════════════════════════════════
 function renderAvatars(){
   var el=document.getElementById('map-members');
-  if(el) el.textContent=S.members.length+'位成員';
+  if(el) el.textContent=uniqueMembers().length+'位成員';
 }
 function renderMembers(){
   var el=document.getElementById('mem-list');
-  document.getElementById('mem-count').textContent=S.members.length+'位';
+  var uMembers=uniqueMembers(); var devCounts=memberDeviceCounts();
+  document.getElementById('mem-count').textContent=uMembers.length+'位';
   var html='';
-  S.members.forEach(function(m,i){
+  uMembers.forEach(function(m,i){
     var isOrg=m.role==='organizer';
     var isSelf=m.id===S.myUid;
     var canDelete=S.isOrg||isSelf; // organizer can delete anyone; others only self
     var delLabel=isSelf?'刪除自己':'移除';
     html+='<div class="mem-row">'+
       '<div class="mem-av av'+(i%7)+'">'+m.name.substring(0,2).toUpperCase()+'</div>'+
-      '<div style="flex:1"><div class="mem-nm">'+(isOrg?'👑 ':'')+m.name+(isSelf?' <span style="font-size:9px;color:var(--blue);background:#E8F0FE;border-radius:4px;padding:1px 5px">我</span>':'')+'</div><div class="mem-role">'+(isOrg?'組織者':'團員')+'</div></div>'+
+      '<div style="flex:1"><div class="mem-nm">'+(isOrg?'👑 ':'')+m.name+(isSelf?' <span style="font-size:9px;color:var(--blue);background:#E8F0FE;border-radius:4px;padding:1px 5px">我</span>':'')+(devCounts[m.name]>1?' <span style="font-size:9px;color:var(--text2);background:var(--bg2);border-radius:4px;padding:1px 5px">'+devCounts[m.name]+'台</span>':'')+'</div><div class="mem-role">'+(isOrg?'組織者':'團員')+'</div></div>'+
       '<div class="mem-acts">'+
         (S.isOrg?'<button class="mem-org-btn'+(isOrg?' on':'')+'" data-action="setorg" data-mid="'+m.id+'">'+(isOrg?'✓ 組織者':'設組織者')+'</button>':'')+
         (canDelete?'<button class="mem-del-btn" data-action="delmember" data-mid="'+m.id+'">'+delLabel+'</button>':'')+
