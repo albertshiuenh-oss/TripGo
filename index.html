@@ -3193,6 +3193,8 @@ function renderExpenses(){
     total+=e.amt;
     // 私人群組：群組成員均可編輯/刪除任何費用；管理員同等權限
     var card=document.createElement('div'); card.className='exp-card';
+    var uLen=uniqueMembers().length;
+    var perAmt=uLen>0?Math.round(e.amt/uLen):e.per;
     card.innerHTML='<div class="exp-top">'+
       '<span class="exp-nm">'+e.name+'</span>'+
       '<div style="display:flex;align-items:center;gap:2px">'+
@@ -3201,7 +3203,7 @@ function renderExpenses(){
         '<button class="exp-act-btn red" data-act="del"><i class="ti ti-trash"></i></button>'+
       '</div>'+
     '</div>'+
-    '<div class="exp-meta">付款：'+e.payer+' · '+e.split+'人平攤 · 每人 NT$ '+e.per.toLocaleString()+'</div>';
+    '<div class="exp-meta">付款：'+e.payer+' · '+uLen+'人平攤 · 每人 NT$ '+perAmt.toLocaleString()+'</div>';
     card.querySelector('[data-act="edit"]').addEventListener('click',function(ev){ev.stopPropagation();editExpense(key,e);});
     card.querySelector('[data-act="del"]').addEventListener('click',function(ev){ev.stopPropagation();deleteExpense(key);});
     list.appendChild(card);
@@ -3222,7 +3224,9 @@ function calcSettle(){
   uniqueMembers().forEach(function(m){paid[m.name]=0;share[m.name]=0;});
   Object.values(S.expenses).forEach(function(e){
     paid[e.payer]=(paid[e.payer]||0)+e.amt;
-    Object.keys(share).slice(0,e.split).forEach(function(n){share[n]=(share[n]||0)+e.per;});
+    // 以當前唯一成員平攤（忽略舊 e.split，防止假人被算入）
+    var uNames=Object.keys(share);
+    uNames.forEach(function(n){share[n]=(share[n]||0)+Math.round(e.amt/uNames.length);});
   });
   var balance={}; Object.keys(paid).forEach(function(n){balance[n]=(paid[n]||0)-(share[n]||0);});
   var cr=[],db=[];
@@ -3297,6 +3301,11 @@ function renderPayerSelect(){
   var sel=document.getElementById('m-payer'); sel.innerHTML='';
   uniqueMembers().forEach(function(m){var o=document.createElement('option');o.value=m.name;o.textContent=m.name;sel.appendChild(o);});
 }
+function renderSplitSelect(){
+  var sel=document.getElementById('m-split'); if(!sel) return;
+  var uLen=uniqueMembers().length;
+  sel.options[0].textContent='全體成員（'+uLen+'人）';
+}
 
 // ════════════════════════════════
 // MEMBERS
@@ -3317,7 +3326,7 @@ function renderMembers(){
     var delLabel=isSelf?'刪除自己':'移除';
     html+='<div class="mem-row">'+
       '<div class="mem-av av'+(i%7)+'">'+m.name.substring(0,2).toUpperCase()+'</div>'+
-      '<div style="flex:1"><div class="mem-nm">'+(isOrg?'👑 ':'')+m.name+(isSelf?' <span style="font-size:9px;color:var(--blue);background:#E8F0FE;border-radius:4px;padding:1px 5px">我</span>':'')+(devCounts[m.name]>1?' <span style="font-size:9px;color:var(--text2);background:var(--bg2);border-radius:4px;padding:1px 5px">'+devCounts[m.name]+'台</span>':'')+'</div><div class="mem-role">'+(isOrg?'組織者':'團員')+'</div></div>'+
+      '<div style="flex:1"><div class="mem-nm">'+(isOrg?'👑 ':'')+m.name+(isSelf?' <span style="font-size:9px;color:var(--blue);background:#E8F0FE;border-radius:4px;padding:1px 5px">我</span>':'')+(devCounts[m.name]>1?' <span style="font-size:9px;color:#fff;background:var(--red);border-radius:4px;padding:1px 6px;font-weight:700">'+devCounts[m.name]+'台裝置</span>':'')+'</div><div class="mem-role">'+(isOrg?'組織者':'團員')+'</div></div>'+
       '<div class="mem-acts">'+
         (S.isOrg?'<button class="mem-org-btn'+(isOrg?' on':'')+'" data-action="setorg" data-mid="'+m.id+'">'+(isOrg?'✓ 組織者':'設組織者')+'</button>':'')+
         (canDelete?'<button class="mem-del-btn" data-action="delmember" data-mid="'+m.id+'">'+delLabel+'</button>':'')+
@@ -4612,7 +4621,7 @@ window.addEventListener('load',function(){
   });
 
   // Expense
-  document.getElementById('btn-add-exp').addEventListener('click',function(){openModal('M-expense');});
+  document.getElementById('btn-add-exp').addEventListener('click',function(){renderPayerSelect();renderSplitSelect();openModal('M-expense');});
   document.getElementById('btn-exp-cancel').addEventListener('click',function(){
     document.getElementById('m-edit-key').value='';
     var t=document.getElementById('m-exp-title'),b=document.getElementById('btn-exp-ok');
