@@ -1256,6 +1256,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
           <button id="btn-add-exp" style="padding:6px 12px;border:none;border-radius:8px;background:var(--blue);color:#fff;font-size:12px;cursor:pointer">+ 新增</button>
         </div>
         <div id="exp-list"></div>
+        <div id="exp-total-bar" style="display:none;margin:0 14px 8px;padding:10px 14px;background:var(--bg2);border-radius:12px;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:12px;font-weight:600;color:var(--text2)">花費總計</span>
+          <span id="exp-total-num" style="font-size:16px;font-weight:700;color:var(--blue)">NT$ 0</span>
+        </div>
         <div class="settle-section"><div class="settle-title">💰 結算</div><div id="settle-rows"></div></div>
       </div>
       <!-- Locations pane -->
@@ -3206,6 +3210,9 @@ function renderExpenses(){
   document.getElementById('bud-pct').textContent=pct+'%';
   document.getElementById('bud-fill').style.width=pct+'%';
   document.getElementById('bud-used').textContent='NT$ '+total.toLocaleString();
+  // 花費總和
+  var totalNum=document.getElementById('exp-total-num');
+  if(totalNum) totalNum.textContent='NT$ '+total.toLocaleString();
   calcSettle();
 }
 function calcSettle(){
@@ -3244,16 +3251,22 @@ function confirmExpense(){
   document.getElementById('m-name').value=''; document.getElementById('m-amt').value='';
 }
 function editExpense(key,e){
-  document.getElementById('m-edit-key').value=key;
-  document.getElementById('m-name').value=e.name||'';
-  document.getElementById('m-amt').value=e.amt||'';
-  renderPayerSelect();
-  document.getElementById('m-payer').value=e.payer||'';
-  var sp=document.getElementById('m-split');
-  sp.value=(e.split===S.members.length)?'all':String(e.split);
-  var t=document.getElementById('m-exp-title'),b=document.getElementById('btn-exp-ok');
-  if(t)t.textContent='編輯花費'; if(b)b.textContent='確認修改';
-  openModal('M-expense');
+  try{
+    document.getElementById('m-edit-key').value=key;
+    document.getElementById('m-name').value=e.name||'';
+    document.getElementById('m-amt').value=String(e.amt||0);
+    renderPayerSelect();
+    var payerEl=document.getElementById('m-payer');
+    if(payerEl) payerEl.value=e.payer||'';
+    var sp=document.getElementById('m-split');
+    if(sp){
+      var splitVal=(e.split&&e.split===S.members.length)?'all':(e.split?String(e.split):'all');
+      sp.value=splitVal;
+    }
+    var t=document.getElementById('m-exp-title'),b=document.getElementById('btn-exp-ok');
+    if(t)t.textContent='編輯花費'; if(b)b.textContent='確認修改';
+    openModal('M-expense');
+  }catch(err){ showToast('❌ 開啟編輯失敗：'+err.message,2000); }
 }
 function deleteExpense(key){
   showCustomConfirm('🗑','刪除此筆費用？','刪除後無法復原。','確定刪除',function(){
@@ -3967,19 +3980,24 @@ function searchFirebaseForName(name, nl, localMatched){
 function applyFirebaseNameMatches(name, nl, localMatched, data){
   var existingCodes={};
   localMatched.forEach(function(t){ existingCodes[t.code]=true; });
-  var foundNew=false;
+
+  // 已知自己的 uid（裝置有記錄）→ 只加入該 uid 確實在其中的群組
+  // 全新裝置（uid 未知）→ 退而用名字搜尋（還原模式）
+  var knownUid=localStorage.getItem('tg_uid')||'';
+
   Object.keys(data).forEach(function(code){
     var g=data[code]; if(!g.members||existingCodes[code]) return;
     Object.values(g.members).forEach(function(m){
-      if(m.name && m.name.toLowerCase().indexOf(nl)>=0 && !existingCodes[code]){
-        existingCodes[code]=true; foundNew=true;
-        updateStoredTrip(code, m.id, m.name, g.tripName||'(未命名)', m.role==='organizer');
-      }
+      if(existingCodes[code]) return;
+      var nameMatch=m.name && m.name.toLowerCase().indexOf(nl)>=0;
+      if(!nameMatch) return;
+      // 有已知 uid：必須完全吻合，防止「同名他人」的群組混入
+      if(knownUid && m.id!==knownUid) return;
+      existingCodes[code]=true;
+      updateStoredTrip(code, m.id, m.name, g.tripName||'(未命名)', m.role==='organizer');
     });
   });
-  // Re-render either way, so the "搜尋雲端中…" placeholder always resolves to a final state.
-  // Only re-render if the name field still matches this search (avoid clobbering newer input).
-  // Pass _skipFbSearch=true to prevent this from re-triggering another search (would loop forever otherwise).
+
   var curVal=(document.getElementById('js-home-name')||{}).value||'';
   if(curVal.trim()===name) renderTripsPreview(name, true);
 }
