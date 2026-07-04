@@ -1018,7 +1018,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:9px;color:rgba(255,255,255,.35);z-index:1">build 2026-06-15-A</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v2.0 &nbsp;·&nbsp; 2026-07-05</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -1256,7 +1256,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
           <button id="btn-add-exp" style="padding:6px 12px;border:none;border-radius:8px;background:var(--blue);color:#fff;font-size:12px;cursor:pointer">+ 新增</button>
         </div>
         <div id="exp-list"></div>
-        <div id="exp-total-bar" style="display:none;margin:0 14px 8px;padding:10px 14px;background:var(--bg2);border-radius:12px;display:flex;justify-content:space-between;align-items:center">
+        <div id="exp-total-bar" style="margin:0 14px 8px;padding:10px 14px;background:var(--bg2);border-radius:12px;display:flex;justify-content:space-between;align-items:center">
           <span style="font-size:12px;font-weight:600;color:var(--text2)">花費總計</span>
           <span id="exp-total-num" style="font-size:16px;font-weight:700;color:var(--blue)">NT$ 0</span>
         </div>
@@ -3213,6 +3213,8 @@ function renderExpenses(){
   // 花費總和
   var totalNum=document.getElementById('exp-total-num');
   if(totalNum) totalNum.textContent='NT$ '+total.toLocaleString();
+  var totalBar=document.getElementById('exp-total-bar');
+  if(totalBar) totalBar.style.display='flex';
   calcSettle();
 }
 function calcSettle(){
