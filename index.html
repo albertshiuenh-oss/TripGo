@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="TripGo"/>
@@ -454,10 +454,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .stop-cb.on::after{content:'✓';color:#fff;font-size:11px}
 .multiselect .stop-cb{display:flex}
 .stop-txt{flex:1;cursor:pointer;min-width:0}
-.stop-name{font-size:16px;font-weight:600;color:var(--text);
+.stop-name{font-size:24px;font-weight:600;color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stop-txt.active .stop-name{color:var(--blue);font-weight:700}
-.stop-time{font-size:11px;color:var(--text2);margin-top:2px}
+.stop-time{font-size:17px;color:var(--text2);margin-top:3px}
 .stop-nav{
   font-size:10px;padding:4px 8px;border-radius:8px;
   border:1px solid var(--border);background:#fff;
@@ -465,7 +465,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   display:flex;align-items:center;gap:3px;
 }
 .stop-arr{
-  font-size:18px;color:var(--blue);opacity:.4;
+  font-size:27px;color:var(--blue);opacity:.4;
   flex-shrink:0;padding:4px;cursor:pointer;
 }
 .stop-expand{
@@ -476,31 +476,31 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 }
 .stop-expand.open{display:block}
 .exp-section{margin-bottom:10px}
-.exp-sec-title{font-size:10px;font-weight:700;color:var(--text2);
-  text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;
+.exp-sec-title{font-size:15px;font-weight:700;color:var(--text2);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;
   display:flex;align-items:center;gap:6px;width:100%;}
 .exp-sec-title .exp-edit-btn{margin-left:auto!important}
-.exp-act-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px}
+.exp-act-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:18px}
 .exp-chk{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border);
   cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .exp-chk.done{background:var(--green);border-color:var(--green);}
 .exp-chk.done::after{content:'✓';color:#fff;font-size:9px;}
 .exp-lbl{flex:1;color:var(--text);}
 .exp-lbl.done{text-decoration:line-through;color:var(--text2);}
-.exp-note-row{display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;font-size:12px;color:var(--red);}
+.exp-note-row{display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;font-size:18px;color:var(--red);}
 .exp-dot{width:5px;height:5px;border-radius:50%;background:var(--blue);margin-top:5px;flex-shrink:0;}
 .exp-edit-btn{
-  font-size:11px;padding:5px 12px;border-radius:8px;border:1px solid var(--blue);
+  font-size:16px;padding:7px 14px;border-radius:8px;border:1px solid var(--blue);
   background:#fff;color:var(--blue);cursor:pointer;
 }
 .exp-del-btn{
-  font-size:11px;padding:5px 12px;border-radius:8px;border:1px solid var(--red);
+  font-size:16px;padding:7px 14px;border-radius:8px;border:1px solid var(--red);
   background:#fff;color:var(--red);cursor:pointer;
   display:inline-flex;align-items:center;gap:4px;flex-shrink:0;
 }
 .exp-edit-form{background:#fff;border-radius:10px;padding:12px;border:1px solid var(--border);margin-top:8px}
-.exp-ef-label{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px}
-.exp-ef-inp{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;outline:none;margin-bottom:8px}
+.exp-ef-label{font-size:15px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px}
+.exp-ef-inp{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:19px;outline:none;margin-bottom:10px}
 .exp-ef-inp:focus{border-color:var(--blue)}
 .exp-ef-row{display:flex;gap:6px}
 .exp-ef-row .exp-ef-field{flex:1}
@@ -521,7 +521,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 /* .stop-past removed */
 .stop-next-row{background:var(--bg2);border-radius:8px}
 .next-stop-tag{
-  font-size:9px;font-weight:700;
+  font-size:13px;font-weight:700;
   background:#FFF3E0;color:#E65100;
   border-radius:4px;padding:1px 5px;
   margin-left:5px;vertical-align:middle;
@@ -530,24 +530,24 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .stop-transit-green{
   display:inline-flex;align-items:center;gap:4px;
   background:#E8F5E9;color:#1B5E20;
-  border-radius:99px;font-size:12px;font-weight:600;
-  padding:4px 11px;flex-shrink:0;cursor:pointer;
+  border-radius:99px;font-size:18px;font-weight:600;
+  padding:5px 13px;flex-shrink:0;cursor:pointer;
 }
-.stop-transit-green i{font-size:16px}
+.stop-transit-green i{font-size:24px}
 .stop-transit-black{
   display:inline-flex;align-items:center;gap:4px;
   background:#EBEBEB;color:#1A1A1A;
-  border-radius:99px;font-size:12px;font-weight:600;
-  padding:4px 11px;flex-shrink:0;cursor:pointer;
+  border-radius:99px;font-size:18px;font-weight:600;
+  padding:5px 13px;flex-shrink:0;cursor:pointer;
 }
-.stop-transit-black i{font-size:16px}
+.stop-transit-black i{font-size:24px}
 .stop-transit-red{
   display:inline-flex;align-items:center;gap:4px;
   background:#FCEBEB;color:#A32D2D;
-  border-radius:99px;font-size:12px;font-weight:600;
-  padding:4px 11px;flex-shrink:0;cursor:pointer;
+  border-radius:99px;font-size:18px;font-weight:600;
+  padding:5px 13px;flex-shrink:0;cursor:pointer;
 }
-.stop-transit-red i{font-size:16px}
+.stop-transit-red i{font-size:24px}
 .transit-diff{font-size:10px;font-weight:700;flex-shrink:0}
 .transit-diff-green{color:#1B5E20}
 .transit-diff-red{color:#A32D2D}
@@ -566,10 +566,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .stop-transit{
   display:inline-flex;align-items:center;gap:5px;
   background:#E6F1FB;color:#185FA5;
-  border-radius:99px;font-size:12px;font-weight:600;
-  padding:4px 11px;flex-shrink:0;cursor:pointer;
+  border-radius:99px;font-size:18px;font-weight:600;
+  padding:5px 13px;flex-shrink:0;cursor:pointer;
 }
-.stop-transit i{font-size:16px}
+.stop-transit i{font-size:24px}
 .stop-transit:active{background:#B5D4F4}
 .stop-wrap.dragging{
   position:relative;z-index:30;
@@ -1991,6 +1991,7 @@ function pcAddToItinerary(){
 // ════════════════════════════════
 function startApp(code, uid, name, tripName, isOrg){
   S.groupCode=code; S.myUid=uid; S.myName=name; S.isOrg=isOrg;
+  var _nmEl=document.getElementById('tb-myname'); if(_nmEl) _nmEl.textContent=name;
   localStorage.setItem('tg_code',code);
   localStorage.setItem('tg_uid',uid);
   localStorage.setItem('tg_name',name);
@@ -2319,8 +2320,10 @@ function renderStops(){
           '<div class="stop-time">'+((s.day?s.day+' ':'')+(s.arrive||'')+(s.depart?' ~ '+s.depart:'')+(s.note?' · '+s.note.substring(0,25):''))+'</div>' +
         '</div>' +
         (MS_MODE?'':
-          tbadge+
-          '<i class="ti ti-chevron-down stop-arr" id="sa-'+i+'"></i>'
+          '<div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0">'+
+            (tbadge?'<div style="display:flex;align-items:center;gap:4px">'+tbadge+'</div>':'')+
+            '<i class="ti ti-chevron-down stop-arr" id="sa-'+i+'"></i>'+
+          '</div>'
         ) +
       '</div>' +
       '<div class="stop-expand" id="se-'+i+'">' +
