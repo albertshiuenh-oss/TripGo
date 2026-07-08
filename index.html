@@ -1018,7 +1018,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v2.2 &nbsp;·&nbsp; 2026-07-09</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v2.3 &nbsp;·&nbsp; 2026-07-09</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -1324,9 +1324,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <input type="hidden" id="m-edit-key" value=""/>
   <div class="m-field"><label class="m-lbl">花費名稱</label><input class="m-inp" id="m-name" placeholder="午餐、門票…"/></div>
   <div class="m-row">
-    <div class="m-field"><label class="m-lbl">金額 (NT$)</label><input class="m-inp" id="m-amt" type="number" placeholder="0"/></div>
-    <div class="m-field"><label class="m-lbl">付款人</label><select class="m-sel" id="m-payer"></select></div>
+    <div class="m-field"><label class="m-lbl">金額</label><input class="m-inp" id="m-amt" type="number" placeholder="0"/></div>
+    <div class="m-field"><label class="m-lbl">幣別</label><select class="m-sel" id="m-currency"><option value="NTD">NTD</option><option value="USD">USD</option><option value="JPY">JPY</option><option value="EURO">EURO</option><option value="Others">Others</option></select></div>
   </div>
+  <div class="m-field"><label class="m-lbl">付款人</label><select class="m-sel" id="m-payer"></select></div>
   <div class="m-field"><label class="m-lbl">平攤人數</label>
     <select class="m-sel" id="m-split"><option value="all">全體成員</option><option value="5">5人</option><option value="4">4人</option><option value="3">3人</option><option value="2">2人</option></select>
   </div>
@@ -2316,15 +2317,10 @@ function renderStops(){
       '<div class="stop-row" id="sr-'+i+(isNext?' stop-next-row':'')+'">' +
         '<div class="stop-cb'+(sel?' on':'')+'" id="cb-'+i+'"></div>' +
         '<div class="stop-txt" id="st-'+i+'">' +
-          '<div class="stop-name">'+s.name+nextTag+'</div>' +
+          '<div class="stop-name"><i class="ti ti-chevron-right stop-arr" id="sa-'+i+'" style="font-size:12px;font-weight:700;vertical-align:middle;margin-right:4px;transition:transform .2s"></i>'+s.name+nextTag+'</div>' +
           '<div class="stop-time">'+((s.day?s.day+' ':'')+(s.arrive||'')+(s.depart?' ~ '+s.depart:'')+(s.note?' · '+s.note.substring(0,25):''))+'</div>' +
         '</div>' +
-        (MS_MODE?'':
-          '<div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0">'+
-            (tbadge?'<div style="display:flex;align-items:center;gap:4px">'+tbadge+'</div>':'')+
-            '<i class="ti ti-chevron-down stop-arr" id="sa-'+i+'"></i>'+
-          '</div>'
-        ) +
+        (MS_MODE?'':(tbadge?'<div style="display:flex;align-items:center;gap:4px;flex-shrink:0">'+tbadge+'</div>':'')) +
       '</div>' +
       '<div class="stop-expand" id="se-'+i+'">' +
         '<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-checkbox" aria-hidden="true"></i>活動清單<button class="exp-edit-btn" data-i="'+i+'" style="margin-left:auto"><i class="ti ti-pencil" aria-hidden="true"></i> 編輯</button><button class="exp-del-btn" data-i="'+i+'" style="margin-left:6px"><i class="ti ti-trash" aria-hidden="true"></i> 刪除</button></div>'+(actsHtml||'')+'</div>' +
@@ -2349,7 +2345,7 @@ function renderStops(){
       expPanel.classList.add('open');
       expPanel.style.display='block';
       var arrEl2=document.getElementById('sa-'+toRestore);
-      if(arrEl2) arrEl2.style.transform='rotate(180deg)';
+      if(arrEl2) arrEl2.style.transform='rotate(90deg)';
       var activeTxt2=document.getElementById('st-'+toRestore);
       if(activeTxt2) activeTxt2.classList.add('active');
       if(_inlineEditIdx>=0) renderInlineEditForm(_inlineEditIdx);
@@ -2496,7 +2492,7 @@ function tapStop(i){
   var activeTxt=document.getElementById('st-'+i);
   if(activeTxt) activeTxt.classList.add('active');
   var arrEl=document.getElementById('sa-'+i);
-  if(arrEl) arrEl.style.transform='rotate(180deg)';
+  if(arrEl) arrEl.style.transform='rotate(90deg)';
 
   S.currentStop=i;
   _expandedStopIdx=i; // track which panel is open
@@ -3201,7 +3197,7 @@ function renderExpenses(){
     card.innerHTML='<div class="exp-top">'+
       '<span class="exp-nm">'+e.name+'</span>'+
       '<div style="display:flex;align-items:center;gap:2px">'+
-        '<span class="exp-amt">NT$ '+e.amt.toLocaleString()+'</span>'+
+        '<span class="exp-amt">'+(e.currency||'NTD')+' '+e.amt.toLocaleString()+'</span>'+
         '<button class="exp-act-btn" data-act="edit"><i class="ti ti-pencil"></i></button>'+
         '<button class="exp-act-btn red" data-act="del"><i class="ti ti-trash"></i></button>'+
       '</div>'+
@@ -3246,7 +3242,8 @@ function confirmExpense(){
   var sn=sv==='all'?uniqueMembers().length:parseInt(sv);
   if(!name||!amt){showToast('請填寫名稱和金額',1500);return;}
   var editKey=document.getElementById('m-edit-key').value;
-  var data={name:name,amt:amt,payer:payer,split:sn,per:Math.round(amt/sn),time:getTime(),uid:S.myUid};
+  var currency=(document.getElementById('m-currency')||{}).value||'NTD';
+  var data={name:name,amt:amt,payer:payer,split:sn,per:Math.round(amt/sn),time:getTime(),uid:S.myUid,currency:currency};
   if(editKey){
     var orig=S.expenses[editKey]; if(orig&&orig.uid) data.uid=orig.uid; // 保留原始擁有者
     window.FB.set('tripgo/groups/'+S.groupCode+'/expenses/'+editKey,data);
@@ -3258,6 +3255,7 @@ function confirmExpense(){
   if(t)t.textContent='新增花費'; if(b)b.textContent='確認新增';
   closeModal('M-expense');
   document.getElementById('m-name').value=''; document.getElementById('m-amt').value='';
+  var _ce=document.getElementById('m-currency'); if(_ce){ _ce.value='NTD'; _ce.disabled=false; }
 }
 function editExpense(key,e){
   try{
@@ -3274,6 +3272,8 @@ function editExpense(key,e){
     }
     var t=document.getElementById('m-exp-title'),b=document.getElementById('btn-exp-ok');
     if(t)t.textContent='編輯花費'; if(b)b.textContent='確認修改';
+    var _ce2=document.getElementById('m-currency');
+    if(_ce2){ _ce2.value=e.currency||'NTD'; _ce2.disabled=!S.isOrg; }
     openModal('M-expense');
   }catch(err){ showToast('❌ 開啟編輯失敗：'+err.message,2000); }
 }
@@ -3303,6 +3303,7 @@ function memberDeviceCounts(){
 function renderPayerSelect(){
   var sel=document.getElementById('m-payer'); sel.innerHTML='';
   uniqueMembers().forEach(function(m){var o=document.createElement('option');o.value=m.name;o.textContent=m.name;sel.appendChild(o);});
+  if(S.myName) sel.value=S.myName;
 }
 function renderSplitSelect(){
   var sel=document.getElementById('m-split'); if(!sel) return;
@@ -4624,7 +4625,11 @@ window.addEventListener('load',function(){
   });
 
   // Expense
-  document.getElementById('btn-add-exp').addEventListener('click',function(){renderPayerSelect();renderSplitSelect();openModal('M-expense');});
+  document.getElementById('btn-add-exp').addEventListener('click',function(){
+    renderPayerSelect();renderSplitSelect();
+    var _ce=document.getElementById('m-currency'); if(_ce) _ce.disabled=!S.isOrg;
+    openModal('M-expense');
+  });
   document.getElementById('btn-exp-cancel').addEventListener('click',function(){
     document.getElementById('m-edit-key').value='';
     var t=document.getElementById('m-exp-title'),b=document.getElementById('btn-exp-ok');
