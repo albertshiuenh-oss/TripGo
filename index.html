@@ -213,14 +213,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   border-bottom:1px solid var(--border);flex-shrink:0;
 }
 .tb-logo{
-  font-size:15px;font-weight:700;color:var(--blue);
+  font-size:20px;font-weight:700;color:var(--blue);
   display:flex;align-items:center;gap:4px;flex-shrink:0;cursor:pointer;
   user-select:none;
 }
 .tb-trip{
-  font-size:13px;font-weight:600;color:var(--text);
+  font-size:20px;font-weight:600;color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  max-width:120px;cursor:pointer;flex:1;
+  max-width:160px;cursor:pointer;flex:1;
 }
 .tb-trip:active{opacity:.7}
 #net-status{
@@ -454,7 +454,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .stop-cb.on::after{content:'✓';color:#fff;font-size:11px}
 .multiselect .stop-cb{display:flex}
 .stop-txt{flex:1;cursor:pointer;min-width:0}
-.stop-name{font-size:22px;font-weight:600;color:var(--text);
+.stop-name{font-size:20px;font-weight:600;color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stop-txt.active .stop-name{color:var(--blue);font-weight:700}
 .stop-time{font-size:14px;color:var(--text2);margin-top:2px}
@@ -1018,7 +1018,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v2.3 &nbsp;·&nbsp; 2026-07-09</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v2.5 &nbsp;·&nbsp; 2026-07-09</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -2317,7 +2317,7 @@ function renderStops(){
       '<div class="stop-row" id="sr-'+i+(isNext?' stop-next-row':'')+'">' +
         '<div class="stop-cb'+(sel?' on':'')+'" id="cb-'+i+'"></div>' +
         '<div class="stop-txt" id="st-'+i+'">' +
-          '<div class="stop-name"><i class="ti ti-chevron-right stop-arr" id="sa-'+i+'" style="font-size:12px;font-weight:700;vertical-align:middle;margin-right:4px;transition:transform .2s"></i>'+s.name+nextTag+'</div>' +
+          '<div class="stop-name"><i class="ti ti-chevron-right stop-arr" id="sa-'+i+'" style="font-size:12px;font-weight:700;vertical-align:middle;margin-right:4px;transition:transform .2s;color:inherit;opacity:1"></i>'+s.name+nextTag+'</div>' +
           '<div class="stop-time">'+((s.day?s.day+' ':'')+(s.arrive||'')+(s.depart?' ~ '+s.depart:'')+(s.note?' · '+s.note.substring(0,25):''))+'</div>' +
         '</div>' +
         (MS_MODE?'':(tbadge?'<div style="display:flex;align-items:center;gap:4px;flex-shrink:0">'+tbadge+'</div>':'')) +
@@ -2929,7 +2929,7 @@ function renderNewStopForm(prefill){
         '<div class="exp-ef-field"><label class="exp-ef-label">離開時間</label><input class="exp-ef-inp" id="ief-depart" placeholder="12:00"/></div>'+
       '</div>'+
       '<div class="exp-ef-row">'+
-        '<div class="exp-ef-field"><label class="exp-ef-label">前往交通</label>'+
+        '<div class="exp-ef-field"><label class="exp-ef-label">前段交通</label>'+
           '<select class="exp-ef-inp" id="ief-transit-mode" style="cursor:pointer">'+
             '<option value="">（無）</option>'+
             '<option value="car">🚗 開車</option>'+
@@ -4271,7 +4271,7 @@ function renderInlineEditForm(i){
         '<div class="exp-ef-field"><label class="exp-ef-label">離開時間</label><input class="exp-ef-inp" id="ief-depart" value="'+escHtml(s.depart||'')+'" placeholder="12:00"/></div>'+
       '</div>'+
       '<div class="exp-ef-row">'+
-        '<div class="exp-ef-field"><label class="exp-ef-label">前往交通</label>'+
+        '<div class="exp-ef-field"><label class="exp-ef-label">前段交通</label>'+
           '<select class="exp-ef-inp" id="ief-transit-mode" style="cursor:pointer">'+
             '<option value=""'+((!s.transit||!s.transit.mode)?' selected':'')+'>（無）</option>'+
             '<option value="car"'+((s.transit&&s.transit.mode==='car')?' selected':'')+'>🚗 開車</option>'+
