@@ -563,6 +563,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .transit-refresh::after{content:''}
 .transit-refresh:active,.transit-refresh:hover{background:#C5DCF6}
 .stop-arr{touch-action:none;cursor:grab}
+.stop-arr.open{transform:rotate(90deg)}
 .stop-transit{
   display:inline-flex;align-items:center;gap:5px;
   background:#E6F1FB;color:#185FA5;
@@ -1018,7 +1019,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v2.5 &nbsp;·&nbsp; 2026-07-09</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v2.6 &nbsp;·&nbsp; 2026-07-09</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -1126,8 +1127,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="topbar">
     <span class="tb-logo" id="tb-logo"><i class="ti ti-map-2"></i> TripGo</span>
     <span class="tb-trip" id="tb-trip">旅遊群組</span>
-    <span id="net-status" class="online"><i class="ti ti-wifi" style="font-size:11px"></i><span id="net-label">線上</span></span>
     <span style="flex:1"></span>
+    <span id="net-status" class="online" style="margin-right:6px"><i class="ti ti-wifi" style="font-size:11px"></i><span id="net-label">線上</span></span>
     <span id="tb-myname" style="font-size:11px;color:var(--text2);font-weight:600;flex-shrink:0;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
 
   </div>
@@ -2345,7 +2346,7 @@ function renderStops(){
       expPanel.classList.add('open');
       expPanel.style.display='block';
       var arrEl2=document.getElementById('sa-'+toRestore);
-      if(arrEl2) arrEl2.style.transform='rotate(90deg)';
+      if(arrEl2) arrEl2.classList.add('open');
       var activeTxt2=document.getElementById('st-'+toRestore);
       if(activeTxt2) activeTxt2.classList.add('active');
       if(_inlineEditIdx>=0) renderInlineEditForm(_inlineEditIdx);
@@ -2478,7 +2479,7 @@ function tapStop(i){
     p.style.display='';   // clear inline style so CSS display:none takes over
   });
   document.querySelectorAll('.stop-txt.active').forEach(function(el){ el.classList.remove('active'); });
-  document.querySelectorAll('.stop-arr').forEach(function(el){ el.style.transform=''; });
+  document.querySelectorAll('.stop-arr').forEach(function(el){ el.classList.remove('open'); });
   _inlineEditIdx=-1;  // cancel any open edit form in the previously expanded stop
 
   if(isOpen){
@@ -2492,7 +2493,7 @@ function tapStop(i){
   var activeTxt=document.getElementById('st-'+i);
   if(activeTxt) activeTxt.classList.add('active');
   var arrEl=document.getElementById('sa-'+i);
-  if(arrEl) arrEl.style.transform='rotate(90deg)';
+  if(arrEl) arrEl.classList.add('open');
 
   S.currentStop=i;
   _expandedStopIdx=i; // track which panel is open
@@ -3400,7 +3401,7 @@ function showPane(name){
   var mw=document.getElementById('map-wrap');
   if(mw){
     mw.style.height=''; mw.style.width=''; // clear any leftover manual drag size from a previous pane
-    if(name==='chat'){ mw.classList.add('map-mini'); }
+    if(name==='chat'||name==='expense'){ mw.classList.add('map-mini'); }
     else { mw.classList.remove('map-mini'); }
     if(map) setTimeout(function(){ google.maps.event.trigger(map,'resize'); },260);
   }
@@ -4385,7 +4386,7 @@ function closeInlineEdit(i, collapse){
       expPanel.innerHTML=''; // 清空 ief-* 殘留元素，防止 getElementById 找到 hidden 的 stale 元素
     }
     var arrEl=document.getElementById('sa-'+i);
-    if(arrEl) arrEl.style.transform='';
+    if(arrEl) arrEl.classList.remove('open');
     var txt=document.getElementById('st-'+i);
     if(txt) txt.classList.remove('active');
     return;
