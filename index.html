@@ -499,6 +499,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   display:inline-flex;align-items:center;gap:4px;flex-shrink:0;
 }
 .exp-edit-form{background:#fff;border-radius:10px;padding:12px;border:1px solid var(--border);margin-top:8px}
+.time-sug{display:none;align-items:center;gap:5px;font-size:11px;color:var(--text2);margin-top:-5px;margin-bottom:5px;flex-wrap:wrap}
+.time-sug .sug-v{color:var(--blue);font-weight:700}
+.time-sug .sug-ok{background:none;border:1px solid var(--blue);color:var(--blue);border-radius:4px;font-size:10px;padding:1px 7px;cursor:pointer}
+.time-sug.stay{color:var(--green);font-weight:600}
+.exp-ins-btn{font-size:16px;padding:7px 14px;border-radius:8px;border:1px solid var(--green);background:#fff;color:var(--green);cursor:pointer;display:inline-flex;align-items:center;gap:4px;flex-shrink:0}
 .exp-ef-label{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px}
 .exp-ef-inp{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;outline:none;margin-bottom:8px}
 .exp-ef-inp:focus{border-color:var(--blue)}
@@ -1019,7 +1024,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v2.6 &nbsp;·&nbsp; 2026-07-09</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v2.7 &nbsp;·&nbsp; 2026-07-14</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -2243,6 +2248,10 @@ function sortStopsForDisplay(raw){
     if(!(d in groups)){ groups[d]=[]; dayOrder.push(d); }
     groups[d].push(s);
   });
+  dayOrder.sort(function(a,b){
+    var da=labelToDate(a)||a, db=labelToDate(b)||b;
+    return da<db?-1:da>db?1:0;
+  });
   var result=[];
   dayOrder.forEach(function(d){
     var items=groups[d];
@@ -2324,7 +2333,7 @@ function renderStops(){
         (MS_MODE?'':(tbadge?'<div style="display:flex;align-items:center;gap:4px;flex-shrink:0">'+tbadge+'</div>':'')) +
       '</div>' +
       '<div class="stop-expand" id="se-'+i+'">' +
-        '<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-checkbox" aria-hidden="true"></i>活動清單<button class="exp-edit-btn" data-i="'+i+'" style="margin-left:auto"><i class="ti ti-pencil" aria-hidden="true"></i> 編輯</button><button class="exp-del-btn" data-i="'+i+'" style="margin-left:6px"><i class="ti ti-trash" aria-hidden="true"></i> 刪除</button></div>'+(actsHtml||'')+'</div>' +
+        '<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-checkbox" aria-hidden="true"></i>活動清單<button class="exp-ins-btn" data-i="'+i+'" style="margin-left:auto"><i class="ti ti-row-insert-bottom" aria-hidden="true"></i> 插入</button><button class="exp-edit-btn" data-i="'+i+'" style="margin-left:6px"><i class="ti ti-pencil" aria-hidden="true"></i> 編輯</button><button class="exp-del-btn" data-i="'+i+'" style="margin-left:6px"><i class="ti ti-trash" aria-hidden="true"></i> 刪除</button></div>'+(actsHtml||'')+'</div>' +
         (notesHtml?'<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-alert-triangle" style="color:#F9AB00" aria-hidden="true"></i>注意事項</div>'+notesHtml+'</div>':'') +
 
         '</div>' +
@@ -2926,7 +2935,7 @@ function renderNewStopForm(prefill){
       '<input type="hidden" id="ief-lat" value="'+(prefill.lat||0)+'"/>'+
       '<input type="hidden" id="ief-lng" value="'+(prefill.lng||0)+'"/>'+
       '<div class="exp-ef-row">'+
-        '<div class="exp-ef-field"><label class="exp-ef-label">抵達時間</label><input class="exp-ef-inp" id="ief-arrive" placeholder="09:00"/></div>'+
+        '<div class="exp-ef-field"><label class="exp-ef-label">抵達時間</label><input class="exp-ef-inp" id="ief-arrive" placeholder="09:00" value="'+(prefill.arrive||'')+'"/></div>'+
         '<div class="exp-ef-field"><label class="exp-ef-label">離開時間</label><input class="exp-ef-inp" id="ief-depart" placeholder="12:00"/></div>'+
       '</div>'+
       '<div class="exp-ef-row">'+
@@ -2942,7 +2951,7 @@ function renderNewStopForm(prefill){
         '<div class="exp-ef-field"><label class="exp-ef-label">所需時間（分）</label><input class="exp-ef-inp" id="ief-transit-mins" type="number" inputmode="numeric" min="0" placeholder="0"/></div>'+
       '</div>'+
       '<label class="exp-ef-label">日期</label>'+
-      '<input class="exp-ef-inp" id="ief-day" type="date" style="cursor:pointer"/>'+
+      '<input class="exp-ef-inp" id="ief-day" type="date" style="cursor:pointer" value="'+(prefill.day||'')+'"/>'+
       '<label class="exp-ef-label">備註</label>'+
       '<input class="exp-ef-inp" id="ief-note" placeholder="（選填）"/>'+
       '<label class="exp-ef-label"><i class="ti ti-checkbox" style="font-size:13px" aria-hidden="true"></i> 活動清單</label>'+
@@ -3299,6 +3308,68 @@ function memberDeviceCounts(){
   var counts={};
   S.members.forEach(function(m){ counts[m.name]=(counts[m.name]||0)+1; });
   return counts;
+}
+
+// ── 時間工具 ──
+function parseT(t){
+  if(!t) return null;
+  var tr=t.trim();
+  if(tr.indexOf(':')<0) return null;
+  var p=tr.split(':'); var h=parseInt(p[0]),m=parseInt(p[1]);
+  if(isNaN(h)||isNaN(m)) return null;
+  return h*60+m;
+}
+function fmtT(m){
+  m=((m%1440)+1440)%1440;
+  var h=Math.floor(m/60),mi=m%60;
+  return (h<10?'0':'')+h+':'+(mi<10?'0':'')+mi;
+}
+function showSug(id,val,onApply){
+  var el=document.getElementById(id); if(!el) return;
+  var sv=el.querySelector('.sug-v'); if(sv) sv.textContent=val;
+  el.style.display='flex';
+  var btn=el.querySelector('.sug-ok');
+  if(btn){ btn.onclick=function(){ el.style.display='none'; if(onApply)onApply(); }; }
+}
+function hideSug(id){ var el=document.getElementById(id); if(el)el.style.display='none'; }
+function wireTimeFields(stopIdx){
+  var prev=stopIdx>0?S.stops[stopIdx-1]:null;
+  var prevD=prev?parseT(prev.depart):null;
+  var aEl=document.getElementById('ief-arrive');
+  var dEl=document.getElementById('ief-depart');
+  var mEl=document.getElementById('ief-transit-mins');
+  if(!aEl||!dEl||!mEl) return;
+  var stayEl=document.getElementById('sug-stay');
+  function updStay(){ var a=parseT(aEl.value),d=parseT(dEl.value);
+    if(a!=null&&d!=null&&stayEl){ var s=d-a; if(s<0)s+=1440;
+      stayEl.textContent='停留 '+Math.floor(s/60)+'時'+(s%60?s%60+'分':'');
+      stayEl.style.display='flex'; }
+    else if(stayEl) stayEl.style.display='none'; }
+  updStay();
+  mEl.addEventListener('input',function(){
+    hideSug('sug-arrive');
+    if(prevD==null) return;
+    var mins=parseInt(this.value)||0;
+    if(mins<=0||mins>600) return;
+    var sv=fmtT(prevD+mins);
+    showSug('sug-arrive',sv,function(){ aEl.value=sv; aEl.dispatchEvent(new Event('input')); });
+  });
+  aEl.addEventListener('input',function(){
+    hideSug('sug-arrive');
+    var a=parseT(this.value);
+    if(prevD!=null&&a!=null){
+      var tm=a-prevD;
+      if(tm>=0&&tm<600) showSug('sug-transit',String(tm),function(){ mEl.value=tm; });
+      else hideSug('sug-transit');
+    } else hideSug('sug-transit');
+    var d=parseT(dEl.value);
+    if(d!=null&&a!=null){
+      var stay=d-a; if(stay<0)stay+=1440;
+      if(stay<1440){ var sd=fmtT(a+stay);
+        showSug('sug-depart',sd,function(){ dEl.value=sd; updStay(); }); }
+    } else hideSug('sug-depart');
+  });
+  dEl.addEventListener('input',function(){ hideSug('sug-depart'); updStay(); });
 }
 
 function renderPayerSelect(){
@@ -4226,10 +4297,11 @@ function openInlineEdit(i){
 
   if(!expPanel.classList.contains('open')){
     tapStop(i);
-    setTimeout(function(){ renderInlineEditForm(i); afterRender(); },100);
+    setTimeout(function(){ renderInlineEditForm(i); afterRender(); wireTimeFields(i); },100);
   } else {
     renderInlineEditForm(i);
     afterRender();
+    wireTimeFields(i);
   }
 }
 
@@ -4268,8 +4340,8 @@ function renderInlineEditForm(i){
       '<input type="hidden" id="ief-lat" value="'+(s.lat||0)+'"/>'+
       '<input type="hidden" id="ief-lng" value="'+(s.lng||0)+'"/>'+
       '<div class="exp-ef-row">'+
-        '<div class="exp-ef-field"><label class="exp-ef-label">抵達時間</label><input class="exp-ef-inp" id="ief-arrive" value="'+escHtml(s.arrive||'')+'" placeholder="09:00"/></div>'+
-        '<div class="exp-ef-field"><label class="exp-ef-label">離開時間</label><input class="exp-ef-inp" id="ief-depart" value="'+escHtml(s.depart||'')+'" placeholder="12:00"/></div>'+
+        '<div class="exp-ef-field"><label class="exp-ef-label">抵達時間</label><input class="exp-ef-inp" id="ief-arrive" value="'+escHtml(s.arrive||'')+'" placeholder="09:00"/><div class="time-sug" id="sug-arrive">建議：<span class="sug-v"></span><button class="sug-ok">套用</button></div></div>'+
+        '<div class="exp-ef-field"><label class="exp-ef-label">離開時間</label><input class="exp-ef-inp" id="ief-depart" value="'+escHtml(s.depart||'')+'" placeholder="12:00"/><div class="time-sug" id="sug-depart">建議：<span class="sug-v"></span><button class="sug-ok">套用</button></div><div class="time-sug stay" id="sug-stay"></div></div>'+
       '</div>'+
       '<div class="exp-ef-row">'+
         '<div class="exp-ef-field"><label class="exp-ef-label">前段交通</label>'+
@@ -4413,7 +4485,8 @@ function closeInlineEdit(i, collapse){
   }
   expPanel.innerHTML=
     '<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-checkbox"></i>活動清單'+
-      '<button class="exp-edit-btn" data-i="'+i+'" style="margin-left:auto"><i class="ti ti-pencil"></i> 編輯</button>'+
+      '<button class="exp-ins-btn" data-i="'+i+'" style="margin-left:auto"><i class="ti ti-row-insert-bottom"></i> 插入</button>'+
+      '<button class="exp-edit-btn" data-i="'+i+'" style="margin-left:6px"><i class="ti ti-pencil"></i> 編輯</button>'+
       '<button class="exp-del-btn" data-i="'+i+'" style="margin-left:6px"><i class="ti ti-trash"></i> 刪除</button>'+
     '</div>'+(actsHtml||'')+'</div>'+
     (notesHtml?'<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-alert-triangle" style="color:#F9AB00"></i>注意事項</div>'+notesHtml+'</div>':'');
@@ -4592,6 +4665,12 @@ window.addEventListener('load',function(){
 
   // Itinerary
   document.getElementById('btn-add-stop').addEventListener('click',openNewStopForm);
+  document.getElementById('stop-list').addEventListener('click',function(e){
+    var btn=e.target.closest('.exp-ins-btn'); if(!btn) return;
+    e.stopPropagation();
+    var idx=parseInt(btn.dataset.i), s=S.stops[idx]; if(!s) return;
+    openNewStopForm({day:s.day?labelToDate(s.day):'', arrive:s.depart||s.arrive||''});
+  });
   document.getElementById('btn-asp-cancel').addEventListener('click',closeAddStop);
   document.getElementById('btn-asp-save').addEventListener('click',saveStop);
   document.getElementById('btn-det-back').addEventListener('click',closeDetail);
