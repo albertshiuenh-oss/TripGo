@@ -1024,7 +1024,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v3.1 &nbsp;·&nbsp; 2026-07-14</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v3.2 &nbsp;·&nbsp; 2026-07-14</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -2323,14 +2323,23 @@ function renderStops(){
         tbadge='<span class="stop-transit" id="stn-'+i+'" data-i="'+i+'"><i class="ti '+ticon+'" aria-hidden="true"></i> '+planned+'min</span>'+(isNext?'<span class="transit-refresh" data-i="'+i+'" title="查即時路況"><i class="ti ti-refresh" aria-hidden="true"></i></span>':'');
       }
     }
+    // 計算停留時間（在展開前顯示於時間列）
+    var stayStr='';
+    if(s.arrive&&s.depart){
+      var _sa=parseT(s.arrive),_sd=parseT(s.depart);
+      if(_sa!=null&&_sd!=null){var _st=_sd-_sa;if(_st<0)_st+=1440;
+        var _sh=Math.floor(_st/60),_sm=_st%60;
+        if(_st>0) stayStr=' · <span style="color:var(--green);font-weight:700">停留 '+(_sh?_sh+'時':'')+(_sm?_sm+'分':'')+'</span>';}
+    }
     html+='<div class="stop-wrap'+pastCls+'" id="sw-'+i+'">' +
-      '<div class="stop-row" id="sr-'+i+(isNext?' stop-next-row':'')+'">' +
+      '<div class="stop-row" id="sr-'+i+(isNext?' stop-next-row':'')+'" style="position:relative">' +
         '<div class="stop-cb'+(sel?' on':'')+'" id="cb-'+i+'"></div>' +
         '<div class="stop-txt" id="st-'+i+'">' +
-          '<div class="stop-name"><i class="ti ti-chevron-right stop-arr" id="sa-'+i+'" style="font-size:12px;font-weight:700;vertical-align:middle;margin-right:4px;transition:transform .2s;color:inherit;opacity:1"></i>'+s.name+nextTag+'</div>' +
-          '<div class="stop-time">'+((s.day?s.day+' ':'')+(s.arrive||'')+(s.depart?' ~ '+s.depart:'')+(s.note?' · '+s.note.substring(0,25):''))+'</div>' +
+          '<div class="stop-name"'+(tbadge?' style="padding-right:95px"':'')+'>'+
+            '<i class="ti ti-chevron-right stop-arr" id="sa-'+i+'" style="font-size:12px;font-weight:700;vertical-align:middle;margin-right:4px;transition:transform .2s;color:inherit;opacity:1"></i>'+s.name+nextTag+'</div>' +
+          '<div class="stop-time">'+((s.day?s.day+' ':'')+(s.arrive||'')+(s.depart?' ~ '+s.depart:'')+stayStr+(s.note?' · '+s.note.substring(0,25):''))+'</div>' +
         '</div>' +
-        (MS_MODE?'':(tbadge?'<div style="display:flex;align-items:center;gap:4px;flex-shrink:0">'+tbadge+'</div>':'')) +
+        (MS_MODE?'':(tbadge?'<div style="position:absolute;top:11px;right:14px;display:flex;align-items:center;gap:4px;">'+tbadge+'</div>':'')) +
       '</div>' +
       '<div class="stop-expand" id="se-'+i+'">' +
         '<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-checkbox" aria-hidden="true"></i>活動清單<div style="display:flex;align-items:center;gap:6px;margin-left:auto"><button class="exp-ins-btn" data-i="'+i+'"><i class="ti ti-row-insert-bottom" aria-hidden="true"></i> 插入</button><button class="exp-edit-btn" data-i="'+i+'"><i class="ti ti-pencil" aria-hidden="true"></i> 編輯</button><button class="exp-del-btn" data-i="'+i+'"><i class="ti ti-trash" aria-hidden="true"></i> 刪除</button></div></div>'+(actsHtml||'')+'</div>' +
