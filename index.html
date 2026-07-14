@@ -490,20 +490,20 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .exp-note-row{display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;font-size:14px;color:var(--red);}
 .exp-dot{width:5px;height:5px;border-radius:50%;background:var(--blue);margin-top:5px;flex-shrink:0;}
 .exp-edit-btn{
-  font-size:16px;padding:7px 14px;border-radius:8px;border:1px solid var(--blue);
-  background:#fff;color:var(--blue);cursor:pointer;
+  font-size:11px;padding:3px 10px;border-radius:99px;border:1px solid #185FA5;
+  background:#E6F1FB;color:#185FA5;cursor:pointer;
 }
 .exp-del-btn{
-  font-size:16px;padding:7px 14px;border-radius:8px;border:1px solid var(--red);
-  background:#fff;color:var(--red);cursor:pointer;
-  display:inline-flex;align-items:center;gap:4px;flex-shrink:0;
+  font-size:11px;padding:3px 10px;border-radius:99px;border:1px solid #A32D2D;
+  background:#FCEBEB;color:#A32D2D;cursor:pointer;
+  display:inline-flex;align-items:center;gap:3px;flex-shrink:0;
 }
 .exp-edit-form{background:#fff;border-radius:10px;padding:12px;border:1px solid var(--border);margin-top:8px}
 .time-sug{display:none;align-items:center;gap:5px;font-size:11px;color:var(--text2);margin-top:-5px;margin-bottom:5px;flex-wrap:wrap}
 .time-sug .sug-v{color:var(--blue);font-weight:700}
 .time-sug .sug-ok{background:none;border:1px solid var(--blue);color:var(--blue);border-radius:4px;font-size:10px;padding:1px 7px;cursor:pointer}
 .time-sug.stay{color:var(--green);font-weight:600}
-.exp-ins-btn{font-size:16px;padding:7px 14px;border-radius:8px;border:1px solid var(--green);background:#fff;color:var(--green);cursor:pointer;display:inline-flex;align-items:center;gap:4px;flex-shrink:0}
+.exp-ins-btn{font-size:11px;padding:3px 10px;border-radius:99px;border:1px solid #2E7D32;background:#E8F5E9;color:#2E7D32;cursor:pointer;display:inline-flex;align-items:center;gap:3px;flex-shrink:0}
 .exp-ef-label{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px}
 .exp-ef-inp{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;outline:none;margin-bottom:8px}
 .exp-ef-inp:focus{border-color:var(--blue)}
@@ -1024,7 +1024,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v2.7 &nbsp;·&nbsp; 2026-07-14</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v3.0 &nbsp;·&nbsp; 2026-07-14</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -3342,8 +3342,8 @@ function wireTimeFields(stopIdx){
   var stayEl=document.getElementById('sug-stay');
   function updStay(){ var a=parseT(aEl.value),d=parseT(dEl.value);
     if(a!=null&&d!=null&&stayEl){ var s=d-a; if(s<0)s+=1440;
-      stayEl.textContent='停留 '+Math.floor(s/60)+'時'+(s%60?s%60+'分':'');
-      stayEl.style.display='flex'; }
+      stayEl.textContent=' 停留 '+Math.floor(s/60)+'時'+(s%60?s%60+'分':'');
+      stayEl.style.display='block'; }
     else if(stayEl) stayEl.style.display='none'; }
   updStay();
   mEl.addEventListener('input',function(){
@@ -4341,7 +4341,7 @@ function renderInlineEditForm(i){
       '<input type="hidden" id="ief-lng" value="'+(s.lng||0)+'"/>'+
       '<div class="exp-ef-row">'+
         '<div class="exp-ef-field"><label class="exp-ef-label">抵達時間</label><input class="exp-ef-inp" id="ief-arrive" value="'+escHtml(s.arrive||'')+'" placeholder="09:00"/><div class="time-sug" id="sug-arrive">建議：<span class="sug-v"></span><button class="sug-ok">套用</button></div></div>'+
-        '<div class="exp-ef-field"><label class="exp-ef-label">離開時間</label><input class="exp-ef-inp" id="ief-depart" value="'+escHtml(s.depart||'')+'" placeholder="12:00"/><div class="time-sug" id="sug-depart">建議：<span class="sug-v"></span><button class="sug-ok">套用</button></div><div class="time-sug stay" id="sug-stay"></div></div>'+
+        '<div class="exp-ef-field"><label class="exp-ef-label">離開時間</label><div style="display:flex;align-items:center;gap:8px"><input class="exp-ef-inp" id="ief-depart" value="'+escHtml(s.depart||'')+'" placeholder="12:00" style="flex:1;width:auto;min-width:0"/><div id="sug-stay" style="display:none;font-size:13px;font-weight:700;color:var(--green);white-space:nowrap;flex-shrink:0"></div></div><div class="time-sug" id="sug-depart">建議：<span class="sug-v"></span><button class="sug-ok">套用</button></div></div>'+
       '</div>'+
       '<div class="exp-ef-row">'+
         '<div class="exp-ef-field"><label class="exp-ef-label">前段交通</label>'+
@@ -4670,6 +4670,47 @@ window.addEventListener('load',function(){
     e.stopPropagation();
     var idx=parseInt(btn.dataset.i), s=S.stops[idx]; if(!s) return;
     openNewStopForm({day:s.day?labelToDate(s.day):'', arrive:s.depart||s.arrive||''});
+  });
+
+  // ── 景點名稱長按（600ms）→ 複製景點名稱 ──
+  var _lpTimer=null, _lpFired=false;
+  var stopList=document.getElementById('stop-list');
+  stopList.addEventListener('touchstart',function(e){
+    var nameEl=e.target.closest('.stop-name');
+    if(!nameEl||e.target.closest('.stop-arr')) return; // 排除拖曳箭頭
+    var stTxt=nameEl.closest('.stop-txt');
+    if(!stTxt) return;
+    var idx=parseInt((stTxt.id||'').replace('st-',''));
+    if(isNaN(idx)||!S.stops[idx]) return;
+    var name=S.stops[idx].name||'';
+    _lpFired=false;
+    _lpTimer=setTimeout(function(){
+      _lpFired=true;
+      // 複製到剪貼簿
+      if(navigator.clipboard){
+        navigator.clipboard.writeText(name).catch(function(){});
+      } else {
+        var ta=document.createElement('textarea');
+        ta.value=name; ta.style.position='fixed'; ta.style.opacity='0';
+        document.body.appendChild(ta); ta.select();
+        try{ document.execCommand('copy'); }catch(e2){}
+        document.body.removeChild(ta);
+      }
+      // 視覺回饋
+      nameEl.style.opacity='0.4';
+      setTimeout(function(){ nameEl.style.opacity=''; },300);
+      showToast('📋 已複製：'+name, 2000);
+    },600);
+  },{passive:true});
+  stopList.addEventListener('touchend',function(e){
+    if(_lpTimer){ clearTimeout(_lpTimer); _lpTimer=null; }
+    if(_lpFired){ _lpFired=false; e.preventDefault(); } // 長按後不觸發 click
+  },{passive:false});
+  stopList.addEventListener('touchmove',function(){
+    if(_lpTimer){ clearTimeout(_lpTimer); _lpTimer=null; } // 滑動時取消
+  },{passive:true});
+  stopList.addEventListener('touchcancel',function(){
+    if(_lpTimer){ clearTimeout(_lpTimer); _lpTimer=null; }
   });
   document.getElementById('btn-asp-cancel').addEventListener('click',closeAddStop);
   document.getElementById('btn-asp-save').addEventListener('click',saveStop);
