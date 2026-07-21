@@ -74,6 +74,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   box-shadow:0 2px 8px rgba(0,0,0,.1);
 }
 .jtp-card:active{opacity:.9}
+.jtp-done-divider{display:flex;align-items:center;gap:10px;margin:4px 0}
+.jtp-done-line{flex:1;height:1px;background:rgba(255,255,255,.15)}
+.jtp-done-txt{font-size:10px;color:rgba(255,255,255,.35);font-weight:600;letter-spacing:.4px;white-space:nowrap}
+.jtp-card-done{background:rgba(255,255,255,.3);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:8px;cursor:pointer;opacity:.65;transition:opacity .2s;filter:saturate(.5)}
+.jtp-card-done:hover,.jtp-card-done:active{opacity:.85}
+.jtp-done-badge{font-size:10px;padding:2px 8px;border-radius:99px;background:rgba(46,125,50,.2);color:#7cba7e;font-weight:700;white-space:nowrap;flex-shrink:0}
+.jtp-complete-btn{background:none;border:1.5px solid #7cba7e;color:#7cba7e;font-size:10px;padding:2px 9px;border-radius:6px;cursor:pointer;flex-shrink:0;white-space:nowrap;font-weight:700}
+.jtp-undo-btn{background:none;border:1px solid rgba(255,255,255,.3);color:rgba(255,255,255,.55);font-size:10px;padding:2px 9px;border-radius:6px;cursor:pointer;flex-shrink:0;white-space:nowrap}
 .jtp-del{
   background:#FCE8E6;border:none;border-radius:8px;
   padding:4px 8px;cursor:pointer;font-size:12px;
@@ -1024,7 +1032,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v3.2 &nbsp;·&nbsp; 2026-07-14</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v3.3 &nbsp;·&nbsp; 2026-07-14</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -1038,6 +1046,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
     </div>
     <button class="js-big-btn primary" id="btn-join"><div class="jbb-ic blue"><i class="ti ti-login" style="color:var(--blue);font-size:22px"></i></div><div class="jbb-txt"><div class="jbb-h">加入群組</div><div class="jbb-s">輸入邀請碼，加入朋友的旅遊</div></div><i class="ti ti-chevron-right jbb-arr"></i></button>
     <button class="js-big-btn outline" id="btn-create"><div class="jbb-ic wh"><i class="ti ti-map-plus" style="color:#fff;font-size:22px"></i></div><div class="jbb-txt"><div class="jbb-h">建立群組</div><div class="jbb-s">建立新旅遊，邀請朋友加入</div></div><i class="ti ti-chevron-right jbb-arr"></i></button>
+    <div id="jtp-done-section" style="display:none;flex-direction:column;gap:8px"></div>
   </div>
 
   <!-- Sub (join / create) -->
@@ -4117,6 +4126,14 @@ function applyFirebaseNameMatches(name, nl, localMatched, data){
   if(curVal.trim()===name) renderTripsPreview(name, true);
 }
 
+function markTripCompleted(code, done){
+  var trips=getStoredTrips();
+  trips=trips.map(function(t){ if(t.code===code){ t.completed=!!done; } return t; });
+  saveStoredTrips(trips);
+  renderTripsPreview((document.getElementById('js-home-name')||{}).value||'');
+  showToast(done?'✅ 已標記完成':'↩️ 已恢復進行中',1500);
+}
+
 function renderTripsPreview(inputName, _skipFbSearch){
   var preview=document.getElementById('js-trips-preview');
   var list=document.getElementById('jtp-list');
@@ -4133,41 +4150,64 @@ function renderTripsPreview(inputName, _skipFbSearch){
     list.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.6)">找不到「'+name+'」的旅程，搜尋雲端中…</div>';
     countEl.textContent=''; return;
   }
-  var built=matched.filter(function(t){return t.isOrg;}).length;
-  var joined=matched.filter(function(t){return !t.isOrg;}).length;
-  countEl.textContent='「'+name+'」建立 '+built+' 個 · 加入 '+joined+' 個';
-  list.innerHTML=matched.slice(0,5).map(function(t,i){
-    return '<div class="jtp-card" data-i="'+i+'">' +
+  var active=matched.filter(function(t){return !t.completed;});
+  var done=matched.filter(function(t){return !!t.completed;});
+  var built=active.filter(function(t){return t.isOrg;}).length;
+  var joined=active.filter(function(t){return !t.isOrg;}).length;
+  countEl.textContent='「'+name+'」進行中 '+(built+joined)+' 個'+(done.length?' · 已完成 '+done.length+' 個':'');
+  function buildCard(t,i,isDone){
+    var cls=isDone?'jtp-card-done':'jtp-card';
+    return '<div class="'+cls+'" data-i="'+i+'" data-done="'+(isDone?1:0)+'">' +
       '<span style="font-size:14px;flex-shrink:0">'+(t.isOrg?'👑':'👤')+'</span>' +
       '<div style="flex:1;min-width:0">'+
         '<div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+t.tripName+'</div>'+
         '<div style="font-size:10px;color:var(--text2)">'+t.code+'</div>'+
       '</div>'+
-      (t.isOrg?'<button class="jtp-del" data-code="'+t.code+'">🗑</button>':'')+
-      '<i class="ti ti-chevron-right" style="font-size:14px;color:var(--blue);opacity:.5;flex-shrink:0"></i>'+
-    '</div>';
-  }).join('') + (matched.length>5?'<div style="font-size:11px;color:rgba(255,255,255,.7);text-align:center;padding:4px">還有 '+(matched.length-5)+' 個旅程…</div>':'');
+      (isDone
+        ? '<span class="jtp-done-badge">✓ 已完成</span><button class="jtp-undo-btn" data-code="'+t.code+'">恢復</button>'
+        : (t.isOrg?'<button class="jtp-complete-btn" data-code="'+t.code+'">✓ 完成</button><button class="jtp-del" data-code="'+t.code+'">🗑</button>':'')+
+          '<i class="ti ti-chevron-right" style="font-size:14px;color:var(--blue);opacity:.5;flex-shrink:0"></i>'
+      )+'</div>';
+  }
+  list.innerHTML=active.slice(0,5).map(function(t,i){ return buildCard(t,i,false); }).join('')+
+    (active.length>5?'<div style="font-size:11px;color:rgba(255,255,255,.7);text-align:center;padding:4px">還有 '+(active.length-5)+' 個旅程…</div>':'');
   preview.style.display='flex';
-  // Attach handlers
-  list.querySelectorAll('.jtp-card').forEach(function(card,i){
-    var t=matched[i], _delClicked=false;
-    var delBtn=card.querySelector('.jtp-del');
-    if(delBtn){
-      delBtn.addEventListener('touchstart',function(e){e.stopPropagation();},{passive:false});
-      delBtn.addEventListener('click',function(e){
-        e.stopPropagation(); e.stopImmediatePropagation();
-        _delClicked=true; setTimeout(function(){_delClicked=false;},500);
-        deleteTrip(this.dataset.code);
-      });
-    }
-    card.addEventListener('click',function(){
-      if(_delClicked) return;
-      if(!window.FB||!window.FB.ready){showToast('⏳ 連線中',1500);return;}
-      window.FB.get('tripgo/groups/'+t.code).then(function(snap){
-        if(snap.exists()) startApp(t.code,t.uid,t.name,t.tripName,t.isOrg);
-        else{ saveStoredTrips(getStoredTrips().filter(function(x){return x.code!==t.code;}));renderTripsPreview(name);showToast('⚠️ 旅程已不存在',2000); }
-      });
+  var doneSection=document.getElementById('jtp-done-section');
+  if(doneSection){
+    if(done.length){
+      doneSection.innerHTML='<div class="jtp-done-divider"><div class="jtp-done-line"></div><div class="jtp-done-txt">已完成的旅程</div><div class="jtp-done-line"></div></div>'+
+        done.map(function(t,i){ return buildCard(t,i,true); }).join('');
+      doneSection.style.display='flex';
+    } else { doneSection.innerHTML=''; doneSection.style.display='none'; }
+  }
+  function enterTrip(t){ if(!window.FB||!window.FB.ready){showToast('⏳ 連線中',1500);return;}
+    window.FB.get('tripgo/groups/'+t.code).then(function(snap){
+      if(snap.exists()) startApp(t.code,t.uid,t.name,t.tripName,t.isOrg);
+      else{ saveStoredTrips(getStoredTrips().filter(function(x){return x.code!==t.code;}));renderTripsPreview(name);showToast('⚠️ 旅程已不存在',2000); }
     });
+  }
+  list.querySelectorAll('.jtp-card').forEach(function(card,i){
+    var t=active[i]; var _b=false;
+    var delBtn=card.querySelector('.jtp-del');
+    if(delBtn){ delBtn.addEventListener('touchstart',function(e){e.stopPropagation();},{passive:false});
+      delBtn.addEventListener('click',function(e){ e.stopPropagation();e.stopImmediatePropagation();_b=true;setTimeout(function(){_b=false;},500); deleteTrip(this.dataset.code); }); }
+    var compBtn=card.querySelector('.jtp-complete-btn');
+    if(compBtn){ compBtn.addEventListener('touchstart',function(e){e.stopPropagation();},{passive:false});
+      compBtn.addEventListener('click',(function(code){ return function(e){
+        e.stopPropagation();e.stopImmediatePropagation();_b=true;setTimeout(function(){_b=false;},500);
+        showCustomConfirm('✅','標記為已完成？','行程移至封存區，仍可點擊進入查看。','確定完成',function(){ markTripCompleted(code,true); });
+      };})(t.code)); }
+    card.addEventListener('click',function(){ if(_b) return; enterTrip(t); });
+  });
+  if(doneSection) doneSection.querySelectorAll('.jtp-card-done').forEach(function(card,i){
+    var t=done[i]; var _b=false;
+    var undoBtn=card.querySelector('.jtp-undo-btn');
+    if(undoBtn){ undoBtn.addEventListener('touchstart',function(e){e.stopPropagation();},{passive:false});
+      undoBtn.addEventListener('click',(function(code){ return function(e){
+        e.stopPropagation();e.stopImmediatePropagation();_b=true;setTimeout(function(){_b=false;},500);
+        markTripCompleted(code,false);
+      };})(t.code)); }
+    card.addEventListener('click',function(){ if(_b) return; enterTrip(t); });
   });
 }
 
