@@ -81,6 +81,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .jtp-card-done:hover,.jtp-card-done:active{opacity:.85}
 .jtp-done-badge{font-size:10px;padding:2px 8px;border-radius:99px;background:rgba(46,125,50,.2);color:#7cba7e;font-weight:700;white-space:nowrap;flex-shrink:0}
 .jtp-complete-btn{background:none;border:1.5px solid #7cba7e;color:#7cba7e;font-size:10px;padding:2px 9px;border-radius:6px;cursor:pointer;flex-shrink:0;white-space:nowrap;font-weight:700}
+.jtp-export-btn{background:none;border:1.5px solid #185FA5;color:#185FA5;font-size:10px;padding:2px 9px;border-radius:6px;cursor:pointer;flex-shrink:0;white-space:nowrap;font-weight:700;display:inline-flex;align-items:center;gap:3px}
 .jtp-undo-btn{background:none;border:1px solid rgba(255,255,255,.3);color:rgba(255,255,255,.55);font-size:10px;padding:2px 9px;border-radius:6px;cursor:pointer;flex-shrink:0;white-space:nowrap}
 .jtp-del{
   background:#FCE8E6;border:none;border-radius:8px;
@@ -1032,7 +1033,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v3.3 &nbsp;·&nbsp; 2026-07-14</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v3.5 &nbsp;·&nbsp; 2026-07-14</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -3964,8 +3965,11 @@ function getStoredTrips(){
 }
 function saveStoredTrips(arr){ localStorage.setItem('tg_trips',JSON.stringify(arr)); }
 function updateStoredTrip(code,uid,name,tripName,isOrg){
-  var trips=getStoredTrips().filter(function(t){return t.code!==code;});
-  trips.unshift({code:code,uid:uid,name:name,tripName:tripName,isOrg:isOrg});
+  var trips=getStoredTrips();
+  var old=trips.find(function(t){return t.code===code;});
+  trips=trips.filter(function(t){return t.code!==code;});
+  trips.unshift({code:code,uid:uid,name:name,tripName:tripName,isOrg:isOrg,
+    completed:!!(old&&old.completed)}); // 保留「已完成」狀態
   saveStoredTrips(trips.slice(0,20));
 }
 function deleteTrip(code){
@@ -4126,6 +4130,97 @@ function applyFirebaseNameMatches(name, nl, localMatched, data){
   if(curVal.trim()===name) renderTripsPreview(name, true);
 }
 
+function exportTripKML(code, tripName){
+  if(!window.FB||!window.FB.ready){ showToast('⏳ 連線中',1500); return; }
+  showToast('⏳ 匯出中，請稍候…', 3000);
+  Promise.all([
+    window.FB.get('tripgo/groups/'+code+'/stops'),
+    window.FB.get('tripgo/groups/'+code+'/members'),
+    window.FB.get('tripgo/groups/'+code+'/expenses')
+  ]).then(function(res){
+    var stops=res[0].exists()?Object.values(res[0].val()):[];
+    var mems=res[1].exists()?Object.values(res[1].val()):[];
+    var exps=res[2].exists()?Object.values(res[2].val()):[];
+    // 去重成員
+    var seenN={}, uMems=[];
+    mems.forEach(function(m){ if(!seenN[m.name]){seenN[m.name]=true;uMems.push(m);} });
+    var memStr=uMems.map(function(m){return m.name+(m.role==='organizer'?'（召集人）':'');}).join('、');
+    // 景點排序
+    stops.sort(function(a,b){
+      var da=labelToDate(a.day)||a.day||'', db=labelToDate(b.day)||b.day||'';
+      if(da!==db) return da<db?-1:1;
+      return (parseT(a.arrive)||0)-(parseT(b.arrive)||0);
+    });
+    // 按天分組
+    var days={}, dayOrd=[];
+    stops.forEach(function(s){
+      var d=s.day||'未指定日期'; if(!days[d]){days[d]=[];dayOrd.push(d);} days[d].push(s);
+    });
+    // KML 開頭
+    var x='<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document>\n';
+    x+='<name>'+escHtml(tripName)+'</name>\n';
+    x+='<description><![CDATA[匯出自 TripGo<br>團員：'+memStr+']]></description>\n';
+    x+='<Style id="stp"><IconStyle><color>ff9B4400</color><scale>1.1</scale><Icon><href>https://maps.google.com/mapfiles/kml/paddle/blu-circle.png</href></Icon></IconStyle></Style>\n';
+    x+='<Style id="rte"><LineStyle><color>ffFF7800</color><width>3</width></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>\n';
+    // 每天資料夾
+    dayOrd.forEach(function(day){
+      var ds=days[day];
+      x+='<Folder><name>'+escHtml(day)+'</name>\n';
+      // 路線
+      var hasCrd=ds.filter(function(s){return s.lat&&s.lng;});
+      if(hasCrd.length>1){
+        x+='<Placemark><name>'+escHtml(day)+' 路線</name><styleUrl>#rte</styleUrl><LineString><tessellate>1</tessellate><coordinates>\n';
+        hasCrd.forEach(function(s){x+=s.lng+','+s.lat+',0\n';});
+        x+='</coordinates></LineString></Placemark>\n';
+      }
+      // 景點
+      ds.forEach(function(s,idx){
+        x+='<Placemark>\n<name>'+escHtml((idx+1)+'. '+s.name)+'</name>\n';
+        var desc='';
+        if(s.arrive||s.depart){
+          desc+='⏰ '+(s.arrive||'?')+' ~ '+(s.depart||'?');
+          if(s.arrive&&s.depart){var sa=parseT(s.arrive),sd=parseT(s.depart);
+            if(sa!=null&&sd!=null){var st=sd-sa;if(st<0)st+=1440;var sh=Math.floor(st/60),sm=st%60;
+              desc+=' 停留 '+(sh?sh+'時':'')+(sm?sm+'分':'');}}
+          desc+='<br>';
+        }
+        if(s.transit&&s.transit.mode&&s.transit.minutes){
+          var modeMap={car:'開車',walk:'步行',bus:'公車',train:'火車'};
+          desc+='🚌 前段交通：'+s.transit.minutes+'分（'+(modeMap[s.transit.mode]||s.transit.mode)+'）<br>';
+        }
+        if(s.note) desc+='📝 '+s.note+'<br>';
+        if(s.activities&&s.activities.length) desc+='✅ '+s.activities.map(function(a){return a.text||a;}).join('、')+'<br>';
+        if(s.budget&&s.budget!=='NT$ 0') desc+='💰 預算：'+s.budget+'<br>';
+        x+='<description><![CDATA['+desc+']]></description>\n<styleUrl>#stp</styleUrl>\n';
+        if(s.lat&&s.lng) x+='<Point><coordinates>'+s.lng+','+s.lat+',0</coordinates></Point>\n';
+        x+='</Placemark>\n';
+      });
+      x+='</Folder>\n';
+    });
+    // 團員資料夾
+    x+='<Folder><name>👥 團員</name><Placemark><name>'+escHtml(tripName)+' 團員名單</name>';
+    x+='<description><![CDATA['+memStr+']]></description></Placemark></Folder>\n';
+    // 花費資料夾
+    if(exps.length){
+      var total=0; var lines='';
+      exps.forEach(function(e){ total+=e.amt||0;
+        lines+=(e.currency||'NTD')+' '+(e.amt||0).toLocaleString()+' · '+escHtml(e.name||'')+'（付款：'+escHtml(e.payer||'')+' · '+e.split+'人）<br>';
+      });
+      x+='<Folder><name>💰 花費記錄</name><Placemark><name>花費總計 '+total.toLocaleString()+'</name>';
+      x+='<description><![CDATA['+lines+']]></description></Placemark></Folder>\n';
+    }
+    x+='</Document>\n</kml>';
+    // 下載
+    var blob=new Blob([x],{type:'application/vnd.google-earth.kml+xml'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a'); a.href=url; a.download=(tripName||'tripgo').replace(/\s+/g,'-')+'.kml';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setTimeout(function(){ window.open('https://www.google.com/maps/d/create','_blank'); },800);
+    showToast('✅ KML 已下載！請在 Google My Maps 點「匯入」',3500);
+  }).catch(function(err){ showToast('❌ 匯出失敗：'+err.message,2000); });
+}
+
 function markTripCompleted(code, done){
   var trips=getStoredTrips();
   trips=trips.map(function(t){ if(t.code===code){ t.completed=!!done; } return t; });
@@ -4165,7 +4260,7 @@ function renderTripsPreview(inputName, _skipFbSearch){
       '</div>'+
       (isDone
         ? '<span class="jtp-done-badge">✓ 已完成</span><button class="jtp-undo-btn" data-code="'+t.code+'">恢復</button>'
-        : (t.isOrg?'<button class="jtp-complete-btn" data-code="'+t.code+'">✓ 完成</button><button class="jtp-del" data-code="'+t.code+'">🗑</button>':'')+
+        : (t.isOrg?'<button class="jtp-export-btn" data-code="'+t.code+'" data-trip="'+escHtml(t.tripName)+'"><i class="ti ti-file-export"></i> 匯出</button><button class="jtp-complete-btn" data-code="'+t.code+'">✓ 完成</button><button class="jtp-del" data-code="'+t.code+'">🗑</button>':'')+
           '<i class="ti ti-chevron-right" style="font-size:14px;color:var(--blue);opacity:.5;flex-shrink:0"></i>'
       )+'</div>';
   }
@@ -4191,6 +4286,12 @@ function renderTripsPreview(inputName, _skipFbSearch){
     var delBtn=card.querySelector('.jtp-del');
     if(delBtn){ delBtn.addEventListener('touchstart',function(e){e.stopPropagation();},{passive:false});
       delBtn.addEventListener('click',function(e){ e.stopPropagation();e.stopImmediatePropagation();_b=true;setTimeout(function(){_b=false;},500); deleteTrip(this.dataset.code); }); }
+    var exportBtn=card.querySelector('.jtp-export-btn');
+    if(exportBtn){ exportBtn.addEventListener('touchstart',function(e){e.stopPropagation();},{passive:false});
+      exportBtn.addEventListener('click',(function(code,trip){ return function(e){
+        e.stopPropagation();e.stopImmediatePropagation();_b=true;setTimeout(function(){_b=false;},500);
+        exportTripKML(code,trip);
+      };})(t.code,t.tripName)); }
     var compBtn=card.querySelector('.jtp-complete-btn');
     if(compBtn){ compBtn.addEventListener('touchstart',function(e){e.stopPropagation();},{passive:false});
       compBtn.addEventListener('click',(function(code){ return function(e){
