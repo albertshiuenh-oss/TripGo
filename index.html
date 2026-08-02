@@ -266,7 +266,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   background:#E8E8E8;
   transition:height .25s ease;
 }
-#map-wrap.map-mini{height:5vh}
+#map-wrap.map-mini{height:5vh;overflow:hidden}
+#map-wrap.map-mini .map-transport,
+#map-wrap.map-mini .map-locate,
+#map-wrap.map-mini #map-pick-banner,
+#map-wrap.map-mini .route-bar,
+#map-wrap.map-mini #place-card{display:none!important}
 @media(orientation:landscape){
   #map-wrap{height:100%;width:58%;flex-shrink:0}
 }
@@ -1033,7 +1038,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v3.5 &nbsp;·&nbsp; 2026-07-14</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v3.7 &nbsp;·&nbsp; 2026-07-14</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -4899,6 +4904,8 @@ window.addEventListener('load',function(){
 
   // Expense
   document.getElementById('btn-add-exp').addEventListener('click',function(){
+    closeNewStopForm();
+    if(_inlineEditIdx>=0){ closeInlineEdit(_inlineEditIdx); }
     renderPayerSelect();renderSplitSelect();
     var _ce=document.getElementById('m-currency'); if(_ce) _ce.disabled=!S.isOrg;
     openModal('M-expense');
