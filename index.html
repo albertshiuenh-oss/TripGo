@@ -518,8 +518,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .time-sug .sug-ok{background:none;border:1px solid var(--blue);color:var(--blue);border-radius:4px;font-size:10px;padding:1px 7px;cursor:pointer}
 .time-sug.stay{color:var(--green);font-weight:600}
 .exp-ins-btn{font-size:13px;padding:4px 11px;border-radius:99px;border:1px solid #2E7D32;background:#E8F5E9;color:#2E7D32;cursor:pointer;display:inline-flex;align-items:center;gap:3px;flex-shrink:0}
-.exp-ef-label{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px}
-.exp-ef-inp{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;outline:none;margin-bottom:8px}
+.exp-ef-label{font-size:14px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px}
+.exp-ef-inp{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;outline:none;margin-bottom:8px}
 .exp-ef-inp:focus{border-color:var(--blue)}
 .exp-ef-row{display:flex;gap:6px}
 .exp-ef-row .exp-ef-field{flex:1}
@@ -778,6 +778,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .exp-amt{font-size:14px;font-weight:700;color:var(--blue)}
 .exp-meta{font-size:11px;color:var(--text2)}
 .settle-section{margin:12px 14px;padding:12px;background:var(--bg2);border-radius:12px}
+.offline-banner{display:none;align-items:center;gap:8px;padding:7px 14px;background:#E65100;color:#fff;font-size:12px;font-weight:600;flex-shrink:0}
+.share-banner{display:flex;align-items:center;gap:8px;padding:7px 14px;background:#185FA5;color:#fff;font-size:12px;font-weight:600;flex-shrink:0}
+.share-btn{background:none;border:1px solid var(--blue);color:var(--blue);font-size:11px;padding:2px 9px;border-radius:6px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:3px}
 .settle-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
 .settle-row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0}
 .settle-amt{font-weight:700;color:var(--green)}
@@ -1038,7 +1041,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v3.8 &nbsp;·&nbsp; 2026-07-14</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v4.0 &nbsp;·&nbsp; 2026-07-14</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -1149,6 +1152,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
     <span class="tb-trip" id="tb-trip">旅遊群組</span>
     <span style="flex:1"></span>
     <span id="net-status" class="online" style="margin-right:6px"><i class="ti ti-wifi" style="font-size:11px"></i><span id="net-label">線上</span></span>
+    <button id="btn-share-trip" class="share-btn" style="display:none"><i class="ti ti-share"></i></button>
     <span id="tb-myname" style="font-size:11px;color:var(--text2);font-weight:600;flex-shrink:0;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
 
   </div>
@@ -1199,6 +1203,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
     </div>
     <div class="divider" id="divider"><div class="divider-dot"></div></div>
     <div id="right-panel">
+      <div class="offline-banner" id="offline-banner"><i class="ti ti-wifi-off"></i><span id="offline-msg">離線模式 · 顯示快取資料</span></div>
       <div class="tabs">
         <button class="tab on" data-pane="itinerary" aria-label="行程"><i class="ti ti-route"></i></button>
         <button class="tab" data-pane="chat" aria-label="群組"><i class="ti ti-message"></i><span class="tab-dot" id="chat-unread-dot"></span></button>
@@ -1274,7 +1279,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <div class="pane" id="pane-expense">
         <div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
           <span style="font-size:13px;font-weight:700">花費記錄</span>
-          <button id="btn-add-exp" style="padding:6px 12px;border:none;border-radius:8px;background:var(--blue);color:#fff;font-size:12px;cursor:pointer">+ 新增</button>
+          <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:var(--text2)">主幣別</span><select id="primary-currency" style="font-size:11px;padding:2px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text)"><option value="NTD">NTD</option><option value="USD">USD</option><option value="JPY">JPY</option><option value="EUR">EUR</option></select><button id="btn-add-exp" style="padding:6px 12px;border:none;border-radius:8px;background:var(--blue);color:#fff;font-size:12px;cursor:pointer">+ 新增</button></div>
         </div>
         <div id="exp-list"></div>
         <div id="exp-total-bar" style="margin:0 14px 8px;padding:10px 14px;background:var(--bg2);border-radius:12px;display:flex;justify-content:space-between;align-items:center">
@@ -1496,11 +1501,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   var _netInitDone=false;
   window.addEventListener('online',function(){
     _online=true; updateNetUI(); flush();
-    if(_netInitDone) showToast('✅ 已重新連線，資料同步中',2000);
+    if(_netInitDone){ showToast('✅ 已重新連線，資料同步中',2000); showOfflineBanner(false,null); }
   });
   window.addEventListener('offline',function(){
     _online=false; updateNetUI();
-    if(_netInitDone) showToast('📶 已離線，部分功能暫停',3000);
+    if(_netInitDone){ showToast('📶 已離線，部分功能暫停',3000);
+      var cache=loadFromCache(S.groupCode||''); showOfflineBanner(true,cache?cache.cachedAt:null); }
   });
   setTimeout(function(){ _netInitDone=true; },2000); // 避免頁面載入時誤觸發
 
@@ -1959,7 +1965,7 @@ function _applyPlaceCard(place){
   document.getElementById('pc-rating').innerHTML=ratingHtml;
   var info='';
   if(place.formatted_address) info+='<div class="pc-info-row"><i class="ti ti-map-pin"></i><span>'+place.formatted_address+'</span></div>';
-  if(place.formatted_phone_number) info+='<div class="pc-info-row"><i class="ti ti-phone"></i><span>'+place.formatted_phone_number+'</span></div>';
+  // 電話文字不顯示（電話 icon 按鈕保留在 actions）
   document.getElementById('pc-info').innerHTML=info;
   document.getElementById('place-card').classList.add('show');
 }
@@ -2022,6 +2028,12 @@ function pcAddToItinerary(){
 function startApp(code, uid, name, tripName, isOrg){
   S.groupCode=code; S.myUid=uid; S.myName=name; S.isOrg=isOrg;
   var _nmEl=document.getElementById('tb-myname'); if(_nmEl) _nmEl.textContent=name;
+  var _sb=document.getElementById('btn-share-trip'); if(_sb) _sb.style.display='inline-flex';
+  // 讀取主幣別
+  S.primaryCurrency='NTD';
+  window.FB.get('tripgo/groups/'+code+'/primaryCurrency').then(function(snap){
+    if(snap.exists()){ S.primaryCurrency=snap.val(); var ps=document.getElementById('primary-currency'); if(ps) ps.value=S.primaryCurrency; }
+  }).catch(function(){});
   localStorage.setItem('tg_code',code);
   localStorage.setItem('tg_uid',uid);
   localStorage.setItem('tg_name',name);
@@ -2061,6 +2073,7 @@ function startApp(code, uid, name, tripName, isOrg){
     _firstMembers=false;
   });
   FB.onValue('tripgo/groups/'+code+'/stops',function(snap){
+    setTimeout(function(){updateCache(code);},600);
     var raw=snap.val()?Object.entries(snap.val())
       .sort(function(a,b){return a[0]<b[0]?-1:1;})
       .map(function(e){return Object.assign({_key:e[0]},e[1]);}):[];
@@ -3262,13 +3275,15 @@ function renderExpenses(){
   calcSettle();
 }
 function calcSettle(){
+  var base=S.primaryCurrency||'NTD';
+  fetchRates(base,function(rates){
   var paid={},share={};
   uniqueMembers().forEach(function(m){paid[m.name]=0;share[m.name]=0;});
   Object.values(S.expenses).forEach(function(e){
-    paid[e.payer]=(paid[e.payer]||0)+e.amt;
-    // 以當前唯一成員平攤（忽略舊 e.split，防止假人被算入）
+    var amt=toBase(e.amt,e.currency||'NTD',rates,base);
+    paid[e.payer]=(paid[e.payer]||0)+amt;
     var uNames=Object.keys(share);
-    uNames.forEach(function(n){share[n]=(share[n]||0)+Math.round(e.amt/uNames.length);});
+    uNames.forEach(function(n){share[n]=(share[n]||0)+Math.round(amt/uNames.length);});
   });
   var balance={}; Object.keys(paid).forEach(function(n){balance[n]=(paid[n]||0)-(share[n]||0);});
   var cr=[],db=[];
@@ -3276,6 +3291,8 @@ function calcSettle(){
   var html='';
   db.forEach(function(d){cr.forEach(function(c){if(d.amt>0&&c.amt>0){var t=Math.min(d.amt,c.amt);html+='<div class="settle-row"><span>'+d.name+' → '+c.name+'</span><span class="settle-amt">NT$ '+Math.round(t).toLocaleString()+'</span></div>';d.amt-=t;c.amt-=t;}});});
   document.getElementById('settle-rows').innerHTML=html||'<div style="font-size:11px;color:var(--gray)">目前無需結算 ✅</div>';
+  var st=document.querySelector('.settle-title'); if(st) st.textContent='💰 結算（以 '+(S.primaryCurrency||'NTD')+' 計）';
+  }); // end fetchRates
 }
 function confirmExpense(){
   if(!S.groupCode){ showToast('⚠️ 請先進入旅程',1500); return; }
@@ -4259,6 +4276,68 @@ function exportTripKML(code, tripName){
   }).catch(function(err){ showToast('❌ 匯出失敗：'+err.message,2000); });
 }
 
+// ══ 幣別換算 ══
+var _rateCache={ts:0,base:'',rates:{}};
+function fetchRates(base,cb){
+  var now=Date.now();
+  if(_rateCache.base===base&&now-_rateCache.ts<3600000){cb(_rateCache.rates);return;}
+  try{var cached=JSON.parse(localStorage.getItem('tg_rates_'+base)||'null');
+    if(cached&&now-cached.ts<3600000){_rateCache={ts:cached.ts,base:base,rates:cached.rates};cb(cached.rates);return;}
+  }catch(e){}
+  fetch('https://api.frankfurter.app/latest?from='+base)
+    .then(function(r){return r.json();})
+    .then(function(d){
+      _rateCache={ts:now,base:base,rates:d.rates||{}};
+      try{localStorage.setItem('tg_rates_'+base,JSON.stringify({ts:now,rates:d.rates}));}catch(e){}
+      cb(d.rates||{});
+    }).catch(function(){cb({});});
+}
+function toBase(amt,fromCur,rates,base){
+  if(!amt||fromCur===base) return amt||0;
+  if(!rates[fromCur]) return amt;
+  return Math.round(amt/rates[fromCur]);
+}
+// ══ 離線快取 ══
+function updateCache(code){
+  try{localStorage.setItem('tg_cache_'+code,JSON.stringify({stops:S.stops,members:S.members,expenses:S.expenses,tripName:S.tripName||'',cachedAt:Date.now()}));}catch(e){}
+}
+function loadFromCache(code){
+  try{var raw=localStorage.getItem('tg_cache_'+code);return raw?JSON.parse(raw):null;}catch(e){return null;}
+}
+function showOfflineBanner(show,cachedAt){
+  var b=document.getElementById('offline-banner');if(!b)return;
+  if(show){b.style.display='flex';
+    var msg=document.getElementById('offline-msg');
+    if(msg&&cachedAt){var d=new Date(cachedAt);msg.textContent='離線模式 · 快取於 '+(d.getHours()<10?'0':'')+d.getHours()+':'+(d.getMinutes()<10?'0':'')+d.getMinutes();}
+  }else{b.style.display='none';}
+}
+// ══ 行程分享 ══
+function getShareUrl(code){return location.href.split('?')[0]+'?view='+(code||'');}
+function initShareView(code){
+  if(!window.FB||!window.FB.ready){showToast('⏳ 連線中',1500);return;}
+  showToast('⏳ 載入分享行程…',2000);
+  Promise.all([window.FB.get('tripgo/groups/'+code+'/stops'),window.FB.get('tripgo/groups/'+code+'/members'),window.FB.get('tripgo/groups/'+code+'/tripName')])
+  .then(function(res){
+    var stops=res[0].exists()?Object.values(res[0].val()):[];
+    var mems=res[1].exists()?Object.values(res[1].val()):[];
+    var tName=res[2].exists()?res[2].val():'旅程';
+    stops.sort(function(a,b){var da=labelToDate(a.day)||a.day||'',db=labelToDate(b.day)||b.day||'';if(da!==db)return da<db?-1:1;return(parseT(a.arrive)||0)-(parseT(b.arrive)||0);});
+    document.getElementById('S-join').classList.add('hide');
+    document.getElementById('S-app').classList.add('show');
+    document.getElementById('tb-trip').textContent=tName;
+    document.getElementById('tb-myname').textContent='唯讀';
+    var rp=document.getElementById('right-panel');
+    var sb=document.createElement('div');sb.className='share-banner';
+    sb.innerHTML='<i class="ti ti-eye"></i> 唯讀分享 · <span style="opacity:.8">'+escHtml(tName)+'</span>';
+    rp.insertBefore(sb,rp.querySelector('.tabs'));
+    showPane('itinerary');
+    S.stops=stops;S.members=mems;S.myUid='__share__';S.myName='';S.groupCode=code;S.isOrg=false;
+    renderStops();renderAvatars();
+    var ab=document.getElementById('btn-add-stop');if(ab)ab.style.display='none';
+    document.body.setAttribute('data-readonly','1');
+  }).catch(function(e){showToast('❌ 載入失敗：'+e.message,2000);});
+}
+
 function markTripCompleted(code, done){
   var trips=getStoredTrips();
   trips=trips.map(function(t){ if(t.code===code){ t.completed=!!done; } return t; });
@@ -4529,7 +4608,7 @@ function renderInlineEditForm(i){
       '<input type="hidden" id="ief-lng" value="'+(s.lng||0)+'"/>'+
       '<div class="exp-ef-row">'+
         '<div class="exp-ef-field"><label class="exp-ef-label">抵達時間</label><input class="exp-ef-inp" id="ief-arrive" value="'+escHtml(s.arrive||'')+'" placeholder="09:00"/><div class="time-sug" id="sug-arrive">建議：<span class="sug-v"></span><button class="sug-ok">套用</button></div></div>'+
-        '<div class="exp-ef-field"><div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><label class="exp-ef-label" style="margin-bottom:0">離開時間</label><div id="sug-stay" style="display:none;font-size:10px;font-weight:700;color:var(--green);white-space:nowrap"></div></div><input class="exp-ef-inp" id="ief-depart" value="'+escHtml(s.depart||'')+'" placeholder="12:00"/><div class="time-sug" id="sug-depart">建議：<span class="sug-v"></span><button class="sug-ok">套用</button></div></div>'+
+        '<div class="exp-ef-field"><div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><label class="exp-ef-label" style="margin-bottom:0">離開時間</label><div id="sug-stay" style="display:none;font-size:14px;font-weight:700;color:var(--green);white-space:nowrap"></div></div><input class="exp-ef-inp" id="ief-depart" value="'+escHtml(s.depart||'')+'" placeholder="12:00"/><div class="time-sug" id="sug-depart">建議：<span class="sug-v"></span><button class="sug-ok">套用</button></div></div>'+
       '</div>'+
       '<div class="exp-ef-row">'+
         '<div class="exp-ef-field"><label class="exp-ef-label">前段交通</label>'+
@@ -4930,6 +5009,24 @@ window.addEventListener('load',function(){
   document.getElementById('btn-sticker').addEventListener('click',function(){document.getElementById('sticker-tray').classList.toggle('show');});
   document.getElementById('btn-send').addEventListener('click',sendMsg);
   document.getElementById('chat-edit-cancel').addEventListener('click',cancelEditMsg);
+  // 分享按鈕
+  document.getElementById('btn-share-trip').addEventListener('click',function(){
+    var url=getShareUrl(S.groupCode||'');
+    if(navigator.clipboard) navigator.clipboard.writeText(url).catch(function(){});
+    showToast('📋 分享連結已複製！',2200);
+  });
+  // 主幣別切換
+  var _pcSel=document.getElementById('primary-currency');
+  if(_pcSel){ _pcSel.addEventListener('change',function(){
+    S.primaryCurrency=this.value;
+    if(S.groupCode) window.FB.set('tripgo/groups/'+S.groupCode+'/primaryCurrency',this.value);
+    calcSettle(); renderExpenses();
+  }); }
+  // 檢查分享連結 ?view=
+  (function(){
+    var viewCode=new URLSearchParams(window.location.search).get('view');
+    if(viewCode){ var _sw=setInterval(function(){ if(window.FB&&window.FB.ready){clearInterval(_sw);initShareView(viewCode);} },200); }
+  })();
   document.getElementById('chat-inp').addEventListener('keydown',function(e){if(e.key==='Enter')sendMsg();});
   document.getElementById('sticker-tray').querySelectorAll('[data-s]').forEach(function(s){
     s.addEventListener('click',function(){sendSticker(this.dataset.s);});
