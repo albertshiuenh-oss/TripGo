@@ -1038,7 +1038,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v3.7 &nbsp;·&nbsp; 2026-07-14</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v3.8 &nbsp;·&nbsp; 2026-07-14</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -1493,8 +1493,16 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
     saveQ();
   }
 
-  window.addEventListener('online',  function(){ _online=true;  updateNetUI(); flush(); });
-  window.addEventListener('offline', function(){ _online=false; updateNetUI(); });
+  var _netInitDone=false;
+  window.addEventListener('online',function(){
+    _online=true; updateNetUI(); flush();
+    if(_netInitDone) showToast('✅ 已重新連線，資料同步中',2000);
+  });
+  window.addEventListener('offline',function(){
+    _online=false; updateNetUI();
+    if(_netInitDone) showToast('📶 已離線，部分功能暫停',3000);
+  });
+  setTimeout(function(){ _netInitDone=true; },2000); // 避免頁面載入時誤觸發
 
   function safeSet(path, data){
     if(_online) return rtdb.ref(path).set(data);
@@ -3160,6 +3168,7 @@ function appendMsg(uid,name,text,isSticker,time,key){
 }
 var _editingMsgKey=null;
 function sendMsg(){
+  if(!S.groupCode){ showToast('⚠️ 請先進入旅程',1500); return; }
   var inp=document.getElementById('chat-inp'),text=inp.value.trim();if(!text)return;
   if(_editingMsgKey){
     window.FB.set('tripgo/groups/'+S.groupCode+'/chat/'+_editingMsgKey+'/text',text);
@@ -3269,6 +3278,7 @@ function calcSettle(){
   document.getElementById('settle-rows').innerHTML=html||'<div style="font-size:11px;color:var(--gray)">目前無需結算 ✅</div>';
 }
 function confirmExpense(){
+  if(!S.groupCode){ showToast('⚠️ 請先進入旅程',1500); return; }
   var name=document.getElementById('m-name').value.trim();
   var amt=parseInt(document.getElementById('m-amt').value)||0;
   var payer=document.getElementById('m-payer').value;
@@ -3965,8 +3975,31 @@ function goToHome(){
 // ════════════════════════════════
 // TRIP STORAGE & SWITCHER
 // ════════════════════════════════
+// ── A. 統一錯誤處理 ──
+function handleFBError(err, context){
+  var msg = (err&&err.message)||'未知錯誤';
+  if(msg.toLowerCase().includes('network')||msg.toLowerCase().includes('offline')||msg.toLowerCase().includes('failed to fetch')){
+    showToast('📶 網路異常，請檢查連線後重試',2500);
+  } else if(msg.toLowerCase().includes('permission')||msg.toLowerCase().includes('denied')){
+    showToast('⛔ 權限不足，請重新進入群組',2500);
+  } else {
+    showToast('❌ '+(context||'操作')+'失敗：'+msg.substring(0,40),2500);
+    console.error('[TripGo]',context||'',err);
+  }
+}
+
 function getStoredTrips(){
-  try{ return JSON.parse(localStorage.getItem('tg_trips')||'[]'); }catch(e){return [];}
+  try{
+    var raw=localStorage.getItem('tg_trips');
+    if(!raw) return [];
+    var parsed=JSON.parse(raw);
+    if(!Array.isArray(parsed)) throw new Error('格式錯誤');
+    return parsed;
+  } catch(e){
+    console.warn('[TripGo] tg_trips 損毀，已重置',e);
+    try{ localStorage.removeItem('tg_trips'); }catch(e2){}
+    return [];
+  }
 }
 function saveStoredTrips(arr){ localStorage.setItem('tg_trips',JSON.stringify(arr)); }
 function updateStoredTrip(code,uid,name,tripName,isOrg){
