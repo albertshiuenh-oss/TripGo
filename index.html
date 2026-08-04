@@ -263,6 +263,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 #map-wrap{
   position:relative;
   height:42vh;flex-shrink:0;
+  will-change:height,width;
   background:#E8E8E8;
   transition:height .25s ease;
 }
@@ -375,16 +376,20 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   flex-shrink:0;
   display:flex;align-items:center;justify-content:center;
   /* Portrait: horizontal bar */
-  height:14px;
+  height:24px;
   background:var(--border);
   cursor:row-resize;
   z-index:3;
+  touch-action:none;
+  user-select:none;
 }
 @media(orientation:landscape){
   .divider{
-    width:14px;height:auto;
+    width:24px;height:auto;
     background:var(--border);
     cursor:col-resize;
+    touch-action:none;
+    user-select:none;
   }
 }
 /* The pill handle */
@@ -1041,7 +1046,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v4.1 &nbsp;·&nbsp; 2026-07-14</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v4.2 &nbsp;·&nbsp; 2026-07-14</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -4484,27 +4489,41 @@ function initDivider(){
     e.preventDefault(); // 阻止頁面滾動
   }
 
+  var _rafPending=false,_mapResizeTimer=null;
   function onMove(e){
     if(!dragging) return;
-    e.preventDefault(); // 阻止頁面滾動
+    e.preventDefault();
     var touch=e.touches?e.touches[0]:e;
     var pos=portrait()?touch.clientY:touch.clientX;
     var delta=pos-startPos;
     var mw=document.getElementById('map-wrap');
     var top=(document.querySelector('.topbar')||{}).offsetHeight||44;
-    if(portrait()){
-      var h=Math.max(100,Math.min(startSize+delta,window.innerHeight-top-120));
-      mw.style.height=h+'px';
-    } else {
-      var w=Math.max(150,Math.min(startSize+delta,window.innerWidth-150));
-      mw.style.width=w+'px';
+    if(!_rafPending){
+      _rafPending=true;
+      requestAnimationFrame(function(){
+        _rafPending=false;
+        if(portrait()){
+          var h=Math.max(100,Math.min(startSize+delta,window.innerHeight-top-120));
+          mw.style.height=h+'px';
+        } else {
+          var w=Math.max(150,Math.min(startSize+delta,window.innerWidth-150));
+          mw.style.width=w+'px';
+        }
+        if(!_mapResizeTimer&&map){
+          _mapResizeTimer=setTimeout(function(){
+            _mapResizeTimer=null;
+            google.maps.event.trigger(map,'resize');
+          },120);
+        }
+      });
     }
-    if(map) google.maps.event.trigger(map,'resize');
   }
 
   function onEnd(){
-    dragging=false;
+    dragging=false; _rafPending=false;
+    if(_mapResizeTimer){clearTimeout(_mapResizeTimer);_mapResizeTimer=null;}
     div.classList.remove('active');
+    if(map) setTimeout(function(){google.maps.event.trigger(map,'resize');},50);
   }
 
   // Mouse (desktop)
