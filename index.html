@@ -72,6 +72,25 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 #js-trips-preview{display:none;flex-direction:column;gap:8px}
 .jtp-count{font-size:11px;color:rgba(255,255,255,.8);font-weight:600}
 #jtp-list{display:flex;flex-direction:column;gap:6px}
+.login-screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px 24px;background:linear-gradient(160deg,#0D2137 0%,#1A3A5C 100%)}
+.login-screen.show{display:flex}
+.login-card{background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.google-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border:1.5px solid #ddd;border-radius:10px;background:#fff;font-size:14px;font-weight:600;color:#333;cursor:pointer}
+.google-btn:hover{background:#f5f5f5}
+.login-divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:#bbb;font-size:11px}
+.login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:#eee}
+.login-inp{width:100%;padding:11px 14px;border:1.5px solid #e0e0e0;border-radius:10px;font-size:14px;outline:none;margin-bottom:10px;transition:border-color .15s}
+.login-inp:focus{border-color:#1A3A5C}
+.pin-row{display:flex;gap:8px;margin-bottom:8px}
+.pin-digit{flex:1;text-align:center;font-size:20px;font-weight:700;padding:10px 0;border:1.5px solid #e0e0e0;border-radius:10px;outline:none}
+.pin-digit:focus{border-color:#1A3A5C}
+.login-hint{font-size:11px;color:#888;margin-bottom:10px;min-height:14px;text-align:center}
+.login-hint.ok{color:#2E7D32}.login-hint.new{color:#1A3A5C}
+.login-submit{width:100%;padding:13px;background:#1A3A5C;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer}
+.login-submit:disabled{opacity:.45;cursor:default}
+.login-err-msg{font-size:11px;color:#d32f2f;text-align:center;margin-top:6px;min-height:14px}
+.login-footer{margin-top:16px;font-size:10px;color:rgba(255,255,255,.3);text-align:center}
+
 .jtp-card{
   background:#fff;border-radius:12px;padding:10px 14px;
   display:flex;align-items:center;gap:8px;cursor:pointer;
@@ -1048,6 +1067,32 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 <body>
 
 <!-- ========== JOIN SCREEN ========== -->
+  <!-- Login Screen -->
+  <div class="login-screen" id="S-login">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:26px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;gap:8px">🗺 Trip<span style="color:#E8B84B">Go</span></div>
+      <div style="font-size:11px;color:rgba(255,255,255,.45);letter-spacing:.5px;margin-top:4px">團體旅遊管理 APP</div>
+    </div>
+    <div class="login-card">
+      <button class="google-btn" id="btn-google-login">
+        <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.5l6.7-6.7C35.6 2.2 30.1 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.8 6.1C12.4 13.1 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.9 7.2l7.7 6c4.5-4.2 7-10.3 7-17.2z"/><path fill="#FBBC05" d="M10.5 28.6c-.5-1.5-.8-3.1-.8-4.6s.3-3.1.8-4.6l-7.8-6.1C1 16.4 0 20.1 0 24s1 7.6 2.7 10.7l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.1 0 11.2-2 14.9-5.4l-7.7-6c-2 1.4-4.6 2.2-7.2 2.2-6.2 0-11.5-4.2-13.4-9.8l-7.8 6.1C6.6 42.6 14.6 48 24 48z"/></svg>
+        使用 Google 帳號登入
+      </button>
+      <div class="login-divider">或使用名字 + PIN</div>
+      <input class="login-inp" id="login-name" type="text" placeholder="你的名字" autocomplete="off"/>
+      <div class="pin-row">
+        <input class="pin-digit" maxlength="1" type="tel" inputmode="numeric" id="pd0"/>
+        <input class="pin-digit" maxlength="1" type="tel" inputmode="numeric" id="pd1"/>
+        <input class="pin-digit" maxlength="1" type="tel" inputmode="numeric" id="pd2"/>
+        <input class="pin-digit" maxlength="1" type="tel" inputmode="numeric" id="pd3"/>
+      </div>
+      <div class="login-hint" id="login-hint">輸入名字和 4 位 PIN 碼</div>
+      <button class="login-submit" id="btn-pin-submit" disabled>登入 / 建立帳號</button>
+      <div class="login-err-msg" id="login-err"></div>
+    </div>
+    <div class="login-footer">TripGo v4.4</div>
+  </div>
+
 <div id="S-join">
   <button class="js-gear" onclick="toggleGear(event)"><i class="ti ti-settings"></i></button>
   <div id="js-gear-menu">
@@ -1062,7 +1107,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v4.3 &nbsp;·&nbsp; 2026-07-14</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v4.4 &nbsp;·&nbsp; 2026-09-14</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -1173,6 +1218,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
     <span class="tb-trip" id="tb-trip">旅遊群組</span>
     <span style="flex:1"></span>
     <span id="net-status" class="online" style="margin-right:6px"><i class="ti ti-wifi" style="font-size:11px"></i><span id="net-label">線上</span></span>
+    <button id="btn-logout" title="登出" style="display:none;background:none;border:1px solid rgba(255,255,255,.3);color:rgba(255,255,255,.7);font-size:10px;padding:2px 8px;border-radius:6px;cursor:pointer;margin-right:4px" onclick="doLogout()">登出</button>
     <button id="btn-share-trip" class="share-btn" style="display:none"><i class="ti ti-share"></i></button>
     <span id="tb-myname" style="font-size:11px;color:var(--text2);font-weight:600;flex-shrink:0;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
 
@@ -1473,6 +1519,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 <!-- Firebase Compat SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script>
 (function(){
   var db = firebase.initializeApp({
@@ -1485,6 +1532,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
     appId:"1:612261656504:web:9191b3198e3de0549a014d"
   }, 'tripgo');
   var rtdb = firebase.database(db);
+  var _auth = firebase.auth(db);
+  _auth.languageCode = 'zh-TW';
+  window.FB_AUTH = _auth;
 
   // Offline queue
   var _q = [];
@@ -2010,6 +2060,8 @@ function startApp(code, uid, name, tripName, isOrg){
   S.groupCode=code; S.myUid=uid; S.myName=name; S.isOrg=isOrg;
   var _nmEl=document.getElementById('tb-myname'); if(_nmEl) _nmEl.textContent=name;
   var _sb=document.getElementById('btn-share-trip'); if(_sb) _sb.style.display='inline-flex';
+  var _lb=document.getElementById('btn-logout'); if(_lb) _lb.style.display='inline-block';
+  if(_currentUser&&_currentUser.uid) uid=_currentUser.uid;
   // 讀取主幣別
   S.primaryCurrency='NTD';
   window.FB.get('tripgo/groups/'+code+'/primaryCurrency').then(function(snap){
@@ -4370,6 +4422,120 @@ function initShareView(code){
   }).catch(function(e){showToast('❌ 載入失敗：'+e.message,2000);});
 }
 
+// ══ 帳號登入系統 ══
+var _currentUser = null;
+
+function showLoginScreen(){
+  document.getElementById('S-login').classList.add('show');
+  document.getElementById('S-join').classList.remove('show');
+  document.getElementById('S-app').classList.remove('show');
+}
+function hideLoginScreen(){ document.getElementById('S-login').classList.remove('show'); }
+
+function afterLogin(uid, name){
+  _currentUser={uid:uid,name:name};
+  hideLoginScreen();
+  var nameEl=document.getElementById('js-home-name');
+  if(nameEl){ nameEl.value=name; renderTripsPreview(name); }
+  document.getElementById('S-join').classList.add('show');
+}
+
+function doGoogleLogin(){
+  var provider=new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({prompt:'select_account'});
+  window.FB_AUTH.signInWithPopup(provider).then(function(result){
+    var user=result.user; var uid=user.uid;
+    var name=user.displayName||user.email.split('@')[0];
+    window.FB.get('tripgo/accounts/g_'+uid).then(function(snap){
+      if(!snap.exists()) window.FB.set('tripgo/accounts/g_'+uid,{uid:uid,displayName:name,provider:'google',createdAt:Date.now()});
+      else name=snap.val().displayName||name;
+      try{localStorage.setItem('tg_session',JSON.stringify({uid:uid,name:name,provider:'google',ts:Date.now()}));}catch(e){}
+      afterLogin(uid,name);
+    });
+  }).catch(function(e){
+    document.getElementById('login-err').textContent='Google 登入失敗，請再試';
+  });
+}
+
+function getPinValue(){
+  return ['pd0','pd1','pd2','pd3'].map(function(id){return (document.getElementById(id)||{}).value||'';}).join('');
+}
+
+function doPinSubmit(){
+  var name=(document.getElementById('login-name')||{}).value.trim();
+  var pin=getPinValue(); var err=document.getElementById('login-err'); err.textContent='';
+  if(!name){err.textContent='請輸入名字';return;}
+  if(pin.length!==4||!/^\d{4}$/.test(pin)){err.textContent='PIN 須為 4 位數字';return;}
+  var sub=document.getElementById('btn-pin-submit'); sub.disabled=true; sub.textContent='驗證中…';
+  var key='p_'+name.toLowerCase().replace(/\s+/g,'_');
+  window.FB.get('tripgo/accounts/'+key).then(function(snap){
+    if(snap.exists()){
+      var acct=snap.val();
+      if(acct.pin===pin){
+        try{localStorage.setItem('tg_creds',JSON.stringify({name:acct.displayName,pin:pin}));localStorage.setItem('tg_session',JSON.stringify({uid:acct.uid,name:acct.displayName,provider:'pin',ts:Date.now()}));}catch(e){}
+        afterLogin(acct.uid,acct.displayName);
+      } else { err.textContent='PIN 碼錯誤'; sub.disabled=false; sub.textContent='登入 / 建立帳號'; }
+    } else {
+      var newUid='u_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+      window.FB.set('tripgo/accounts/'+key,{uid:newUid,displayName:name,pin:pin,provider:'pin',createdAt:Date.now()}).then(function(){
+        try{localStorage.setItem('tg_creds',JSON.stringify({name:name,pin:pin}));localStorage.setItem('tg_session',JSON.stringify({uid:newUid,name:name,provider:'pin',ts:Date.now()}));}catch(e){}
+        afterLogin(newUid,name);
+        sub.disabled=false; sub.textContent='登入 / 建立帳號';
+      }).catch(function(e2){err.textContent='建立帳號失敗'; sub.disabled=false; sub.textContent='登入 / 建立帳號';});
+    }
+  }).catch(function(){err.textContent='連線錯誤'; sub.disabled=false; sub.textContent='登入 / 建立帳號';});
+}
+
+function doLogout(){
+  try{localStorage.removeItem('tg_session');localStorage.removeItem('tg_creds');}catch(e){}
+  if(window.FB_AUTH) window.FB_AUTH.signOut().catch(function(){});
+  _currentUser=null;
+  showLoginScreen();
+  var ne=document.getElementById('js-home-name'); if(ne) ne.value='';
+  document.getElementById('S-join').classList.remove('show');
+  var lb=document.getElementById('btn-logout'); if(lb) lb.style.display='none';
+  var sb=document.getElementById('btn-share-trip'); if(sb) sb.style.display='none';
+}
+
+function checkSession(){
+  if(window.FB_AUTH){
+    window.FB_AUTH.onAuthStateChanged(function(user){
+      if(user&&!_currentUser){
+        window.FB.get('tripgo/accounts/g_'+user.uid).then(function(snap){
+          var name=snap.exists()?snap.val().displayName:user.displayName||'';
+          try{localStorage.setItem('tg_session',JSON.stringify({uid:user.uid,name:name,provider:'google',ts:Date.now()}));}catch(e){}
+          afterLogin(user.uid,name);
+        }).catch(function(){afterLogin(user.uid,user.displayName||'');});
+      }
+    });
+  }
+  // 有儲存的帳號+PIN → 自動重新驗證登入
+  try{
+    var creds=JSON.parse(localStorage.getItem('tg_creds')||'null');
+    if(creds&&creds.name&&creds.pin){
+      // 預填表單
+      var ln=document.getElementById('login-name'); if(ln) ln.value=creds.name;
+      ['pd0','pd1','pd2','pd3'].forEach(function(id,i){
+        var el=document.getElementById(id); if(el) el.value=creds.pin[i]||'';
+      });
+      // 靜默自動登入
+      var key='p_'+creds.name.toLowerCase().replace(/\s+/g,'_');
+      window.FB.get('tripgo/accounts/'+key).then(function(snap){
+        if(snap.exists()&&snap.val().pin===creds.pin){
+          var acct=snap.val();
+          afterLogin(acct.uid,acct.displayName);
+        } else {
+          // 憑證不符（可能帳號已變更）→ 清除並顯示登入畫面
+          try{localStorage.removeItem('tg_creds');}catch(e){}
+          showLoginScreen();
+        }
+      }).catch(function(){ showLoginScreen(); });
+      return;
+    }
+  }catch(e){}
+  setTimeout(function(){ if(!_currentUser) showLoginScreen(); },800);
+}
+
 function markTripCompleted(code, done){
   var trips=getStoredTrips();
   trips=trips.map(function(t){ if(t.code===code){ t.completed=!!done; } return t; });
@@ -5057,6 +5223,39 @@ window.addEventListener('load',function(){
   document.getElementById('btn-sticker').addEventListener('click',function(){document.getElementById('sticker-tray').classList.toggle('show');});
   document.getElementById('btn-send').addEventListener('click',sendMsg);
   document.getElementById('chat-edit-cancel').addEventListener('click',cancelEditMsg);
+
+  // ── 登入畫面事件 ──
+  document.getElementById('btn-google-login').addEventListener('click',doGoogleLogin);
+  document.getElementById('btn-pin-submit').addEventListener('click',doPinSubmit);
+  ['pd0','pd1','pd2','pd3'].forEach(function(id,i){
+    var el=document.getElementById(id);
+    el.addEventListener('input',function(){
+      this.value=this.value.replace(/[^0-9]/g,'').slice(-1);
+      if(this.value&&i<3) document.getElementById('pd'+(i+1)).focus();
+      var pin=getPinValue();
+      document.getElementById('btn-pin-submit').disabled=pin.length!==4||!(document.getElementById('login-name').value.trim());
+    });
+    el.addEventListener('keydown',function(e){
+      if(e.key==='Backspace'&&!this.value&&i>0) document.getElementById('pd'+(i-1)).focus();
+      if(e.key==='Enter') doPinSubmit();
+    });
+  });
+  document.getElementById('login-name').addEventListener('input',function(){
+    var pin=getPinValue();
+    document.getElementById('btn-pin-submit').disabled=pin.length!==4||!this.value.trim();
+    var name=this.value.trim();
+    if(name.length>=2){
+      var key='p_'+name.toLowerCase().replace(/\s+/g,'_');
+      window.FB.get('tripgo/accounts/'+key).then(function(snap){
+        var h=document.getElementById('login-hint');
+        if(snap.exists()){h.textContent='✓ 找到帳號，請輸入 PIN 登入';h.className='login-hint ok';}
+        else{h.textContent='新帳號，輸入 PIN 建立帳號';h.className='login-hint new';}
+      }).catch(function(){});
+    }
+  });
+
+  // 啟動 session 檢查
+  checkSession();
   // 動態產生 Apple Touch Icon（書籤圖示）
   (function(){
     try{
