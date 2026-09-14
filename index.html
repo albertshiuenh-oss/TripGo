@@ -1074,11 +1074,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <div style="font-size:11px;color:rgba(255,255,255,.45);letter-spacing:.5px;margin-top:4px">團體旅遊管理 APP</div>
     </div>
     <div class="login-card">
-      <button class="google-btn" id="btn-google-login">
-        <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.5l6.7-6.7C35.6 2.2 30.1 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.8 6.1C12.4 13.1 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.9 7.2l7.7 6c4.5-4.2 7-10.3 7-17.2z"/><path fill="#FBBC05" d="M10.5 28.6c-.5-1.5-.8-3.1-.8-4.6s.3-3.1.8-4.6l-7.8-6.1C1 16.4 0 20.1 0 24s1 7.6 2.7 10.7l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.1 0 11.2-2 14.9-5.4l-7.7-6c-2 1.4-4.6 2.2-7.2 2.2-6.2 0-11.5-4.2-13.4-9.8l-7.8 6.1C6.6 42.6 14.6 48 24 48z"/></svg>
-        使用 Google 帳號登入
-      </button>
-      <div class="login-divider">或使用名字 + PIN</div>
+      <div style="font-size:13px;color:#888;text-align:center;margin-bottom:14px">輸入名字和 PIN 碼登入或建立帳號</div>
       <input class="login-inp" id="login-name" type="text" placeholder="你的名字" autocomplete="off"/>
       <div class="pin-row">
         <input class="pin-digit" maxlength="1" type="tel" inputmode="numeric" id="pd0"/>
@@ -1090,7 +1086,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <button class="login-submit" id="btn-pin-submit" disabled>登入 / 建立帳號</button>
       <div class="login-err-msg" id="login-err"></div>
     </div>
-    <div class="login-footer">TripGo v4.6</div>
+    <div class="login-footer">TripGo v4.3B</div>
   </div>
 
 <div id="S-join" class="hide">
@@ -1107,7 +1103,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v4.7 &nbsp;·&nbsp; 2026-09-14</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v4.3B &nbsp;·&nbsp; 2026-09-14</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -1519,7 +1515,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 <!-- Firebase Compat SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script>
 (function(){
   var db = firebase.initializeApp({
@@ -1532,9 +1527,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
     appId:"1:612261656504:web:9191b3198e3de0549a014d"
   }, 'tripgo');
   var rtdb = firebase.database(db);
-  var _auth = firebase.auth(db);
-  _auth.languageCode = 'zh-TW';
-  window.FB_AUTH = _auth;
 
   // Offline queue
   var _q = [];
@@ -4440,23 +4432,6 @@ function afterLogin(uid, name){
   document.getElementById('S-join').classList.remove('hide');
 }
 
-function doGoogleLogin(){
-  var provider=new firebase.auth.GoogleAuthProvider();
-  provider.setCustomParameters({prompt:'select_account'});
-  window.FB_AUTH.signInWithPopup(provider).then(function(result){
-    var user=result.user; var uid=user.uid;
-    var name=user.displayName||user.email.split('@')[0];
-    window.FB.get('tripgo/accounts/g_'+uid).then(function(snap){
-      if(!snap.exists()) window.FB.set('tripgo/accounts/g_'+uid,{uid:uid,displayName:name,provider:'google',createdAt:Date.now()});
-      else name=snap.val().displayName||name;
-      try{localStorage.setItem('tg_session',JSON.stringify({uid:uid,name:name,provider:'google',ts:Date.now()}));}catch(e){}
-      afterLogin(uid,name);
-    });
-  }).catch(function(e){
-    document.getElementById('login-err').textContent='Google 登入失敗，請再試';
-  });
-}
-
 function getPinValue(){
   return ['pd0','pd1','pd2','pd3'].map(function(id){return (document.getElementById(id)||{}).value||'';}).join('');
 }
@@ -4488,7 +4463,6 @@ function doPinSubmit(){
 
 function doLogout(){
   try{localStorage.removeItem('tg_session');localStorage.removeItem('tg_creds');}catch(e){}
-  if(window.FB_AUTH) window.FB_AUTH.signOut().catch(function(){});
   _currentUser=null;
   showLoginScreen();
   var ne=document.getElementById('js-home-name'); if(ne) ne.value='';
@@ -4498,17 +4472,6 @@ function doLogout(){
 }
 
 function checkSession(){
-  if(window.FB_AUTH){
-    window.FB_AUTH.onAuthStateChanged(function(user){
-      if(user&&!_currentUser){
-        window.FB.get('tripgo/accounts/g_'+user.uid).then(function(snap){
-          var name=snap.exists()?snap.val().displayName:user.displayName||'';
-          try{localStorage.setItem('tg_session',JSON.stringify({uid:user.uid,name:name,provider:'google',ts:Date.now()}));}catch(e){}
-          afterLogin(user.uid,name);
-        }).catch(function(){afterLogin(user.uid,user.displayName||'');});
-      }
-    });
-  }
   // 有儲存的帳號+PIN → 自動重新驗證登入
   try{
     var creds=JSON.parse(localStorage.getItem('tg_creds')||'null');
@@ -5225,7 +5188,6 @@ window.addEventListener('load',function(){
   document.getElementById('chat-edit-cancel').addEventListener('click',cancelEditMsg);
 
   // ── 登入畫面事件 ──
-  document.getElementById('btn-google-login').addEventListener('click',doGoogleLogin);
   document.getElementById('btn-pin-submit').addEventListener('click',doPinSubmit);
   ['pd0','pd1','pd2','pd3'].forEach(function(id,i){
     var el=document.getElementById(id);
