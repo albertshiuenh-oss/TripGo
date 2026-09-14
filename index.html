@@ -81,8 +81,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:#eee}
 .login-inp{width:100%;padding:11px 14px;border:1.5px solid #e0e0e0;border-radius:10px;font-size:14px;outline:none;margin-bottom:10px;transition:border-color .15s}
 .login-inp:focus{border-color:#1A3A5C}
-.pin-row{display:flex;gap:8px;margin-bottom:8px}
-.pin-digit{flex:1;text-align:center;font-size:20px;font-weight:700;padding:10px 0;border:1.5px solid #e0e0e0;border-radius:10px;outline:none}
+.pin-row{display:flex;gap:8px;margin-bottom:8px;width:100%}
+.pin-digit{flex:1;min-width:0;width:0;text-align:center;font-size:20px;font-weight:700;padding:10px 0;border:1.5px solid #e0e0e0;border-radius:10px;outline:none;box-sizing:border-box}
 .pin-digit:focus{border-color:#1A3A5C}
 .login-hint{font-size:11px;color:#888;margin-bottom:10px;min-height:14px;text-align:center}
 .login-hint.ok{color:#2E7D32}.login-hint.new{color:#1A3A5C}
@@ -1090,7 +1090,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <button class="login-submit" id="btn-pin-submit" disabled>登入 / 建立帳號</button>
       <div class="login-err-msg" id="login-err"></div>
     </div>
-    <div class="login-footer">TripGo v4.4</div>
+    <div class="login-footer">TripGo v4.6</div>
   </div>
 
 <div id="S-join" class="hide">
