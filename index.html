@@ -1068,7 +1068,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 
 <!-- ========== JOIN SCREEN ========== -->
   <!-- Login Screen -->
-  <div class="login-screen" id="S-login">
+  <div class="login-screen show" id="S-login">
     <div style="text-align:center;margin-bottom:24px">
       <div style="font-size:26px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;gap:8px">🗺 Trip<span style="color:#E8B84B">Go</span></div>
       <div style="font-size:11px;color:rgba(255,255,255,.45);letter-spacing:.5px;margin-top:4px">團體旅遊管理 APP</div>
@@ -1107,7 +1107,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v4.4 &nbsp;·&nbsp; 2026-09-14</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v4.5 &nbsp;·&nbsp; 2026-09-14</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -1217,10 +1217,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
     <span class="tb-logo" id="tb-logo"><i class="ti ti-map-2"></i> TripGo</span>
     <span class="tb-trip" id="tb-trip">旅遊群組</span>
     <span style="flex:1"></span>
-    <span id="net-status" class="online" style="margin-right:6px"><i class="ti ti-wifi" style="font-size:11px"></i><span id="net-label">線上</span></span>
+    <span id="net-status" class="online" style="margin-right:4px"><i class="ti ti-wifi" style="font-size:11px"></i><span id="net-label">線上</span></span>
+    <span id="tb-myname" style="font-size:11px;color:var(--text2);font-weight:600;flex-shrink:0;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:6px"></span>
     <button id="btn-logout" title="登出" style="display:none;background:none;border:1px solid rgba(255,255,255,.3);color:rgba(255,255,255,.7);font-size:10px;padding:2px 8px;border-radius:6px;cursor:pointer;margin-right:4px" onclick="doLogout()">登出</button>
     <button id="btn-share-trip" class="share-btn" style="display:none"><i class="ti ti-share"></i></button>
-    <span id="tb-myname" style="font-size:11px;color:var(--text2);font-weight:600;flex-shrink:0;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
 
   </div>
   <div class="main">
@@ -1373,7 +1373,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
             <button class="tb-invite" id="btn-invite"><i class="ti ti-share" style="font-size:11px"></i> 邀請</button>
           </div>
         </div>
-        <div id="mem-list-loc"></div>
+        <div id="mem-list"></div>
       </div>
     </div>
   </div>
@@ -3600,7 +3600,7 @@ function showPane(name){
   var pane=document.getElementById('pane-'+name); if(pane) pane.classList.add('on');
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('on');});
   var tab=document.querySelector('.tab[data-pane="'+name+'"]'); if(tab) tab.classList.add('on');
-  if(name==='locations'){ renderMembers(); }
+  if(name==='locations'){ renderAvatars(); renderMembers(); }
   if(name==='restaurant'){ renderRestaurant(); }
 
   // Chat pane: collapse the map to make room for conversation (manual drag still works once inside)
