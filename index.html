@@ -72,6 +72,23 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 #js-trips-preview{display:none;flex-direction:column;gap:8px}
 .jtp-count{font-size:11px;color:rgba(255,255,255,.8);font-weight:600}
 #jtp-list{display:flex;flex-direction:column;gap:6px}
+/* ── Logo 選單 ── */
+.logo-menu{display:none;position:fixed;top:48px;left:8px;background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.2);z-index:8000;overflow:hidden;min-width:160px}
+.logo-menu.show{display:block}
+.logo-menu-item{display:flex;align-items:center;gap:10px;padding:12px 16px;font-size:13px;color:#1C2B3A;cursor:pointer;border-bottom:1px solid #f0f0f0;transition:background .1s}
+.logo-menu-item:last-child{border-bottom:none}
+.logo-menu-item:hover{background:#f5f8ff}
+.logo-menu-item.danger{color:#d32f2f}
+/* ── 簡介圖片預覽 ── */
+.briefing-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9500;flex-direction:column;align-items:center;justify-content:flex-start;padding:16px;overflow-y:auto}
+.briefing-overlay.show{display:flex}
+.briefing-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:12px;width:100%;max-width:800px}
+.briefing-close{background:rgba(255,255,255,.15);border:none;color:#fff;font-size:13px;padding:6px 14px;border-radius:8px;cursor:pointer}
+.briefing-hint{font-size:11px;color:rgba(255,255,255,.6);flex:1;text-align:center}
+.briefing-dl{background:#E8B84B;border:none;color:#0D2137;font-size:13px;font-weight:700;padding:6px 14px;border-radius:8px;cursor:pointer}
+.briefing-img-wrap{width:100%;max-width:800px}
+.briefing-img-wrap img{width:100%;height:auto;border-radius:8px;display:block}
+
 .login-screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px 24px;background:linear-gradient(160deg,#0D2137 0%,#1A3A5C 100%)}
 .login-screen.show{display:flex}
 .login-card{background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
@@ -822,6 +839,27 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .share-banner{display:flex;align-items:center;gap:8px;padding:7px 14px;background:#185FA5;color:#fff;font-size:12px;font-weight:600;flex-shrink:0}
 .share-btn{background:none;border:1px solid var(--blue);color:var(--blue);font-size:11px;padding:2px 9px;border-radius:6px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:3px}
 .settle-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+/* split mode toggle */
+.split-mode-row{display:flex;gap:6px;margin-bottom:8px}
+.split-mode-btn{flex:1;padding:6px 0;border-radius:8px;border:1.5px solid var(--border);background:var(--bg2);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;transition:.15s}
+.split-mode-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.split-chk-list{max-height:130px;overflow-y:auto;border:1.5px solid var(--border);border-radius:10px;padding:4px 6px;background:#fff}
+.split-chk-label{display:flex;align-items:center;gap:8px;padding:5px 4px;cursor:pointer;border-radius:6px}
+.split-chk-label:hover{background:var(--bg2)}
+.split-chk-label input{accent-color:var(--blue);width:15px;height:15px;cursor:pointer}
+.split-chk-label span{font-size:13px;color:var(--text)}
+/* weather tab */
+.wx-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.wx-loc{font-size:11px;color:var(--text2);margin-left:auto}
+.wx-scroll{overflow-y:auto;flex:1;padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+.wx-day-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:12px}
+.wx-date{font-size:11px;font-weight:700;color:var(--blue);width:52px;flex-shrink:0;text-transform:uppercase}
+.wx-icon{font-size:28px;flex-shrink:0}
+.wx-temps{display:flex;flex-direction:column;font-size:13px;font-weight:600;color:var(--text);flex:1;min-width:0}
+.wx-rain{font-size:11px;color:#185FA5}
+.wx-desc{font-size:11px;color:var(--text2);margin-top:1px}
+.wx-empty{padding:32px 14px;text-align:center;color:var(--text2);font-size:13px;line-height:1.7}
+.wx-loading{padding:32px 14px;text-align:center;color:var(--text2);font-size:13px}
 .settle-row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0}
 .settle-amt{font-weight:700;color:var(--green)}
 .seg-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px}
@@ -1067,6 +1105,24 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 <body>
 
 <!-- ========== JOIN SCREEN ========== -->
+  <!-- Logo 選單 -->
+  <div class="logo-menu" id="logo-menu">
+    <div class="logo-menu-item" id="lm-briefing">📸 產出旅程簡介</div>
+    <div class="logo-menu-item danger" id="lm-home">🏠 回到首頁</div>
+    <div class="logo-menu-item" id="lm-close">✕ 不用了</div>
+  </div>
+  <!-- 簡介圖片預覽 -->
+  <div class="briefing-overlay" id="briefing-overlay">
+    <div class="briefing-toolbar">
+      <button class="briefing-close" id="briefing-close">✕ 關閉</button>
+      <div class="briefing-hint">長按圖片可儲存到手機 📱</div>
+      <button class="briefing-dl" id="briefing-dl">⬇ 下載</button>
+    </div>
+    <div class="briefing-img-wrap" id="briefing-img-wrap">
+      <div id="briefing-loading" style="color:#fff;text-align:center;padding:40px;font-size:14px">⏳ 生成中，請稍候…</div>
+    </div>
+  </div>
+
   <!-- Login Screen -->
   <div class="login-screen show" id="S-login">
     <div style="text-align:center;margin-bottom:24px">
@@ -1086,7 +1142,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <button class="login-submit" id="btn-pin-submit" disabled>登入 / 建立帳號</button>
       <div class="login-err-msg" id="login-err"></div>
     </div>
-    <div class="login-footer">TripGo v4.3B</div>
+    <div class="login-footer">TripGo v4.5</div>
   </div>
 
 <div id="S-join" class="hide">
@@ -1103,7 +1159,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v4.3B &nbsp;·&nbsp; 2026-09-14</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v4.5 &nbsp;·&nbsp; 2026-09-29</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -1272,6 +1328,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
         <button class="tab" data-pane="restaurant" aria-label="餐廳"><i class="ti ti-tools-kitchen-2"></i></button>
         <button class="tab" data-pane="expense" aria-label="費用"><span class="tab-dollar">$</span><span class="tab-dot" id="expense-unread-dot"></span></button>
         <button class="tab" data-pane="locations" aria-label="成員"><i class="ti ti-users"></i><span class="tab-dot" id="members-unread-dot"></span></button>
+        <button class="tab" data-pane="weather" aria-label="天氣"><i class="ti ti-cloud-sun"></i></button>
       </div>
       <!-- Itinerary pane -->
       <div class="pane on" id="pane-itinerary">
@@ -1372,6 +1429,18 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
         <div id="mem-list"></div>
       </div>
     </div>
+      <!-- Weather pane -->
+      <div class="pane" id="pane-weather">
+        <div class="wx-header">
+          <i class="ti ti-cloud-sun" style="font-size:16px;color:var(--blue)"></i>
+          <span style="font-size:13px;font-weight:700">天氣預報</span>
+          <span id="wx-loc-label" class="wx-loc"></span>
+        </div>
+        <div class="wx-scroll" id="wx-scroll">
+          <div class="wx-loading" id="wx-loading">⛅ 載入天氣預報中…</div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1426,8 +1495,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
     <div class="m-field"><label class="m-lbl">幣別</label><select class="m-sel" id="m-currency"><option value="NTD">NTD</option><option value="USD">USD</option><option value="JPY">JPY</option><option value="EURO">EURO</option><option value="Others">Others</option></select></div>
   </div>
   <div class="m-field"><label class="m-lbl">付款人</label><select class="m-sel" id="m-payer"></select></div>
-  <div class="m-field"><label class="m-lbl">平攤人數</label>
-    <select class="m-sel" id="m-split"><option value="all">全體成員</option><option value="5">5人</option><option value="4">4人</option><option value="3">3人</option><option value="2">2人</option></select>
+  <div class="m-field"><label class="m-lbl">分攤方式</label>
+    <div class="split-mode-row">
+      <button class="split-mode-btn active" id="btn-split-all" type="button">全體成員</button>
+      <button class="split-mode-btn" id="btn-split-custom" type="button">指定成員</button>
+    </div>
+    <div class="split-chk-list" id="split-chk-list" style="display:none"></div>
   </div>
   <div class="m-btns"><button class="m-cancel" id="btn-exp-cancel">取消</button><button class="m-ok" id="btn-exp-ok">確認新增</button></div>
 </div></div>
@@ -3285,7 +3358,9 @@ function renderExpenses(){
     // 私人群組：群組成員均可編輯/刪除任何費用；管理員同等權限
     var card=document.createElement('div'); card.className='exp-card';
     var uLen=uniqueMembers().length;
-    var perAmt=uLen>0?Math.round(e.amt/uLen):e.per;
+    var splitCnt=e.splitMembers?e.splitMembers.length:uLen;
+    var perAmt2=Math.round(e.amt/(splitCnt||1));
+    var splitLabel=e.splitMembers?e.splitMembers.join('、')+'（'+e.splitMembers.length+'人）':uLen+'人全體';
     card.innerHTML='<div class="exp-top">'+
       '<span class="exp-nm">'+e.name+'</span>'+
       '<div style="display:flex;align-items:center;gap:2px">'+
@@ -3294,7 +3369,8 @@ function renderExpenses(){
         '<button class="exp-act-btn red" data-act="del"><i class="ti ti-trash"></i></button>'+
       '</div>'+
     '</div>'+
-    '<div class="exp-meta">付款：'+e.payer+' · '+uLen+'人平攤 · 每人 NT$ '+perAmt.toLocaleString()+'</div>';
+    '<div class="exp-meta">付款：'+e.payer+' · 每人 '+(e.currency||'NTD')+' '+perAmt2.toLocaleString()+'</div>'+
+    '<div class="exp-meta" style="margin-top:2px;color:var(--text2)">分攤：'+splitLabel+'</div>';
     card.querySelector('[data-act="edit"]').addEventListener('click',function(ev){ev.stopPropagation();editExpense(key,e);});
     card.querySelector('[data-act="del"]').addEventListener('click',function(ev){ev.stopPropagation();deleteExpense(key);});
     list.appendChild(card);
@@ -3302,10 +3378,9 @@ function renderExpenses(){
   var pct=Math.min(Math.round(total/200000*100),100);
   document.getElementById('bud-pct').textContent=pct+'%';
   document.getElementById('bud-fill').style.width=pct+'%';
-  document.getElementById('bud-used').textContent='NT$ '+total.toLocaleString();
-  // 花費總和
+  // 花費總和 – 顯示"換算中"，由 calcSettle() 用正確匯率更新
   var totalNum=document.getElementById('exp-total-num');
-  if(totalNum) totalNum.textContent='NT$ '+total.toLocaleString();
+  if(totalNum) totalNum.textContent='換算中…';
   var totalBar=document.getElementById('exp-total-bar');
   if(totalBar) totalBar.style.display='flex';
   calcSettle();
@@ -3315,17 +3390,31 @@ function calcSettle(){
   fetchRates(base,function(rates){
   var paid={},share={};
   uniqueMembers().forEach(function(m){paid[m.name]=0;share[m.name]=0;});
+  var totalBase=0;
   Object.values(S.expenses).forEach(function(e){
     var amt=toBase(e.amt,e.currency||'NTD',rates,base);
+    totalBase+=amt;
     paid[e.payer]=(paid[e.payer]||0)+amt;
-    var uNames=Object.keys(share);
-    uNames.forEach(function(n){share[n]=(share[n]||0)+Math.round(amt/uNames.length);});
+    // use splitMembers if specified, else all members
+    var splitNames=e.splitMembers&&e.splitMembers.length?e.splitMembers:Object.keys(share);
+    var perShare=splitNames.length>0?Math.round(amt/splitNames.length):0;
+    splitNames.forEach(function(n){if(n in share) share[n]=(share[n]||0)+perShare;});
   });
+  // update total display with real converted amount
+  var totalNum=document.getElementById('exp-total-num');
+  if(totalNum) totalNum.textContent=base+' '+totalBase.toLocaleString();
+  var budUsed=document.getElementById('bud-used');
+  if(budUsed) budUsed.textContent=base+' '+totalBase.toLocaleString();
+  var pct=Math.min(Math.round(totalBase/200000*100),100);
+  var budFill=document.getElementById('bud-fill');
+  if(budFill) budFill.style.width=pct+'%';
+  var budPct=document.getElementById('bud-pct');
+  if(budPct) budPct.textContent=pct+'%';
   var balance={}; Object.keys(paid).forEach(function(n){balance[n]=(paid[n]||0)-(share[n]||0);});
   var cr=[],db=[];
   Object.entries(balance).forEach(function(e){if(e[1]>10)cr.push({name:e[0],amt:e[1]});else if(e[1]<-10)db.push({name:e[0],amt:-e[1]});});
   var html='';
-  db.forEach(function(d){cr.forEach(function(c){if(d.amt>0&&c.amt>0){var t=Math.min(d.amt,c.amt);html+='<div class="settle-row"><span>'+d.name+' → '+c.name+'</span><span class="settle-amt">NT$ '+Math.round(t).toLocaleString()+'</span></div>';d.amt-=t;c.amt-=t;}});});
+  db.forEach(function(d){cr.forEach(function(c){if(d.amt>0&&c.amt>0){var t=Math.min(d.amt,c.amt);html+='<div class="settle-row"><span>'+d.name+' → '+c.name+'</span><span class="settle-amt">'+base+' '+Math.round(t).toLocaleString()+'</span></div>';d.amt-=t;c.amt-=t;}});});
   document.getElementById('settle-rows').innerHTML=html||'<div style="font-size:11px;color:var(--gray)">目前無需結算 ✅</div>';
   var st=document.querySelector('.settle-title'); if(st) st.textContent='💰 結算（以 '+(S.primaryCurrency||'NTD')+' 計）';
   }); // end fetchRates
@@ -3335,12 +3424,14 @@ function confirmExpense(){
   var name=document.getElementById('m-name').value.trim();
   var amt=parseInt(document.getElementById('m-amt').value)||0;
   var payer=document.getElementById('m-payer').value;
-  var sv=document.getElementById('m-split').value;
-  var sn=sv==='all'?uniqueMembers().length:parseInt(sv);
+  var splitMem=getSplitMembers(); // null = all, array = custom
+  var sn=splitMem?splitMem.length:uniqueMembers().length;
+  if(sn===0){showToast('請選擇至少一位分攤成員',1500);return;}
   if(!name||!amt){showToast('請填寫名稱和金額',1500);return;}
   var editKey=document.getElementById('m-edit-key').value;
   var currency=(document.getElementById('m-currency')||{}).value||'NTD';
   var data={name:name,amt:amt,payer:payer,split:sn,per:Math.round(amt/sn),time:getTime(),uid:S.myUid,currency:currency};
+  if(splitMem) data.splitMembers=splitMem;
   if(editKey){
     var orig=S.expenses[editKey]; if(orig&&orig.uid) data.uid=orig.uid; // 保留原始擁有者
     window.FB.set('tripgo/groups/'+S.groupCode+'/expenses/'+editKey,data);
@@ -3362,10 +3453,11 @@ function editExpense(key,e){
     renderPayerSelect();
     var payerEl=document.getElementById('m-payer');
     if(payerEl) payerEl.value=e.payer||'';
-    var sp=document.getElementById('m-split');
-    if(sp){
-      var splitVal=(e.split&&e.split===uniqueMembers().length)?'all':(e.split?String(e.split):'all');
-      sp.value=splitVal;
+    if(e.splitMembers&&e.splitMembers.length>0){
+      setSplitMode('custom');
+      renderSplitCheckboxes(e.splitMembers);
+    } else {
+      setSplitMode('all');
     }
     var t=document.getElementById('m-exp-title'),b=document.getElementById('btn-exp-ok');
     if(t)t.textContent='編輯花費'; if(b)b.textContent='確認修改';
@@ -3464,10 +3556,34 @@ function renderPayerSelect(){
   uniqueMembers().forEach(function(m){var o=document.createElement('option');o.value=m.name;o.textContent=m.name;sel.appendChild(o);});
   if(S.myName) sel.value=S.myName;
 }
+var _splitMode='all'; // 'all' | 'custom'
+function setSplitMode(mode){
+  _splitMode=mode;
+  var btnAll=document.getElementById('btn-split-all');
+  var btnCust=document.getElementById('btn-split-custom');
+  var list=document.getElementById('split-chk-list');
+  if(btnAll) btnAll.classList.toggle('active',mode==='all');
+  if(btnCust) btnCust.classList.toggle('active',mode==='custom');
+  if(list){ list.style.display=mode==='custom'?'block':'none'; }
+  if(mode==='custom') renderSplitCheckboxes(null);
+}
+function renderSplitCheckboxes(selectedNames){
+  var list=document.getElementById('split-chk-list'); if(!list) return;
+  var ul=uniqueMembers();
+  var html=ul.map(function(m){
+    var chk=(selectedNames===null||selectedNames.indexOf(m.name)>=0)?'checked':'';
+    return '<label class="split-chk-label"><input type="checkbox" class="split-chk" value="'+m.name+'" '+chk+'><span>'+m.name+'</span></label>';
+  }).join('');
+  list.innerHTML=html||'<div style="padding:8px;font-size:12px;color:var(--text2)">尚無成員</div>';
+}
+function getSplitMembers(){
+  if(_splitMode==='all') return null;
+  var checked=document.querySelectorAll('.split-chk:checked');
+  return Array.from(checked).map(function(c){return c.value;});
+}
 function renderSplitSelect(){
-  var sel=document.getElementById('m-split'); if(!sel) return;
-  var uLen=uniqueMembers().length;
-  sel.options[0].textContent='全體成員（'+uLen+'人）';
+  // reset to 'all' mode when opening add-expense form
+  setSplitMode('all');
 }
 
 // ════════════════════════════════
@@ -3523,6 +3639,130 @@ function addMember(){
 // ════════════════════════════════
 // LOCATIONS
 // ════════════════════════════════
+// ════════════════════════════════
+// WEATHER (Open-Meteo free API)
+// ════════════════════════════════
+var WMO_MAP={
+  0:'☀️',1:'🌤',2:'⛅',3:'☁️',
+  45:'🌫',48:'🌫',
+  51:'🌦',53:'🌦',55:'🌧',
+  61:'🌧',63:'🌧',65:'🌧',
+  71:'🌨',73:'🌨',75:'❄️',77:'🌨',
+  80:'🌦',81:'🌧',82:'⛈',
+  85:'🌨',86:'❄️',
+  95:'⛈',96:'⛈',99:'⛈'
+};
+var WMO_DESC={
+  0:'晴天',1:'大致晴朗',2:'部分多雲',3:'陰天',
+  45:'有霧',48:'凍霧',
+  51:'小毛毛雨',53:'毛毛雨',55:'大毛毛雨',
+  61:'小雨',63:'中雨',65:'大雨',
+  71:'小雪',73:'中雪',75:'大雪',77:'冰晶',
+  80:'陣雨',81:'陣雨',82:'強陣雨',
+  85:'陣雪',86:'大陣雪',
+  95:'雷雨',96:'冰雹雷雨',99:'大冰雹雷雨'
+};
+function wmoEmoji(code){ return WMO_MAP[code]||'🌡'; }
+function wmoDesc(code){ return WMO_DESC[code]||''; }
+
+function getTripDateRange(){
+  var dates=[];
+  S.stops.forEach(function(s){
+    var d=s.day?labelToDate(s.day):'';
+    if(d&&d.match(/^\d{4}-\d{2}-\d{2}$/)) dates.push(d);
+  });
+  if(!dates.length) return null;
+  dates.sort();
+  return {start:dates[0], end:dates[dates.length-1]};
+}
+
+function getTripCoords(){
+  for(var i=0;i<S.stops.length;i++){
+    var s=S.stops[i];
+    if(s.lat&&s.lng&&parseFloat(s.lat)!==0){
+      return {lat:parseFloat(s.lat),lng:parseFloat(s.lng),name:s.name};
+    }
+  }
+  return null;
+}
+
+var _wxCache={};
+function renderWeather(){
+  var scroll=document.getElementById('wx-scroll');
+  var locLabel=document.getElementById('wx-loc-label');
+  if(!scroll) return;
+  scroll.innerHTML='<div class="wx-loading">⛅ 載入天氣預報中…</div>';
+
+  var coords=getTripCoords();
+  if(!coords){
+    scroll.innerHTML='<div class="wx-empty">📍 請先在行程中加入有地圖位置的景點<br><span style="font-size:12px">TripGo 將依景點座標取得天氣預報</span></div>';
+    return;
+  }
+  var range=getTripDateRange();
+  var today=new Date();
+  var yyyymmdd=function(d){return d.getFullYear()+'-'+(d.getMonth()<9?'0':'')+(d.getMonth()+1)+'-'+(d.getDate()<10?'0':'')+d.getDate();};
+  var start=range?range.start:yyyymmdd(today);
+  // Open-Meteo max forecast is 16 days; cap end date
+  var endD=range?new Date(range.end):new Date(today.getTime()+6*86400000);
+  var maxD=new Date(today.getTime()+15*86400000);
+  if(endD>maxD) endD=maxD;
+  var end=yyyymmdd(endD);
+
+  if(locLabel) locLabel.textContent=coords.name;
+
+  var cacheKey=coords.lat.toFixed(2)+'_'+coords.lng.toFixed(2)+'_'+start+'_'+end;
+  if(_wxCache[cacheKey]){
+    renderWxCards(_wxCache[cacheKey],coords.name);
+    return;
+  }
+
+  var url='https://api.open-meteo.com/v1/forecast?latitude='+coords.lat+'&longitude='+coords.lng+
+    '&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_sum'+
+    '&timezone=auto&start_date='+start+'&end_date='+end;
+
+  fetch(url).then(function(r){return r.json();}).then(function(d){
+    if(!d||!d.daily){throw new Error('no data');}
+    _wxCache[cacheKey]=d.daily;
+    renderWxCards(d.daily,coords.name);
+  }).catch(function(err){
+    scroll.innerHTML='<div class="wx-empty">❌ 天氣資料載入失敗<br><span style="font-size:12px">請確認網路連線後重試</span></div>';
+    console.warn('Weather fetch error:',err);
+  });
+}
+
+function renderWxCards(daily,locName){
+  var scroll=document.getElementById('wx-scroll');
+  var locLabel=document.getElementById('wx-loc-label');
+  if(locLabel) locLabel.textContent=locName||'';
+  if(!daily||!daily.time||!daily.time.length){
+    scroll.innerHTML='<div class="wx-empty">⚠️ 此行程日期超出預報範圍（最多16天）</div>';
+    return;
+  }
+  // Month short names
+  var MNAME=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var WDAY=['日','一','二','三','四','五','六'];
+  var html='';
+  for(var i=0;i<daily.time.length;i++){
+    var dt=new Date(daily.time[i]+'T12:00:00');
+    var dateStr=MNAME[dt.getMonth()]+' '+dt.getDate();
+    var dayStr='（'+WDAY[dt.getDay()]+'）';
+    var code=daily.weathercode[i];
+    var maxT=Math.round(daily.temperature_2m_max[i]);
+    var minT=Math.round(daily.temperature_2m_min[i]);
+    var rain=daily.precipitation_sum[i];
+    html+='<div class="wx-day-card">'+
+      '<div><div class="wx-date">'+dateStr+'</div><div style="font-size:10px;color:var(--text2);margin-top:1px">'+dayStr+'</div></div>'+
+      '<div class="wx-icon">'+wmoEmoji(code)+'</div>'+
+      '<div class="wx-temps">'+
+        '<span>'+maxT+'° / '+minT+'°C</span>'+
+        '<span class="wx-desc">'+wmoDesc(code)+'</span>'+
+        (rain>0?'<span class="wx-rain">🌧 降雨 '+rain.toFixed(1)+'mm</span>':'<span class="wx-rain" style="color:var(--gray)">無降雨</span>')+
+      '</div>'+
+    '</div>';
+  }
+  scroll.innerHTML=html;
+}
+
 var FOOD_KW=['早餐','午餐','中餐','晚餐','宵夜','餐廳','咖啡','Breakfast','Lunch','Dinner','Brunch','Cafe','Food','Restaurant'];
 function isFood(s){
   if(s.category==='餐廳') return true;
@@ -3594,6 +3834,7 @@ function showPane(name){
   var tab=document.querySelector('.tab[data-pane="'+name+'"]'); if(tab) tab.classList.add('on');
   if(name==='locations'){ renderAvatars(); renderMembers(); }
   if(name==='restaurant'){ renderRestaurant(); }
+  if(name==='weather'){ renderWeather(); }
 
   // Chat pane: collapse the map to make room for conversation (manual drag still works once inside)
   var mw=document.getElementById('map-wrap');
@@ -4471,6 +4712,102 @@ function doLogout(){
   var sb=document.getElementById('btn-share-trip'); if(sb) sb.style.display='none';
 }
 
+// ── Logo 選單 ──
+function showLogoMenu(){
+  var m=document.getElementById('logo-menu'); if(!m) return;
+  m.classList.add('show');
+  setTimeout(function(){ document.addEventListener('click',hideLogoMenuOnce); },10);
+}
+function hideLogoMenuOnce(){ document.getElementById('logo-menu').classList.remove('show'); document.removeEventListener('click',hideLogoMenuOnce); }
+
+// ── 旅程簡介生成 ──
+function generateBriefingHTML(){
+  var tName=S.tripName||'旅程';
+  var stops=S.stops||[];
+  var mems=uniqueMembers?uniqueMembers():(S.members||[]);
+
+  // 日期分組
+  var days={},dayOrd=[];
+  stops.forEach(function(s){
+    var d=s.day||'未指定'; if(!days[d]){days[d]=[];dayOrd.push(d);}  days[d].push(s);
+  });
+  dayOrd.sort(function(a,b){var da=labelToDate(a)||a,db=labelToDate(b)||b;return da<db?-1:da>db?1:0;});
+
+  var stayStr=function(s){if(!s.arrive||!s.depart)return '';var a=parseT(s.arrive),d=parseT(s.depart);if(a==null||d==null)return '';var st=d-a;if(st<0)st+=1440;var h=Math.floor(st/60),m=st%60;return (h?h+'時':'')+  (m?m+'分':'');};
+
+  var rows='';
+  dayOrd.forEach(function(day,di){
+    rows+='<tr><td colspan="4" style="background:#0D2137;color:#E8B84B;font-weight:700;font-size:11px;padding:5px 8px;letter-spacing:.5px">'+day+'</td></tr>';
+    (days[day]||[]).forEach(function(s,i){
+      var dur=stayStr(s);
+      var transit=s.transit&&s.transit.minutes?s.transit.minutes+'min':'';
+      rows+='<tr style="border-bottom:1px solid #eee">'
+        +'<td style="padding:5px 8px;font-size:10px;color:#888;width:55px;white-space:nowrap">'+(s.arrive||'')+(s.depart?' ~<br>'+s.depart:'')+'</td>'
+        +'<td style="padding:5px 8px;font-size:12px;font-weight:600;color:#1C2B3A">'+(s.name||'')+'</td>'
+        +'<td style="padding:5px 8px;font-size:10px;color:#2E7D32;white-space:nowrap">'+dur+'</td>'
+        +'<td style="padding:5px 8px;font-size:10px;color:#7A99B8;white-space:nowrap">'+transit+'</td>'
+        +'</tr>';
+    });
+  });
+
+  var memStr=mems.map(function(m){return m.name;}).join('、');
+
+  // 花費
+  var expTotal=0; var expCur='NTD';
+  Object.values(S.expenses||{}).forEach(function(e){expTotal+=e.amt||0;expCur=e.currency||expCur;});
+
+  return '<div id="briefing-content" style="font-family:\'Noto Sans TC\',system-ui,sans-serif;background:#fff;width:800px;padding:0">'
+    +'<div style="background:#0D2137;color:#fff;padding:20px 24px;display:flex;justify-content:space-between;align-items:center">'
+    +'<div><div style="font-size:9px;letter-spacing:2px;color:#E8B84B;margin-bottom:6px">TRIP ITINERARY</div>'
+    +'<div style="font-size:22px;font-weight:700;line-height:1.1">'+tName+'</div></div>'
+    +'<div style="text-align:right"><div style="font-size:11px;color:#7A99B8;margin-bottom:4px">👥 '+memStr+'</div>'
+    +(expTotal>0?'<div style="font-size:11px;color:#E8B84B">💰 '+expCur+' '+expTotal.toLocaleString()+'</div>':'')
+    +'</div></div>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
+    +'<thead><tr style="background:#f5f8ff"><th style="padding:5px 8px;text-align:left;font-size:9px;color:#888;font-weight:600">時間</th><th style="padding:5px 8px;text-align:left;font-size:9px;color:#888;font-weight:600">景點</th><th style="padding:5px 8px;text-align:left;font-size:9px;color:#888;font-weight:600">停留</th><th style="padding:5px 8px;text-align:left;font-size:9px;color:#888;font-weight:600">交通</th></tr></thead>'
+    +'<tbody>'+rows+'</tbody></table>'
+    +'<div style="background:#f5f8ff;padding:10px 16px;font-size:9px;color:#999;text-align:right">生成自 TripGo · '+new Date().toLocaleDateString('zh-TW')+'</div>'
+    +'</div>';
+}
+
+function exportBriefingImage(){
+  var overlay=document.getElementById('briefing-overlay');
+  var wrap=document.getElementById('briefing-img-wrap');
+  var loading=document.getElementById('briefing-loading');
+  overlay.classList.add('show');
+  loading.style.display='block';
+  wrap.querySelectorAll('img').forEach(function(img){img.remove();});
+
+  // 先插入 briefing div，再截圖
+  var tempDiv=document.createElement('div');
+  tempDiv.style.cssText='position:fixed;left:-9999px;top:0;z-index:-1';
+  tempDiv.innerHTML=generateBriefingHTML();
+  document.body.appendChild(tempDiv);
+  var target=tempDiv.firstChild;
+
+  if(typeof html2canvas==='function'){
+    html2canvas(target,{scale:2,useCORS:true,backgroundColor:'#ffffff'}).then(function(canvas){
+      document.body.removeChild(tempDiv);
+      loading.style.display='none';
+      var img=document.createElement('img');
+      img.src=canvas.toDataURL('image/png');
+      img.style.cssText='width:100%;height:auto;border-radius:8px;display:block';
+      wrap.appendChild(img);
+      document.getElementById('briefing-dl').onclick=function(){
+        var a=document.createElement('a');
+        a.href=img.src; a.download=(S.tripName||'tripgo')+'-briefing.png';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      };
+    }).catch(function(e){
+      document.body.removeChild(tempDiv);
+      loading.textContent='❌ 生成失敗，請稍後再試';
+    });
+  } else {
+    document.body.removeChild(tempDiv);
+    loading.textContent='⏳ 載入中，請稍後再試一次';
+  }
+}
+
 function checkSession(){
   // 有儲存的帳號+PIN → 自動重新驗證登入
   try{
@@ -4599,10 +4936,10 @@ function initLogoListeners(){
   if(!logo) return;
   logo.addEventListener('touchend',function(e){
     var now=Date.now();
-    if(now-_lastTap<300){ e.preventDefault(); e.stopPropagation(); toggleFullscreen(); _lastTap=0; }
+    if(now-_lastTap<300){ e.preventDefault(); e.stopPropagation(); showLogoMenu(); _lastTap=0; }
     else { _lastTap=now; }
   },{passive:false});
-  logo.addEventListener('dblclick',function(e){ e.preventDefault(); toggleFullscreen(); });
+  logo.addEventListener('dblclick',function(e){ e.preventDefault(); showLogoMenu(); });
   logo.addEventListener('click', function(e){
     if(Date.now()-_lastTap<350) return; // swallow click right after double-tap
     goToHome();
@@ -5189,6 +5526,17 @@ window.addEventListener('load',function(){
 
   // ── 登入畫面事件 ──
   document.getElementById('btn-pin-submit').addEventListener('click',doPinSubmit);
+  // Logo 選單
+  document.getElementById('lm-briefing').addEventListener('click',function(){
+    document.getElementById('logo-menu').classList.remove('show');
+    exportBriefingImage();
+  });
+  document.getElementById('lm-home').addEventListener('click',function(){
+    document.getElementById('logo-menu').classList.remove('show');
+    showCustomConfirm('🏠','回到首頁？','你可以隨時用名字找回這個旅程。','回到首頁',function(){ goHome(); });
+  });
+  document.getElementById('lm-close').addEventListener('click',function(){ document.getElementById('logo-menu').classList.remove('show'); });
+  document.getElementById('briefing-close').addEventListener('click',function(){ document.getElementById('briefing-overlay').classList.remove('show'); });
   ['pd0','pd1','pd2','pd3'].forEach(function(id,i){
     var el=document.getElementById(id);
     el.addEventListener('input',function(){
@@ -5276,6 +5624,8 @@ window.addEventListener('load',function(){
     var _ce=document.getElementById('m-currency'); if(_ce) _ce.disabled=!S.isOrg;
     openModal('M-expense');
   });
+  document.getElementById('btn-split-all').addEventListener('click',function(){setSplitMode('all');});
+  document.getElementById('btn-split-custom').addEventListener('click',function(){setSplitMode('custom');});
   document.getElementById('btn-exp-cancel').addEventListener('click',function(){
     document.getElementById('m-edit-key').value='';
     var t=document.getElementById('m-exp-title'),b=document.getElementById('btn-exp-ok');
@@ -5336,6 +5686,7 @@ window.addEventListener('load',function(){
 </script>
 
 <!-- Google Maps -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAqyQyNtBSvK7qLuVR49RqgkKqU1Y2vUjQ&libraries=places&callback=initMap" async defer></script>
 </body>
 </html>
