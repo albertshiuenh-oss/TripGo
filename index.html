@@ -911,19 +911,28 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   padding:5px 10px;border-radius:8px;border:1px solid var(--blue);
   background:#fff;cursor:pointer;font-size:11px;color:var(--blue);flex-shrink:0;
 }
-/* ── Members card redesign ── */
-.mem-grid-wrap{padding:10px 14px 8px;border-bottom:1px solid var(--bg2);display:flex;gap:14px;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
-.mem-grid-wrap::-webkit-scrollbar{display:none}
-.mem-grid-item{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
-.mem-grid-av{width:48px;height:48px;border-radius:50%;font-size:14px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center}
-.mem-grid-av.self-ring{box-shadow:0 0 0 2.5px var(--blue),0 0 0 4.5px #fff}
-.mem-grid-name{font-size:10px;color:var(--text2);max-width:56px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
-.mem-cards{overflow-y:auto;flex:1;padding:4px 0}
-.mem-card{display:flex;align-items:center;gap:10px;margin:5px 10px;padding:10px 12px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
-.mem-card.is-self{background:#EEF4FF;border-color:#C5D9FF}
-.mem-tag{display:inline-block;font-size:9px;border-radius:4px;padding:1px 5px;font-weight:700;margin-left:3px;vertical-align:middle}
+/* ── Members compact list (Option A) ── */
+.mem-list-wrap{overflow-y:auto;flex:1}
+.mem-clist-row{
+  display:flex;align-items:center;gap:12px;
+  padding:11px 14px;border-bottom:1px solid var(--bg2);
+  border-left:3px solid transparent;
+  transition:border-color .15s,background .15s;
+  background:#fff;
+}
+.mem-clist-row.is-self{
+  border-left-color:var(--blue);
+  background:#F7FAFF;
+}
+.mem-av{width:38px;height:38px;border-radius:50%;
+  font-size:12px;font-weight:700;color:#fff;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mem-nm{font-size:13px;font-weight:600;color:var(--text)}
+.mem-sub{font-size:11px;color:var(--text2);margin-top:2px}
+.mem-acts{display:flex;gap:6px;flex-shrink:0}
+.mem-tag{display:inline-block;font-size:9px;border-radius:4px;padding:1px 5px;font-weight:700;margin-left:4px;vertical-align:middle}
 .mem-tag-me{color:var(--blue);background:#E8F0FE}
-.mem-tag-org{color:#fff;background:#F4A523}
+.mem-tag-org{color:#7A5100;background:#FFF0C2}
 .mem-tag-multi{color:#fff;background:var(--red)}
 
 /* ── Add Stop Screen ── */
@@ -3622,48 +3631,38 @@ function renderMembers(){
   var el=document.getElementById('mem-list');
   var uMembers=uniqueMembers(); var devCounts=memberDeviceCounts();
   var cntEl=document.getElementById('mem-count'); if(cntEl) cntEl.textContent=uMembers.length+'位';
-  // make mem-list a flex column so grid + scrollable card area stack properly
-  el.style.cssText='display:flex;flex-direction:column;flex:1;min-height:0';
+  el.style.cssText='display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden';
 
-  // ── Avatar grid (top strip) ──
-  var gridHtml='<div class="mem-grid-wrap">';
-  uMembers.forEach(function(m,i){
-    var isSelf=m.id===S.myUid;
-    var isOrg=m.role==='organizer';
-    gridHtml+='<div class="mem-grid-item">'+
-      '<div class="mem-grid-av av'+(i%7)+(isSelf?' self-ring':'')+'">'+m.name.substring(0,2).toUpperCase()+'</div>'+
-      '<div class="mem-grid-name">'+(isOrg?'👑 ':'')+m.name+'</div>'+
-    '</div>';
-  });
-  gridHtml+='</div>';
-
-  // ── Card list (scrollable) ──
-  var cardsHtml='<div class="mem-cards">';
+  var rows='<div class="mem-list-wrap">';
   uMembers.forEach(function(m,i){
     var isOrg=m.role==='organizer';
     var isSelf=m.id===S.myUid;
     var canDelete=S.isOrg||isSelf;
     var multi=devCounts[m.name]>1;
-    cardsHtml+='<div class="mem-card'+(isSelf?' is-self':'')+'">'+
+    // second line: role text + optional multi-device note
+    var subParts=[];
+    subParts.push(isOrg?'👑 組織者':'團員');
+    if(multi) subParts.push(devCounts[m.name]+'台裝置');
+    rows+='<div class="mem-clist-row'+(isSelf?' is-self':'')+'">'+
       '<div class="mem-av av'+(i%7)+'">'+m.name.substring(0,2).toUpperCase()+'</div>'+
       '<div style="flex:1;min-width:0">'+
         '<div class="mem-nm">'+
           m.name+
           (isSelf?'<span class="mem-tag mem-tag-me">我</span>':'')+
-          (isOrg?'<span class="mem-tag mem-tag-org">👑</span>':'')+
+          (isOrg?'<span class="mem-tag mem-tag-org">組織者</span>':'')+
           (multi?'<span class="mem-tag mem-tag-multi">'+devCounts[m.name]+'台</span>':'')+
         '</div>'+
-        '<div class="mem-role">'+(isOrg?'組織者':'團員')+'</div>'+
+        '<div class="mem-sub">'+subParts.join(' · ')+'</div>'+
       '</div>'+
       '<div class="mem-acts">'+
-        (S.isOrg?'<button class="mem-org-btn'+(isOrg?' on':'')+'" data-action="setorg" data-mid="'+m.id+'">'+(isOrg?'✓':'設為組織者')+'</button>':'')+
+        (S.isOrg&&!isSelf?'<button class="mem-org-btn'+(isOrg?' on':'')+'" data-action="setorg" data-mid="'+m.id+'">'+(isOrg?'✓ 主辦':'設主辦')+'</button>':'')+
         (canDelete?'<button class="mem-del-btn" data-action="delmember" data-mid="'+m.id+'">'+(isSelf?'退出':'移除')+'</button>':'')+
       '</div>'+
     '</div>';
   });
-  cardsHtml+='</div>';
+  rows+='</div>';
 
-  el.innerHTML=gridHtml+cardsHtml;
+  el.innerHTML=rows;
   el.querySelectorAll('[data-action]').forEach(function(btn){
     btn.addEventListener('click',function(){
       var a=this.dataset.action, mid=this.dataset.mid;
