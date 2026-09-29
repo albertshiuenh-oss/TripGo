@@ -853,12 +853,23 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .wx-header{padding:6px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
 .wx-loc{font-size:11px;color:var(--text2);margin-left:auto}
 .wx-scroll{overflow-y:auto;flex:1;padding:6px 12px;display:flex;flex-direction:column;gap:6px}
-.wx-day-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:12px}
-.wx-date{font-size:11px;font-weight:700;color:var(--blue);width:52px;flex-shrink:0;text-transform:uppercase}
-.wx-icon{font-size:28px;flex-shrink:0}
-.wx-temps{display:flex;flex-direction:column;font-size:13px;font-weight:600;color:var(--text);flex:1;min-width:0}
+/* card: plain container — interior uses wx-grid */
+.wx-day-card{border:1px solid var(--border);border-radius:12px;padding:10px 14px;transition:background .15s}
+/* fixed 3-col grid: date(68px) | icon(36px) | temps(1fr) */
+.wx-grid{display:grid;grid-template-columns:68px 36px 1fr;align-items:center;column-gap:10px}
+.wx-date{font-size:12px;font-weight:700;color:var(--blue);line-height:1.4}
+.wx-icon{font-size:30px;text-align:center;line-height:1}
+.wx-temps{display:flex;flex-direction:column;font-size:13px;font-weight:600;color:var(--text);min-width:0}
 .wx-rain{font-size:11px;color:#185FA5}
 .wx-desc{font-size:11px;color:var(--text2);margin-top:1px}
+/* temperature range bar */
+.wx-tbar-wrap{position:relative;height:4px;background:rgba(0,0,0,.08);border-radius:2px;margin-top:5px;overflow:hidden}
+.wx-tbar{position:absolute;top:0;height:4px;border-radius:2px;background:linear-gradient(90deg,#58A7FF,#FFB547)}
+/* location row spans all 3 grid columns */
+.wx-loc-bar{grid-column:1/-1;font-size:11px;color:var(--text2);border-top:1px solid rgba(0,0,0,.07);margin-top:7px;padding-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* trip summary strip */
+.wx-summary{padding:8px 12px;background:var(--bg2);border-radius:10px;margin-bottom:2px;display:flex;gap:14px;align-items:center;font-size:11px;color:var(--text2);flex-wrap:wrap}
+.wx-summary b{color:var(--text);font-weight:700}
 .wx-empty{padding:32px 14px;text-align:center;color:var(--text2);font-size:13px;line-height:1.7}
 .wx-loading{padding:32px 14px;text-align:center;color:var(--text2);font-size:13px}
 .settle-row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0}
@@ -900,6 +911,20 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   padding:5px 10px;border-radius:8px;border:1px solid var(--blue);
   background:#fff;cursor:pointer;font-size:11px;color:var(--blue);flex-shrink:0;
 }
+/* ── Members card redesign ── */
+.mem-grid-wrap{padding:10px 14px 8px;border-bottom:1px solid var(--bg2);display:flex;gap:14px;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
+.mem-grid-wrap::-webkit-scrollbar{display:none}
+.mem-grid-item{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
+.mem-grid-av{width:48px;height:48px;border-radius:50%;font-size:14px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center}
+.mem-grid-av.self-ring{box-shadow:0 0 0 2.5px var(--blue),0 0 0 4.5px #fff}
+.mem-grid-name{font-size:10px;color:var(--text2);max-width:56px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
+.mem-cards{overflow-y:auto;flex:1;padding:4px 0}
+.mem-card{display:flex;align-items:center;gap:10px;margin:5px 10px;padding:10px 12px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.mem-card.is-self{background:#EEF4FF;border-color:#C5D9FF}
+.mem-tag{display:inline-block;font-size:9px;border-radius:4px;padding:1px 5px;font-weight:700;margin-left:3px;vertical-align:middle}
+.mem-tag-me{color:var(--blue);background:#E8F0FE}
+.mem-tag-org{color:#fff;background:#F4A523}
+.mem-tag-multi{color:#fff;background:var(--red)}
 
 /* ── Add Stop Screen ── */
 #add-stop-screen{
@@ -1143,7 +1168,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <button class="login-submit" id="btn-pin-submit" disabled>登入 / 建立帳號</button>
       <div class="login-err-msg" id="login-err"></div>
     </div>
-    <div class="login-footer">TripGo v4.8</div>
+    <div class="login-footer">TripGo v4.9</div>
   </div>
 
 <div id="S-join" class="hide">
@@ -1160,7 +1185,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v4.8 &nbsp;·&nbsp; 2026-09-29</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v4.9 &nbsp;·&nbsp; 2026-09-29</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -3596,22 +3621,49 @@ function renderAvatars(){
 function renderMembers(){
   var el=document.getElementById('mem-list');
   var uMembers=uniqueMembers(); var devCounts=memberDeviceCounts();
-  document.getElementById('mem-count').textContent=uMembers.length+'位';
-  var html='';
+  var cntEl=document.getElementById('mem-count'); if(cntEl) cntEl.textContent=uMembers.length+'位';
+  // make mem-list a flex column so grid + scrollable card area stack properly
+  el.style.cssText='display:flex;flex-direction:column;flex:1;min-height:0';
+
+  // ── Avatar grid (top strip) ──
+  var gridHtml='<div class="mem-grid-wrap">';
+  uMembers.forEach(function(m,i){
+    var isSelf=m.id===S.myUid;
+    var isOrg=m.role==='organizer';
+    gridHtml+='<div class="mem-grid-item">'+
+      '<div class="mem-grid-av av'+(i%7)+(isSelf?' self-ring':'')+'">'+m.name.substring(0,2).toUpperCase()+'</div>'+
+      '<div class="mem-grid-name">'+(isOrg?'👑 ':'')+m.name+'</div>'+
+    '</div>';
+  });
+  gridHtml+='</div>';
+
+  // ── Card list (scrollable) ──
+  var cardsHtml='<div class="mem-cards">';
   uMembers.forEach(function(m,i){
     var isOrg=m.role==='organizer';
     var isSelf=m.id===S.myUid;
-    var canDelete=S.isOrg||isSelf; // organizer can delete anyone; others only self
-    var delLabel=isSelf?'刪除自己':'移除';
-    html+='<div class="mem-row">'+
+    var canDelete=S.isOrg||isSelf;
+    var multi=devCounts[m.name]>1;
+    cardsHtml+='<div class="mem-card'+(isSelf?' is-self':'')+'">'+
       '<div class="mem-av av'+(i%7)+'">'+m.name.substring(0,2).toUpperCase()+'</div>'+
-      '<div style="flex:1"><div class="mem-nm">'+(isOrg?'👑 ':'')+m.name+(isSelf?' <span style="font-size:9px;color:var(--blue);background:#E8F0FE;border-radius:4px;padding:1px 5px">我</span>':'')+(devCounts[m.name]>1?' <span style="font-size:9px;color:#fff;background:var(--red);border-radius:4px;padding:1px 6px;font-weight:700">'+devCounts[m.name]+'台裝置</span>':'')+'</div><div class="mem-role">'+(isOrg?'組織者':'團員')+'</div></div>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div class="mem-nm">'+
+          m.name+
+          (isSelf?'<span class="mem-tag mem-tag-me">我</span>':'')+
+          (isOrg?'<span class="mem-tag mem-tag-org">👑</span>':'')+
+          (multi?'<span class="mem-tag mem-tag-multi">'+devCounts[m.name]+'台</span>':'')+
+        '</div>'+
+        '<div class="mem-role">'+(isOrg?'組織者':'團員')+'</div>'+
+      '</div>'+
       '<div class="mem-acts">'+
-        (S.isOrg?'<button class="mem-org-btn'+(isOrg?' on':'')+'" data-action="setorg" data-mid="'+m.id+'">'+(isOrg?'✓ 組織者':'設組織者')+'</button>':'')+
-        (canDelete?'<button class="mem-del-btn" data-action="delmember" data-mid="'+m.id+'">'+delLabel+'</button>':'')+
-      '</div></div>';
+        (S.isOrg?'<button class="mem-org-btn'+(isOrg?' on':'')+'" data-action="setorg" data-mid="'+m.id+'">'+(isOrg?'✓':'設為組織者')+'</button>':'')+
+        (canDelete?'<button class="mem-del-btn" data-action="delmember" data-mid="'+m.id+'">'+(isSelf?'退出':'移除')+'</button>':'')+
+      '</div>'+
+    '</div>';
   });
-  el.innerHTML=html;
+  cardsHtml+='</div>';
+
+  el.innerHTML=gridHtml+cardsHtml;
   el.querySelectorAll('[data-action]').forEach(function(btn){
     btn.addEventListener('click',function(){
       var a=this.dataset.action, mid=this.dataset.mid;
@@ -3684,6 +3736,19 @@ function getTripCoords(){
     }
   }
   return null;
+}
+
+// Background tint per WMO weather code
+function wxTint(code){
+  if(code===0||code===1) return '#FFFCEE';   // sunny
+  if(code<=3) return '#F6F8FB';              // partly cloudy / overcast
+  if(code<=48) return '#EBEBF0';             // fog
+  if(code<=55) return '#EEF4FF';             // drizzle
+  if(code<=65) return '#E8F1FF';             // rain
+  if(code<=77) return '#F0F2FF';             // snow
+  if(code<=82) return '#E8F1FF';             // showers
+  if(code<=86) return '#F0F2FF';             // snow showers
+  return '#F5EEF8';                          // thunderstorm
 }
 
 // Returns [{dayLabel, date, lat, lng, locName}] sorted by date.
@@ -3807,24 +3872,37 @@ function renderWxCards(daily,locName){
     scroll.innerHTML='<div class="wx-empty">⚠️ 此行程日期超出預報範圍（最多16天）</div>';
     return;
   }
-  var MNAME=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var WDAY=['日','一','二','三','四','五','六'];
-  var html='';
+  // temp range for bar
+  var allMax=daily.temperature_2m_max.map(Math.round);
+  var allMin=daily.temperature_2m_min.map(Math.round);
+  var tripMax=Math.max.apply(null,allMax), tripMin=Math.min.apply(null,allMin);
+  var span=Math.max(tripMax-tripMin,1);
+  var rainDays=daily.precipitation_sum.filter(function(r){return r>0.5;}).length;
+  var summary='<div class="wx-summary">'+
+    '<span>🌡 最高 <b>'+tripMax+'°C</b></span>'+
+    '<span>❄️ 最低 <b>'+tripMin+'°C</b></span>'+
+    (rainDays?'<span>🌧 <b>'+rainDays+'天</b>有雨</span>':'<span>☀️ 全程無雨</span>')+
+  '</div>';
+  var html=summary;
   for(var i=0;i<daily.time.length;i++){
     var dt=new Date(daily.time[i]+'T12:00:00');
-    var dateStr=MNAME[dt.getMonth()]+' '+dt.getDate();
-    var dayStr='（'+WDAY[dt.getDay()]+'）';
+    var dateStr=(dt.getMonth()+1)+'/'+ dt.getDate()+'（'+WDAY[dt.getDay()]+'）';
     var code=daily.weathercode[i];
-    var maxT=Math.round(daily.temperature_2m_max[i]);
-    var minT=Math.round(daily.temperature_2m_min[i]);
+    var maxT=allMax[i], minT=allMin[i];
     var rain=daily.precipitation_sum[i];
-    html+='<div class="wx-day-card">'+
-      '<div><div class="wx-date">'+dateStr+'</div><div style="font-size:10px;color:var(--text2);margin-top:1px">'+dayStr+'</div></div>'+
-      '<div class="wx-icon">'+wmoEmoji(code)+'</div>'+
-      '<div class="wx-temps">'+
-        '<span>'+maxT+'° / '+minT+'°C</span>'+
-        '<span class="wx-desc">'+wmoDesc(code)+'</span>'+
-        (rain>0?'<span class="wx-rain">🌧 降雨 '+rain.toFixed(1)+'mm</span>':'<span class="wx-rain" style="color:var(--gray)">無降雨</span>')+
+    var bL=((minT-tripMin)/span*100).toFixed(1);
+    var bW=Math.max((maxT-minT)/span*100,6).toFixed(1);
+    html+='<div class="wx-day-card" style="background:'+wxTint(code)+'">'+
+      '<div class="wx-grid">'+
+        '<div class="wx-date">'+dateStr+'</div>'+
+        '<div class="wx-icon">'+wmoEmoji(code)+'</div>'+
+        '<div class="wx-temps">'+
+          '<span>'+maxT+'° / '+minT+'°C</span>'+
+          '<span class="wx-desc">'+wmoDesc(code)+'</span>'+
+          (rain>0?'<span class="wx-rain">🌧 '+rain.toFixed(1)+'mm</span>':'<span class="wx-rain" style="color:var(--text2)">無降雨</span>')+
+          '<div class="wx-tbar-wrap"><div class="wx-tbar" style="left:'+bL+'%;width:'+bW+'%"></div></div>'+
+        '</div>'+
       '</div>'+
     '</div>';
   }
@@ -3835,24 +3913,39 @@ function renderWxCards(daily,locName){
 function renderWxCardsByDay(dayStarts,dateToWx){
   var scroll=document.getElementById('wx-scroll');
   if(!dayStarts.length){scroll.innerHTML='<div class="wx-empty">⚠️ 無天氣資料</div>';return;}
-  var MNAME=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var WDAY=['日','一','二','三','四','五','六'];
-  var html='';
+  // trip-wide temp range for normalised bar
+  var allMax=[], allMin=[];
+  dayStarts.forEach(function(ds){
+    var wx=dateToWx[ds.date]; if(!wx) return;
+    allMax.push(Math.round(wx.temperature_2m_max));
+    allMin.push(Math.round(wx.temperature_2m_min));
+  });
+  var tripMax=allMax.length?Math.max.apply(null,allMax):40;
+  var tripMin=allMin.length?Math.min.apply(null,allMin):0;
+  var span=Math.max(tripMax-tripMin,1);
+  var rainDays=dayStarts.filter(function(ds){var wx=dateToWx[ds.date];return wx&&wx.precipitation_sum>0.5;}).length;
+  // summary strip
+  var summary=allMax.length?'<div class="wx-summary">'+
+    '<span>🌡 最高 <b>'+tripMax+'°C</b></span>'+
+    '<span>❄️ 最低 <b>'+tripMin+'°C</b></span>'+
+    (rainDays?'<span>🌧 <b>'+rainDays+'天</b>有雨</span>':'<span>☀️ 全程無雨</span>')+
+  '</div>':'';
+  var html=summary;
   dayStarts.forEach(function(ds){
     var wx=dateToWx[ds.date];
     var dt=new Date(ds.date+'T12:00:00');
-    var dateStr=MNAME[dt.getMonth()]+' '+dt.getDate();
-    var dayStr='（'+WDAY[dt.getDay()]+'）';
+    // "10/2（五）" format
+    var dateStr=(dt.getMonth()+1)+'/'+dt.getDate()+'（'+WDAY[dt.getDay()]+'）';
     var loc=ds.locName||'';
-    var leftCol='<div style="min-width:52px;flex-shrink:0">'+
-      '<div class="wx-date">'+dateStr+'</div>'+
-      '<div style="font-size:10px;color:var(--text2);margin-top:1px">'+dayStr+'</div>'+
-      (loc?'<div style="font-size:10px;color:var(--blue);margin-top:3px;max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+loc+'">📍'+loc+'</div>':'')+
-    '</div>';
     if(!wx){
-      html+='<div class="wx-day-card">'+leftCol+
-        '<div class="wx-icon">❓</div>'+
-        '<div class="wx-temps"><span style="color:var(--text2)">超出預報範圍</span></div>'+
+      html+='<div class="wx-day-card" style="background:#F6F8FB">'+
+        '<div class="wx-grid">'+
+          '<div class="wx-date">'+dateStr+'</div>'+
+          '<div class="wx-icon">❓</div>'+
+          '<div class="wx-temps"><span style="color:var(--text2);font-weight:500">超出預報範圍</span></div>'+
+          (loc?'<div class="wx-loc-bar">📍 '+loc+'</div>':'')+
+        '</div>'+
       '</div>';
       return;
     }
@@ -3860,12 +3953,19 @@ function renderWxCardsByDay(dayStarts,dateToWx){
     var maxT=Math.round(wx.temperature_2m_max);
     var minT=Math.round(wx.temperature_2m_min);
     var rain=wx.precipitation_sum;
-    html+='<div class="wx-day-card">'+leftCol+
-      '<div class="wx-icon">'+wmoEmoji(code)+'</div>'+
-      '<div class="wx-temps">'+
-        '<span>'+maxT+'° / '+minT+'°C</span>'+
-        '<span class="wx-desc">'+wmoDesc(code)+'</span>'+
-        (rain>0?'<span class="wx-rain">🌧 降雨 '+rain.toFixed(1)+'mm</span>':'<span class="wx-rain" style="color:var(--gray)">無降雨</span>')+
+    var bL=((minT-tripMin)/span*100).toFixed(1);
+    var bW=Math.max((maxT-minT)/span*100,6).toFixed(1);
+    html+='<div class="wx-day-card" style="background:'+wxTint(code)+'">'+
+      '<div class="wx-grid">'+
+        '<div class="wx-date">'+dateStr+'</div>'+
+        '<div class="wx-icon">'+wmoEmoji(code)+'</div>'+
+        '<div class="wx-temps">'+
+          '<span>'+maxT+'° / '+minT+'°C</span>'+
+          '<span class="wx-desc">'+wmoDesc(code)+'</span>'+
+          (rain>0?'<span class="wx-rain">🌧 '+rain.toFixed(1)+'mm</span>':'<span class="wx-rain" style="color:var(--text2)">無降雨</span>')+
+          '<div class="wx-tbar-wrap"><div class="wx-tbar" style="left:'+bL+'%;width:'+bW+'%"></div></div>'+
+        '</div>'+
+        (loc?'<div class="wx-loc-bar">📍 '+loc+'</div>':'')+
       '</div>'+
     '</div>';
   });
