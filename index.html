@@ -313,6 +313,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 #map-wrap.map-mini #map-pick-banner,
 #map-wrap.map-mini .route-bar,
 #map-wrap.map-mini #place-card{display:none!important}
+#map-wrap.map-hidden{display:none}
 @media(orientation:landscape){
   #map-wrap{height:100%;width:58%;flex-shrink:0}
 }
@@ -1142,7 +1143,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <button class="login-submit" id="btn-pin-submit" disabled>登入 / 建立帳號</button>
       <div class="login-err-msg" id="login-err"></div>
     </div>
-    <div class="login-footer">TripGo v4.7</div>
+    <div class="login-footer">TripGo v4.8</div>
   </div>
 
 <div id="S-join" class="hide">
@@ -1159,7 +1160,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v4.7 &nbsp;·&nbsp; 2026-09-29</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v4.8 &nbsp;·&nbsp; 2026-09-29</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -3685,44 +3686,113 @@ function getTripCoords(){
   return null;
 }
 
+// Returns [{dayLabel, date, lat, lng, locName}] sorted by date.
+// For each trip day, picks the FIRST geocoded stop in that day (array order).
+function getDayStarts(){
+  var dayDates={};
+  S.stops.forEach(function(s){
+    if(!s.day||dayDates[s.day]) return;
+    var d=labelToDate(s.day);
+    if(d&&d.match(/^\d{4}-\d{2}-\d{2}$/)) dayDates[s.day]=d;
+  });
+  var seen={};
+  var days=[];
+  S.stops.forEach(function(s){
+    if(!s.day||seen[s.day]||!dayDates[s.day]) return;
+    if(s.lat&&s.lng&&parseFloat(s.lat)!==0){
+      seen[s.day]=true;
+      days.push({dayLabel:s.day,date:dayDates[s.day],lat:parseFloat(s.lat),lng:parseFloat(s.lng),locName:s.name||s.day});
+    }
+  });
+  days.sort(function(a,b){return a.date<b.date?-1:1;});
+  return days;
+}
+
 var _wxCache={};
 function renderWeather(){
   var scroll=document.getElementById('wx-scroll');
   var locLabel=document.getElementById('wx-loc-label');
   if(!scroll) return;
   scroll.innerHTML='<div class="wx-loading">⛅ 載入天氣預報中…</div>';
+  if(locLabel) locLabel.textContent='';
 
-  var coords=getTripCoords();
-  if(!coords){
-    scroll.innerHTML='<div class="wx-empty">📍 請先在行程中加入有地圖位置的景點<br><span style="font-size:12px">TripGo 將依景點座標取得天氣預報</span></div>';
-    return;
-  }
-  var range=getTripDateRange();
   var today=new Date();
   var yyyymmdd=function(d){return d.getFullYear()+'-'+(d.getMonth()<9?'0':'')+(d.getMonth()+1)+'-'+(d.getDate()<10?'0':'')+d.getDate();};
-  var start=range?range.start:yyyymmdd(today);
-  // Open-Meteo max forecast is 16 days; cap end date
-  var endD=range?new Date(range.end):new Date(today.getTime()+6*86400000);
-  var maxD=new Date(today.getTime()+15*86400000);
-  if(endD>maxD) endD=maxD;
-  var end=yyyymmdd(endD);
+  var maxD=new Date(today.getTime()+15*86400000); // Open-Meteo max 16 days
 
-  if(locLabel) locLabel.textContent=coords.name;
+  var dayStarts=getDayStarts();
 
-  var cacheKey=coords.lat.toFixed(2)+'_'+coords.lng.toFixed(2)+'_'+start+'_'+end;
-  if(_wxCache[cacheKey]){
-    renderWxCards(_wxCache[cacheKey],coords.name);
+  if(!dayStarts.length){
+    // Fallback: single-location mode (stops without day labels, or no geocoded stops)
+    var coords=getTripCoords();
+    if(!coords){
+      scroll.innerHTML='<div class="wx-empty">📍 請先在行程中加入有地圖位置的景點<br><span style="font-size:12px">TripGo 將依景點座標取得天氣預報</span></div>';
+      return;
+    }
+    var range=getTripDateRange();
+    var start=range?range.start:yyyymmdd(today);
+    var endD=range?new Date(range.end+'T12:00:00'):new Date(today.getTime()+6*86400000);
+    if(endD>maxD) endD=maxD;
+    var end=yyyymmdd(endD);
+    if(locLabel) locLabel.textContent=coords.name;
+    var ck=coords.lat.toFixed(2)+'_'+coords.lng.toFixed(2)+'_'+start+'_'+end;
+    if(_wxCache[ck]){renderWxCards(_wxCache[ck],coords.name);return;}
+    fetch('https://api.open-meteo.com/v1/forecast?latitude='+coords.lat+'&longitude='+coords.lng+
+      '&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_sum'+
+      '&timezone=auto&start_date='+start+'&end_date='+end)
+      .then(function(r){return r.json();}).then(function(d){
+        if(!d||!d.daily) throw new Error('no data');
+        _wxCache[ck]=d.daily; renderWxCards(d.daily,coords.name);
+      }).catch(function(){
+        scroll.innerHTML='<div class="wx-empty">❌ 天氣資料載入失敗<br><span style="font-size:12px">請確認網路連線後重試</span></div>';
+      });
     return;
   }
 
-  var url='https://api.open-meteo.com/v1/forecast?latitude='+coords.lat+'&longitude='+coords.lng+
-    '&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_sum'+
-    '&timezone=auto&start_date='+start+'&end_date='+end;
+  // Per-day mode: group by rounded coords to minimise API calls
+  if(locLabel) locLabel.textContent='依每日出發地 · '+dayStarts.length+'天';
+  var locGroups={};
+  dayStarts.forEach(function(ds){
+    var key=ds.lat.toFixed(2)+'_'+ds.lng.toFixed(2);
+    if(!locGroups[key]) locGroups[key]={lat:ds.lat,lng:ds.lng,locName:ds.locName,dates:[]};
+    locGroups[key].dates.push(ds.date);
+  });
 
-  fetch(url).then(function(r){return r.json();}).then(function(d){
-    if(!d||!d.daily){throw new Error('no data');}
-    _wxCache[cacheKey]=d.daily;
-    renderWxCards(d.daily,coords.name);
+  var fetchTasks=Object.keys(locGroups).map(function(key){
+    var grp=locGroups[key];
+    grp.dates.sort();
+    var startDate=grp.dates[0];
+    var endDObj=new Date(grp.dates[grp.dates.length-1]+'T12:00:00');
+    if(endDObj>maxD) endDObj=maxD;
+    var endDate=yyyymmdd(endDObj);
+    var cacheKey=key+'_'+startDate+'_'+endDate;
+    if(_wxCache[cacheKey]) return Promise.resolve({key:key,daily:_wxCache[cacheKey]});
+    return fetch('https://api.open-meteo.com/v1/forecast?latitude='+grp.lat+'&longitude='+grp.lng+
+      '&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_sum'+
+      '&timezone=auto&start_date='+startDate+'&end_date='+endDate)
+      .then(function(r){return r.json();}).then(function(d){
+        if(!d||!d.daily) throw new Error('no data');
+        _wxCache[cacheKey]=d.daily;
+        return {key:key,daily:d.daily};
+      }).catch(function(){return null;});
+  });
+
+  Promise.all(fetchTasks).then(function(results){
+    var dateToWx={};
+    results.forEach(function(r){
+      if(!r) return;
+      var grp=locGroups[r.key];
+      var daily=r.daily;
+      for(var i=0;i<daily.time.length;i++){
+        dateToWx[daily.time[i]]={
+          weathercode:daily.weathercode[i],
+          temperature_2m_max:daily.temperature_2m_max[i],
+          temperature_2m_min:daily.temperature_2m_min[i],
+          precipitation_sum:daily.precipitation_sum[i]
+        };
+      }
+    });
+    renderWxCardsByDay(dayStarts,dateToWx);
   }).catch(function(err){
     scroll.innerHTML='<div class="wx-empty">❌ 天氣資料載入失敗<br><span style="font-size:12px">請確認網路連線後重試</span></div>';
     console.warn('Weather fetch error:',err);
@@ -3737,7 +3807,6 @@ function renderWxCards(daily,locName){
     scroll.innerHTML='<div class="wx-empty">⚠️ 此行程日期超出預報範圍（最多16天）</div>';
     return;
   }
-  // Month short names
   var MNAME=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var WDAY=['日','一','二','三','四','五','六'];
   var html='';
@@ -3759,6 +3828,47 @@ function renderWxCards(daily,locName){
       '</div>'+
     '</div>';
   }
+  scroll.innerHTML=html;
+}
+
+// Per-day weather render: one card per trip day with its own location
+function renderWxCardsByDay(dayStarts,dateToWx){
+  var scroll=document.getElementById('wx-scroll');
+  if(!dayStarts.length){scroll.innerHTML='<div class="wx-empty">⚠️ 無天氣資料</div>';return;}
+  var MNAME=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var WDAY=['日','一','二','三','四','五','六'];
+  var html='';
+  dayStarts.forEach(function(ds){
+    var wx=dateToWx[ds.date];
+    var dt=new Date(ds.date+'T12:00:00');
+    var dateStr=MNAME[dt.getMonth()]+' '+dt.getDate();
+    var dayStr='（'+WDAY[dt.getDay()]+'）';
+    var loc=ds.locName||'';
+    var leftCol='<div style="min-width:52px;flex-shrink:0">'+
+      '<div class="wx-date">'+dateStr+'</div>'+
+      '<div style="font-size:10px;color:var(--text2);margin-top:1px">'+dayStr+'</div>'+
+      (loc?'<div style="font-size:10px;color:var(--blue);margin-top:3px;max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+loc+'">📍'+loc+'</div>':'')+
+    '</div>';
+    if(!wx){
+      html+='<div class="wx-day-card">'+leftCol+
+        '<div class="wx-icon">❓</div>'+
+        '<div class="wx-temps"><span style="color:var(--text2)">超出預報範圍</span></div>'+
+      '</div>';
+      return;
+    }
+    var code=wx.weathercode;
+    var maxT=Math.round(wx.temperature_2m_max);
+    var minT=Math.round(wx.temperature_2m_min);
+    var rain=wx.precipitation_sum;
+    html+='<div class="wx-day-card">'+leftCol+
+      '<div class="wx-icon">'+wmoEmoji(code)+'</div>'+
+      '<div class="wx-temps">'+
+        '<span>'+maxT+'° / '+minT+'°C</span>'+
+        '<span class="wx-desc">'+wmoDesc(code)+'</span>'+
+        (rain>0?'<span class="wx-rain">🌧 降雨 '+rain.toFixed(1)+'mm</span>':'<span class="wx-rain" style="color:var(--gray)">無降雨</span>')+
+      '</div>'+
+    '</div>';
+  });
   scroll.innerHTML=html;
 }
 
@@ -3838,10 +3948,17 @@ function showPane(name){
   // Chat pane: collapse the map to make room for conversation (manual drag still works once inside)
   var mw=document.getElementById('map-wrap');
   if(mw){
-    mw.style.height=''; mw.style.width=''; // clear any leftover manual drag size from a previous pane
-    if(name==='chat'||name==='expense'||name==='weather'){ mw.classList.add('map-mini'); }
-    else { mw.classList.remove('map-mini'); }
-    if(map) setTimeout(function(){ google.maps.event.trigger(map,'resize'); },260);
+    mw.style.height=''; mw.style.width='';
+    if(name==='expense'||name==='locations'||name==='weather'){
+      // fully hide map — no rendering / tile-loading overhead
+      mw.classList.add('map-hidden'); mw.classList.remove('map-mini');
+    } else if(name==='chat'){
+      mw.classList.remove('map-hidden'); mw.classList.add('map-mini');
+      if(map) setTimeout(function(){ google.maps.event.trigger(map,'resize'); },260);
+    } else {
+      mw.classList.remove('map-hidden'); mw.classList.remove('map-mini');
+      if(map) setTimeout(function(){ google.maps.event.trigger(map,'resize'); },260);
+    }
   }
 
   if(name==='chat'){
