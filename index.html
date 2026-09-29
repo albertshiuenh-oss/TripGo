@@ -849,9 +849,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .split-chk-label input{accent-color:var(--blue);width:15px;height:15px;cursor:pointer}
 .split-chk-label span{font-size:13px;color:var(--text)}
 /* weather tab */
-.wx-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.wx-header{padding:6px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
 .wx-loc{font-size:11px;color:var(--text2);margin-left:auto}
-.wx-scroll{overflow-y:auto;flex:1;padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+.wx-scroll{overflow-y:auto;flex:1;padding:6px 12px;display:flex;flex-direction:column;gap:6px}
 .wx-day-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:12px}
 .wx-date{font-size:11px;font-weight:700;color:var(--blue);width:52px;flex-shrink:0;text-transform:uppercase}
 .wx-icon{font-size:28px;flex-shrink:0}
@@ -1142,7 +1142,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <button class="login-submit" id="btn-pin-submit" disabled>登入 / 建立帳號</button>
       <div class="login-err-msg" id="login-err"></div>
     </div>
-    <div class="login-footer">TripGo v4.5</div>
+    <div class="login-footer">TripGo v4.6</div>
   </div>
 
 <div id="S-join" class="hide">
@@ -1159,7 +1159,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v4.5 &nbsp;·&nbsp; 2026-09-29</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v4.6 &nbsp;·&nbsp; 2026-09-29</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -1328,7 +1328,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
         <button class="tab" data-pane="restaurant" aria-label="餐廳"><i class="ti ti-tools-kitchen-2"></i></button>
         <button class="tab" data-pane="expense" aria-label="費用"><span class="tab-dollar">$</span><span class="tab-dot" id="expense-unread-dot"></span></button>
         <button class="tab" data-pane="locations" aria-label="成員"><i class="ti ti-users"></i><span class="tab-dot" id="members-unread-dot"></span></button>
-        <button class="tab" data-pane="weather" aria-label="天氣"><i class="ti ti-cloud-sun"></i></button>
+        <button class="tab" data-pane="weather" aria-label="天氣"><i class="ti ti-cloud"></i></button>
       </div>
       <!-- Itinerary pane -->
       <div class="pane on" id="pane-itinerary">
@@ -1432,7 +1432,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <!-- Weather pane -->
       <div class="pane" id="pane-weather">
         <div class="wx-header">
-          <i class="ti ti-cloud-sun" style="font-size:16px;color:var(--blue)"></i>
+          <i class="ti ti-cloud" style="font-size:18px"></i>
           <span style="font-size:13px;font-weight:700">天氣預報</span>
           <span id="wx-loc-label" class="wx-loc"></span>
         </div>
@@ -3462,7 +3462,7 @@ function editExpense(key,e){
     var t=document.getElementById('m-exp-title'),b=document.getElementById('btn-exp-ok');
     if(t)t.textContent='編輯花費'; if(b)b.textContent='確認修改';
     var _ce2=document.getElementById('m-currency');
-    if(_ce2){ _ce2.value=e.currency||'NTD'; _ce2.disabled=!S.isOrg; }
+    if(_ce2){ _ce2.value=e.currency||'NTD'; _ce2.disabled=false; }
     openModal('M-expense');
   }catch(err){ showToast('❌ 開啟編輯失敗：'+err.message,2000); }
 }
@@ -3840,7 +3840,7 @@ function showPane(name){
   var mw=document.getElementById('map-wrap');
   if(mw){
     mw.style.height=''; mw.style.width=''; // clear any leftover manual drag size from a previous pane
-    if(name==='chat'||name==='expense'){ mw.classList.add('map-mini'); }
+    if(name==='chat'||name==='expense'||name==='weather'){ mw.classList.add('map-mini'); }
     else { mw.classList.remove('map-mini'); }
     if(map) setTimeout(function(){ google.maps.event.trigger(map,'resize'); },260);
   }
@@ -4595,24 +4595,29 @@ function exportTripKML(code, tripName){
 
 // ══ 幣別換算 ══
 var _rateCache={ts:0,base:'',rates:{}};
+// Frankfurter API uses standard ISO codes; map TripGo display names → ISO
+var CUR_MAP={'NTD':'TWD','EURO':'EUR','TWD':'TWD','EUR':'EUR','USD':'USD','JPY':'JPY','GBP':'GBP'};
+function normCur(c){ return CUR_MAP[c]||c; }
 function fetchRates(base,cb){
+  var apiBase=normCur(base);
   var now=Date.now();
-  if(_rateCache.base===base&&now-_rateCache.ts<3600000){cb(_rateCache.rates);return;}
-  try{var cached=JSON.parse(localStorage.getItem('tg_rates_'+base)||'null');
-    if(cached&&now-cached.ts<3600000){_rateCache={ts:cached.ts,base:base,rates:cached.rates};cb(cached.rates);return;}
+  if(_rateCache.base===apiBase&&now-_rateCache.ts<3600000){cb(_rateCache.rates);return;}
+  try{var cached=JSON.parse(localStorage.getItem('tg_rates_'+apiBase)||'null');
+    if(cached&&now-cached.ts<3600000){_rateCache={ts:now,base:apiBase,rates:cached.rates};cb(cached.rates);return;}
   }catch(e){}
-  fetch('https://api.frankfurter.app/latest?from='+base)
+  fetch('https://api.frankfurter.app/latest?from='+apiBase)
     .then(function(r){return r.json();})
     .then(function(d){
-      _rateCache={ts:now,base:base,rates:d.rates||{}};
-      try{localStorage.setItem('tg_rates_'+base,JSON.stringify({ts:now,rates:d.rates}));}catch(e){}
+      _rateCache={ts:now,base:apiBase,rates:d.rates||{}};
+      try{localStorage.setItem('tg_rates_'+apiBase,JSON.stringify({ts:now,rates:d.rates}));}catch(e){}
       cb(d.rates||{});
     }).catch(function(){cb({});});
 }
 function toBase(amt,fromCur,rates,base){
-  if(!amt||fromCur===base) return amt||0;
-  if(!rates[fromCur]) return amt;
-  return Math.round(amt/rates[fromCur]);
+  var fc=normCur(fromCur), bc=normCur(base);
+  if(!amt||fc===bc) return amt||0;
+  if(!rates[fc]) return amt;  // unknown currency: pass through raw
+  return Math.round(amt/rates[fc]);
 }
 // ══ 離線快取 ══
 function updateCache(code){
@@ -5621,7 +5626,7 @@ window.addEventListener('load',function(){
     closeNewStopForm();
     if(_inlineEditIdx>=0){ closeInlineEdit(_inlineEditIdx); }
     renderPayerSelect();renderSplitSelect();
-    var _ce=document.getElementById('m-currency'); if(_ce) _ce.disabled=!S.isOrg;
+    var _ce=document.getElementById('m-currency'); if(_ce) _ce.disabled=false;
     openModal('M-expense');
   });
   document.getElementById('btn-split-all').addEventListener('click',function(){setSplitMode('all');});
