@@ -1142,7 +1142,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <button class="login-submit" id="btn-pin-submit" disabled>登入 / 建立帳號</button>
       <div class="login-err-msg" id="login-err"></div>
     </div>
-    <div class="login-footer">TripGo v4.6</div>
+    <div class="login-footer">TripGo v4.7</div>
   </div>
 
 <div id="S-join" class="hide">
@@ -1159,7 +1159,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v4.6 &nbsp;·&nbsp; 2026-09-29</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v4.7 &nbsp;·&nbsp; 2026-09-29</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -1428,7 +1428,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
         </div>
         <div id="mem-list"></div>
       </div>
-    </div>
       <!-- Weather pane -->
       <div class="pane" id="pane-weather">
         <div class="wx-header">
@@ -4595,29 +4594,36 @@ function exportTripKML(code, tripName){
 
 // ══ 幣別換算 ══
 var _rateCache={ts:0,base:'',rates:{}};
-// Frankfurter API uses standard ISO codes; map TripGo display names → ISO
-var CUR_MAP={'NTD':'TWD','EURO':'EUR','TWD':'TWD','EUR':'EUR','USD':'USD','JPY':'JPY','GBP':'GBP'};
-function normCur(c){ return CUR_MAP[c]||c; }
+// fawazahmed0/currency-api via jsDelivr: USD base, lowercase ISO codes, supports TWD
+// NTD is TripGo display name → 'twd' (ISO TWD)
+var CUR_MAP={'NTD':'twd','TWD':'twd','EURO':'eur','EUR':'eur','USD':'usd','JPY':'jpy','GBP':'gbp','KRW':'krw','CNY':'cny','HKD':'hkd','THB':'thb','SGD':'sgd'};
+function normCur(c){ return CUR_MAP[(c||'').toUpperCase()]||(c||'usd').toLowerCase(); }
 function fetchRates(base,cb){
-  var apiBase=normCur(base);
+  // always use USD as pivot base; fawazahmed0 API has all currencies incl. TWD
   var now=Date.now();
-  if(_rateCache.base===apiBase&&now-_rateCache.ts<3600000){cb(_rateCache.rates);return;}
-  try{var cached=JSON.parse(localStorage.getItem('tg_rates_'+apiBase)||'null');
-    if(cached&&now-cached.ts<3600000){_rateCache={ts:now,base:apiBase,rates:cached.rates};cb(cached.rates);return;}
+  if(_rateCache.base==='usd'&&now-_rateCache.ts<3600000){cb(_rateCache.rates);return;}
+  try{var cached=JSON.parse(localStorage.getItem('tg_rates_usd')||'null');
+    if(cached&&now-cached.ts<3600000){_rateCache={ts:now,base:'usd',rates:cached.rates};cb(cached.rates);return;}
   }catch(e){}
-  fetch('https://api.frankfurter.app/latest?from='+apiBase)
+  fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json')
     .then(function(r){return r.json();})
     .then(function(d){
-      _rateCache={ts:now,base:apiBase,rates:d.rates||{}};
-      try{localStorage.setItem('tg_rates_'+apiBase,JSON.stringify({ts:now,rates:d.rates}));}catch(e){}
-      cb(d.rates||{});
+      var rates=d['usd']||{};
+      _rateCache={ts:now,base:'usd',rates:rates};
+      try{localStorage.setItem('tg_rates_usd',JSON.stringify({ts:now,rates:rates}));}catch(e){}
+      cb(rates);
     }).catch(function(){cb({});});
 }
 function toBase(amt,fromCur,rates,base){
+  // rates = USD-based: 1 USD = rates[fc] units of fc
+  // convert: amt(fc) → USD → base
   var fc=normCur(fromCur), bc=normCur(base);
-  if(!amt||fc===bc) return amt||0;
-  if(!rates[fc]) return amt;  // unknown currency: pass through raw
-  return Math.round(amt/rates[fc]);
+  if(!amt) return 0;
+  if(fc===bc) return amt;
+  var fromRate=fc==='usd'?1:rates[fc];   // fc per USD
+  var toRate  =bc==='usd'?1:rates[bc];   // bc per USD
+  if(!fromRate||!toRate) return amt;      // unknown currency: pass through
+  return Math.round((amt/fromRate)*toRate);
 }
 // ══ 離線快取 ══
 function updateCache(code){
