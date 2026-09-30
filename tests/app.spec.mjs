@@ -22,6 +22,10 @@ test.describe('啟動', () => {
     });
     await page.goto('/');
     await expect(page.locator('#S-app')).toHaveClass(/show/, { timeout: 5000 });
+    await page.waitForTimeout(2500);                      // let the PIN auto-login finish too
+    await expect(page.locator('#S-join')).toBeHidden();   // join screen must not cover the trip
+    await page.locator('.tab[data-pane="locations"]').click();
+    await expect(page.locator('#pane-locations')).toHaveClass(/\bon\b/);
   });
 });
 

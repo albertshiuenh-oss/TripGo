@@ -7,7 +7,58 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="TripGo"/>
 <title>TripGo</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.0%3C/text%3E%3C/svg%3E"/>
+<script>
+/* ── TripGo boot: version, preview isolation, early error capture ──
+   Must run before any other script touches localStorage or Firebase. */
+(function(){
+  window.TG_VERSION='5.1';
+  var PV=/\/preview\//.test(location.pathname)||/[?&]preview=1(&|$)/.test(location.search);
+  window.TG_PREVIEW=PV;
+
+  // Capture errors before Firebase is ready; drained by the FB wrapper.
+  var q=window.__tgErrQ=[];
+  window.addEventListener('error',function(e){
+    q.push({msg:e.message,src:e.filename,line:e.lineno,col:e.colno,stack:e.error&&e.error.stack});
+    if(window.__tgReportErr) window.__tgReportErr();
+  });
+  window.addEventListener('unhandledrejection',function(e){
+    var r=e.reason||{};
+    q.push({msg:'Unhandled rejection: '+(r.message||String(r)),stack:r.stack});
+    if(window.__tgReportErr) window.__tgReportErr();
+  });
+
+  if(!PV) return;
+  // Preview build: keep every localStorage key separate from the live version
+  // (same origin on GitHub Pages), seeded once from the live keys so the
+  // user stays logged in. The live keys are never written from preview.
+  try{
+    var ls=window.localStorage, SP=Storage.prototype;
+    var g=SP.getItem, s=SP.setItem, r=SP.removeItem;
+    if(g.call(ls,'pv__seeded')===null){
+      var keys=[];
+      for(var i=0;i<ls.length;i++) keys.push(ls.key(i));
+      keys.forEach(function(k){
+        if(!k||k.indexOf('pv_')===0||k==='tg_oq'||k.indexOf('tg_cache_')===0) return;
+        s.call(ls,'pv_'+k,g.call(ls,k));
+      });
+      s.call(ls,'pv__seeded','1');
+    }
+    SP.getItem=function(k){ return this===ls?g.call(this,'pv_'+k):g.call(this,k); };
+    SP.setItem=function(k,v){ return this===ls?s.call(this,'pv_'+k,v):s.call(this,k,v); };
+    SP.removeItem=function(k){ return this===ls?r.call(this,'pv_'+k):r.call(this,k); };
+  }catch(e){}
+  document.addEventListener('DOMContentLoaded',function(){
+    var b=document.createElement('div');
+    b.id='tg-preview-badge';
+    b.textContent='預覽版 v'+window.TG_VERSION+'・資料與正式版分開';
+    b.style.cssText='position:fixed;bottom:10px;left:10px;z-index:9999;'+
+      'background:#F4A523;color:#fff;font-size:10px;font-weight:700;padding:2px 10px;'+
+      'border-radius:10px;pointer-events:none;opacity:.92;box-shadow:0 1px 4px rgba(0,0,0,.2)';
+    document.body.appendChild(b);
+  });
+})();
+</script>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.1%3C/text%3E%3C/svg%3E"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="TripGo"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -911,6 +962,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   padding:5px 10px;border-radius:8px;border:1px solid var(--blue);
   background:#fff;cursor:pointer;font-size:11px;color:var(--blue);flex-shrink:0;
 }
+/* avatar colours (av0–av6), used by member rows and chat */
+.av0{background:#2B5F8E}.av1{background:#E8710A}.av2{background:#188038}.av3{background:#A142F4}
+.av4{background:#D93025}.av5{background:#12A4AF}.av6{background:#B06000}
 /* ── Members compact list (Option A) ── */
 .mem-list-wrap{overflow-y:auto;flex:1}
 .mem-clist-row{
@@ -1177,7 +1231,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <button class="login-submit" id="btn-pin-submit" disabled>登入 / 建立帳號</button>
       <div class="login-err-msg" id="login-err"></div>
     </div>
-    <div class="login-footer">TripGo v5.0</div>
+    <div class="login-footer">TripGo v5.1</div>
   </div>
 
 <div id="S-join" class="hide">
@@ -1194,7 +1248,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.0 &nbsp;·&nbsp; 2026-09-29</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.1 &nbsp;·&nbsp; 2026-09-30</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -1564,7 +1618,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <button id="btn-rename-ok" style="padding:8px 14px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">更新</button>
     </div>
   </div>
-  <div id="mem-list"></div>
+  <div id="mem-list-modal"></div>
   <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
     <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">手動新增成員</div>
     <div style="display:flex;gap:7px"><input class="m-inp" id="new-mem-name" placeholder="名字" style="flex:1"/><button class="m-ok" id="btn-add-member" style="flex:0;padding:9px 12px;white-space:nowrap">新增</button></div>
@@ -1635,6 +1689,37 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   }, 'tripgo');
   var rtdb = firebase.database(db);
 
+  // ── Preview isolation ──
+  // Preview build reads/writes under "tripgo-preview/". The first time a group
+  // (or account, etc.) is touched, it is copied once from the live "tripgo/"
+  // node. Live data is only ever READ from preview, never written.
+  var PV = !!window.TG_PREVIEW;
+  var PV_ROOT = 'tripgo-preview';
+  function mapP(p){ return PV ? String(p).replace(/^tripgo(\/|$)/, PV_ROOT+'$1') : p; }
+  var _clones = {};
+  function cloneNode(p){
+    var m = /^tripgo\/(groups|accounts|create_tokens|trash)\/([^\/]+)/.exec(p);
+    if(m) return 'tripgo/'+m[1]+'/'+m[2];
+    if(/^tripgo\/admin(\/|$)/.test(p)) return 'tripgo/admin';
+    return null;
+  }
+  function ensureClone(p){
+    if(!PV) return Promise.resolve();
+    var node = cloneNode(p); if(!node) return Promise.resolve();
+    if(_clones[node]) return _clones[node];
+    var mark = PV_ROOT+'/_cloned/'+node.replace(/\//g,'__');
+    _clones[node] = rtdb.ref(mark).once('value').then(function(ms){
+      if(ms.exists()) return;
+      return rtdb.ref(node).once('value').then(function(real){
+        var ops = [];
+        if(real.exists()) ops.push(rtdb.ref(mapP(node)).set(real.val()));
+        ops.push(rtdb.ref(mark).set(Date.now()));
+        return Promise.all(ops);
+      });
+    }).catch(function(e){ console.warn('[preview] clone failed', node, e); });
+    return _clones[node];
+  }
+
   // Offline queue
   var _q = [];
   try { _q = JSON.parse(localStorage.getItem('tg_oq')||'[]'); } catch(e){}
@@ -1669,9 +1754,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
     var q=_q.splice(0); saveQ(); updateNetUI();
     q.forEach(function(op){
       try{
-        if(op.t==='set') rtdb.ref(op.p).set(op.d);
-        else if(op.t==='push') rtdb.ref(op.p).push(op.d);
-        else if(op.t==='remove') rtdb.ref(op.p).remove();
+        if(op.t==='set') rtdb.ref(mapP(op.p)).set(op.d);
+        else if(op.t==='push') rtdb.ref(mapP(op.p)).push(op.d);
+        else if(op.t==='remove') rtdb.ref(mapP(op.p)).remove();
       }catch(e){ _q.push(op); }
     });
     saveQ();
@@ -1690,17 +1775,29 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   setTimeout(function(){ _netInitDone=true; },2000); // 避免頁面載入時誤觸發
 
   function safeSet(path, data){
-    if(_online) return rtdb.ref(path).set(data);
+    if(_online){
+      if(!PV) return rtdb.ref(path).set(data);
+      return ensureClone(path).then(function(){ return rtdb.ref(mapP(path)).set(data); });
+    }
     _q.push({t:'set',p:path,d:data}); saveQ(); updateNetUI();
     return Promise.resolve();
   }
   function safePush(path, data){
-    if(_online) return rtdb.ref(path).push(data);
+    if(_online){
+      if(!PV) return rtdb.ref(path).push(data);
+      var nref = rtdb.ref(mapP(path)).push();   // key is generated client-side, synchronously
+      var pr = ensureClone(path).then(function(){ return nref.set(data); });
+      pr.key = nref.key;
+      return pr;
+    }
     _q.push({t:'push',p:path,d:data}); saveQ(); updateNetUI();
     return Promise.resolve({key:'-local-'+Date.now()});
   }
   function safeRemove(path){
-    if(_online) return rtdb.ref(path).remove();
+    if(_online){
+      if(!PV) return rtdb.ref(path).remove();
+      return ensureClone(path).then(function(){ return rtdb.ref(mapP(path)).remove(); });
+    }
     _q.push({t:'remove',p:path}); saveQ(); updateNetUI();
     return Promise.resolve();
   }
@@ -1712,37 +1809,58 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
     _listeners = [];
   }
 
+  function listen(path, ev, cb){
+    var ref = rtdb.ref(mapP(path)), off = false;
+    _listeners.push(function(){ off = true; ref.off(ev, cb); });
+    if(!PV){ ref.on(ev, cb); return; }
+    ensureClone(path).then(function(){ if(!off) ref.on(ev, cb); });
+  }
+
   window.FB = {
     ready: true,
     ref: function(path){ return path; },
     set: safeSet,
     push: safePush,
     remove: safeRemove,
-    get: function(path){ return rtdb.ref(path).once('value'); },
-    onValue: function(path, cb){
-      var ref = rtdb.ref(path);
-      ref.on('value', cb);
-      _listeners.push(function(){ ref.off('value', cb); });
+    get: function(path){
+      if(!PV) return rtdb.ref(path).once('value');
+      return ensureClone(path).then(function(){ return rtdb.ref(mapP(path)).once('value'); });
     },
-    onChildAdded: function(path, cb){
-      var ref = rtdb.ref(path);
-      ref.on('child_added', cb);
-      _listeners.push(function(){ ref.off('child_added', cb); });
-    },
-    onChildChanged: function(path, cb){
-      var ref = rtdb.ref(path);
-      ref.on('child_changed', cb);
-      _listeners.push(function(){ ref.off('child_changed', cb); });
-    },
-    onChildRemoved: function(path, cb){
-      var ref = rtdb.ref(path);
-      ref.on('child_removed', cb);
-      _listeners.push(function(){ ref.off('child_removed', cb); });
-    },
+    onValue: function(path, cb){ listen(path, 'value', cb); },
+    onChildAdded: function(path, cb){ listen(path, 'child_added', cb); },
+    onChildChanged: function(path, cb){ listen(path, 'child_changed', cb); },
+    onChildRemoved: function(path, cb){ listen(path, 'child_removed', cb); },
     clearListeners: clearListeners,
     flush: flush,
     manualSync: flush
   };
+
+  // ── Error reporting → <root>/errors (read daily by a GitHub Action) ──
+  var _errSent = 0, _errSeen = {};
+  window.__tgReportErr = function(){
+    var q = window.__tgErrQ || [];
+    while(q.length){
+      var e = q.shift();
+      var msg = String(e.msg||'');
+      if(!msg || msg==='Script error.' || _errSeen[msg] || _errSent>=20) continue;
+      _errSeen[msg] = true; _errSent++;
+      if(!_online) continue;
+      try{
+        rtdb.ref(mapP('tripgo/errors')).push({
+          msg: msg.slice(0,500),
+          src: String(e.src||'').replace(location.origin,'').slice(0,200),
+          line: e.line||0, col: e.col||0,
+          stack: String(e.stack||'').slice(0,1500),
+          ua: navigator.userAgent.slice(0,200),
+          path: location.pathname,
+          ver: window.TG_VERSION||'',
+          preview: PV,
+          ts: Date.now()
+        });
+      }catch(x){}
+    }
+  };
+  window.__tgReportErr();
 
   window._fbReady = true;
   requestAnimationFrame(updateNetUI);
@@ -1753,7 +1871,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 <!-- Main App JS -->
 <script>
 'use strict';
-// TripGo v5.0
+// TripGo v5.1
 
 // ════════════════════════════════
 // STATE
@@ -1770,7 +1888,9 @@ var MS_MODE = false, MS_SET = new Set();
 // ════════════════════════════════
 // READY FLAGS
 // ════════════════════════════════
-window._fbReady = false;
+// The Firebase block above runs first and may already have set _fbReady=true;
+// keep that value, otherwise checkInit() never runs (no auto-resume, false "slow network" warning).
+window._fbReady = !!window._fbReady;
 window._mapsReady = false;
 window._onFbReady = function(){ window._fbReady = true; checkInit(); };
 
@@ -3512,7 +3632,8 @@ function uniqueMembers(){
     if(!seen[m.name]){ seen[m.name]=true; result.push(m); }
     else if(m.id===S.myUid){
       var idx=result.findIndex(function(x){return x.name===m.name;});
-      if(idx>=0) result[idx]=m;
+      // prefer this device's entry, but keep the person's organizer role
+      if(idx>=0) result[idx]=Object.assign({},m,{role:(result[idx].role==='organizer'||m.role==='organizer')?'organizer':m.role});
     }
   });
   return result;
@@ -3628,11 +3749,8 @@ function renderAvatars(){
   if(el) el.textContent=uniqueMembers().length+'位成員';
 }
 function renderMembers(){
-  var el=document.getElementById('mem-list');
   var uMembers=uniqueMembers(); var devCounts=memberDeviceCounts();
   var cntEl=document.getElementById('mem-count'); if(cntEl) cntEl.textContent=uMembers.length+'位';
-  el.style.cssText='display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden';
-
   var rows='<div class="mem-list-wrap">';
   uMembers.forEach(function(m,i){
     var isOrg=m.role==='organizer';
@@ -3662,18 +3780,23 @@ function renderMembers(){
   });
   rows+='</div>';
 
-  el.innerHTML=rows;
-  el.querySelectorAll('[data-action]').forEach(function(btn){
-    btn.addEventListener('click',function(){
-      var a=this.dataset.action, mid=this.dataset.mid;
-      if(a==='setorg') setOrg(mid); else if(a==='delmember') delMember(mid);
+  // Same list in the members pane and in the 成員管理 sheet
+  ['mem-list','mem-list-modal'].forEach(function(id){
+    var el=document.getElementById(id); if(!el) return;
+    if(id==='mem-list') el.style.cssText='display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden';
+    el.innerHTML=rows;
+    el.querySelectorAll('[data-action]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var a=this.dataset.action, mid=this.dataset.mid;
+        if(a==='setorg') setOrg(mid); else if(a==='delmember') delMember(mid);
+      });
     });
   });
 }
 function setOrg(id){
   var target=S.members.find(function(m){return m.id===id;});
   var name=target?target.name:'此成員';
-  showCustomConfirm('👑','設為組織者？','確定將「'+name+'」設為組織者？原組織者將降為團員。','確定變更',function(){
+  showCustomConfirm('👑','設為組織者？','確定將「'+escHtml(name)+'」設為組織者？原組織者將降為團員。','確定變更',function(){
     S.members.forEach(function(m){
       window.FB.set('tripgo/groups/'+S.groupCode+'/members/'+m.id+'/role', m.id===id?'organizer':'member');
     });
@@ -4901,7 +5024,9 @@ function afterLogin(uid, name){
   hideLoginScreen();
   var nameEl=document.getElementById('js-home-name');
   if(nameEl){ nameEl.value=name; renderTripsPreview(name); }
-  document.getElementById('S-join').classList.remove('hide');
+  // Don't cover a trip that checkInit() already resumed
+  if(!document.getElementById('S-app').classList.contains('show'))
+    document.getElementById('S-join').classList.remove('hide');
 }
 
 function getPinValue(){
@@ -5817,7 +5942,7 @@ window.addEventListener('load',function(){
       // 版本號
       ctx.fillStyle='rgba(255,255,255,0.65)';
       ctx.font='bold 28px system-ui,-apple-system,sans-serif';
-      ctx.fillText('v5.0',90,152);
+      ctx.fillText('v5.1',90,152);
       // 插入 apple-touch-icon
       var lnk=document.querySelector('link[rel="apple-touch-icon"]')||document.createElement('link');
       lnk.rel='apple-touch-icon'; lnk.href=c.toDataURL('image/png');
