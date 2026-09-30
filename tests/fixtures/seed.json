@@ -1,0 +1,123 @@
+{
+  "tripgo": {
+    "groups": {
+      "TEST01": {
+        "tripName": "測試團・大阪",
+        "organizer": "u1",
+        "primaryCurrency": "NTD",
+        "members": {
+          "u1": {
+            "id": "u1",
+            "name": "Albert",
+            "role": "organizer",
+            "joinedAt": 1
+          },
+          "u2": {
+            "id": "u2",
+            "name": "Anna",
+            "role": "member",
+            "joinedAt": 2
+          },
+          "u3": {
+            "id": "u3",
+            "name": "Ben",
+            "role": "member",
+            "joinedAt": 3
+          },
+          "u4": {
+            "id": "u4",
+            "name": "Cathy",
+            "role": "member",
+            "joinedAt": 4
+          },
+          "u5": {
+            "id": "u5",
+            "name": "Cathy",
+            "role": "member",
+            "joinedAt": 5
+          }
+        },
+        "stops": {
+          "-a01": {
+            "name": "KIX 關西國際機場",
+            "day": "Oct 2",
+            "arrive": "10:00",
+            "depart": "11:00",
+            "lat": 34.432,
+            "lng": 135.2304,
+            "category": "transport",
+            "createdAt": 1
+          },
+          "-a02": {
+            "name": "道頓堀",
+            "day": "Oct 2",
+            "arrive": "15:00",
+            "depart": "18:00",
+            "lat": 34.6687,
+            "lng": 135.5013,
+            "category": "sight",
+            "createdAt": 2
+          },
+          "-a03": {
+            "name": "大阪城",
+            "day": "Oct 3",
+            "arrive": "09:30",
+            "depart": "12:00",
+            "lat": 34.6873,
+            "lng": 135.5262,
+            "category": "sight",
+            "createdAt": 3
+          },
+          "-a04": {
+            "name": "伏見稻荷大社",
+            "day": "Oct 4",
+            "arrive": "08:00",
+            "depart": "11:00",
+            "lat": 34.9671,
+            "lng": 135.7727,
+            "category": "sight",
+            "createdAt": 4
+          }
+        },
+        "expenses": {
+          "-e01": {
+            "name": "機場快線",
+            "amt": 4000,
+            "payer": "Albert",
+            "split": 4,
+            "per": 1000,
+            "time": "10/2 11:00",
+            "uid": "u1",
+            "currency": "NTD"
+          },
+          "-e02": {
+            "name": "章魚燒",
+            "amt": 1200,
+            "payer": "Anna",
+            "split": 4,
+            "per": 300,
+            "time": "10/2 16:00",
+            "uid": "u2",
+            "currency": "JPY"
+          }
+        },
+        "chat": {
+          "-c01": {
+            "uid": "u2",
+            "name": "Anna",
+            "text": "明天幾點集合？",
+            "sticker": false,
+            "time": "10/1 21:00"
+          }
+        }
+      }
+    },
+    "accounts": {
+      "p_albert": {
+        "uid": "u1",
+        "displayName": "Albert",
+        "pin": "1234"
+      }
+    }
+  }
+}

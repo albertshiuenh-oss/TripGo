@@ -1,0 +1,46 @@
+# Publishes BOTH versions to GitHub Pages in one site:
+#   main → https://<user>.github.io/<repo>/          (live — what the group uses)
+#   dev  → https://<user>.github.io/<repo>/preview/  (preview — data kept under tripgo-preview/)
+# Requires: Settings → Pages → Source = "GitHub Actions",
+#           Settings → Environments → github-pages → allow branches "main" and "dev".
+name: Deploy live + preview
+on:
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, path: live }
+      - uses: actions/checkout@v4
+        with: { ref: dev, path: preview }
+        continue-on-error: true   # fine before the dev branch exists
+      - name: Assemble site
+        run: |
+          EXCL=(--exclude=.git --exclude=.github --exclude=tests --exclude=scripts --exclude=node_modules
+                --exclude=package.json --exclude=package-lock.json --exclude=playwright.config.mjs
+                --exclude=CLAUDE.md --exclude=CHANGELOG.md --exclude=test-results --exclude=test-report)
+          mkdir -p _site
+          rsync -a "${EXCL[@]}" live/ _site/
+          if [ -f preview/index.html ]; then
+            mkdir -p _site/preview
+            rsync -a "${EXCL[@]}" --exclude=CNAME preview/ _site/preview/
+          fi
+          ls -la _site _site/preview 2>/dev/null || true
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: _site }
+      - id: deploy
+        uses: actions/deploy-pages@v4

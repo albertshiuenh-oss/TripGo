@@ -1,0 +1,26 @@
+# Daily: read the last 24h of real-user JS errors from Firebase (tripgo/errors)
+# and file them as a GitHub Issue labelled "error-report" for the autopilot to fix.
+name: Error report
+on:
+  schedule:
+    - cron: '30 21 * * *'   # 05:30 Asia/Taipei, before the autopilot run
+  workflow_dispatch:
+permissions:
+  issues: write
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: node scripts/error-report.mjs > report.md
+        env:
+          DB_URL: https://tripgo-6b6ed-default-rtdb.firebaseio.com
+      - name: Open issue if there were errors
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          if [ -s report.md ]; then
+            gh label create error-report --color D93025 --force >/dev/null
+            gh issue create --title "使用者錯誤回報 $(TZ=Asia/Taipei date +%F)" --label error-report --body-file report.md
+          else
+            echo "No errors in the last 24h."
+          fi

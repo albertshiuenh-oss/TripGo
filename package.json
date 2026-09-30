@@ -1,0 +1,13 @@
+{
+  "name": "tripgo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node scripts/check-syntax.mjs",
+    "test": "node scripts/check-syntax.mjs && playwright test",
+    "bump": "node scripts/bump-version.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1"
+  }
+}
