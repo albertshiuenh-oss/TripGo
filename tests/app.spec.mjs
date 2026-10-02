@@ -22,7 +22,21 @@ test.describe('啟動', () => {
     });
     await page.goto('/');
     await expect(page.locator('#S-app')).toHaveClass(/show/, { timeout: 5000 });
+    await page.waitForTimeout(2500);                      // let the PIN auto-login finish too
+    await expect(page.locator('#S-join')).toBeHidden();   // join screen must not cover the trip
+    await page.locator('.tab[data-pane="locations"]').click();
+    await expect(page.locator('#pane-locations')).toHaveClass(/\bon\b/);
   });
+});
+
+test('花費名稱與付款人含 HTML 時只當文字顯示', async ({ page }) => {
+  const seed = structuredClone(SEED);
+  seed.tripgo.groups.TEST01.expenses['-ex'] = { name: '<img id="xss-exp" src=x>', amt: 100, payer: '<img id="xss-payer" src=x>', split: 4, per: 25, time: '10/2 12:00', uid: 'u1', currency: 'NTD' };
+  await page.addInitScript((s) => { window.__TG_SEED = s; }, seed);
+  await enterTrip(page);
+  await page.locator('.tab[data-pane="expense"]').click();
+  await expect(page.locator('#pane-expense .exp-nm', { hasText: 'xss-exp' })).toHaveCount(1);
+  expect(await page.locator('#xss-exp, #xss-payer').count()).toBe(0);
 });
 
 test.describe('分頁', () => {
@@ -83,6 +97,18 @@ test.describe('成員', () => {
     await expect(page.locator('#btn-members-close')).toBeVisible();
     const modalList = page.locator('#btn-members-close').locator('xpath=ancestor::*[.//*[@id="new-mem-name"]][1]').locator('#mem-list, #mem-list-modal');
     await expect(modalList.locator('.mem-clist-row')).toHaveCount(4);
+  });
+
+  test('成員名字含 HTML 時只當文字顯示，不會被當成標籤執行', async ({ page }) => {
+    const seed = structuredClone(SEED);
+    seed.tripgo.groups.TEST01.members.ux = { id: 'ux', name: '<img id="xss-probe" src=x>', role: 'member', joinedAt: 9 };
+    await page.addInitScript((s) => { window.__TG_SEED = s; }, seed);
+    await enterTrip(page);
+    await page.locator('.tab[data-pane="locations"]').click();
+    await expect(page.locator('#pane-locations .mem-clist-row', { hasText: 'xss-probe' })).toHaveCount(1);
+    await page.locator('#btn-members').click();
+    await page.locator('#btn-members-close').waitFor();
+    expect(await page.locator('#xss-probe').count()).toBe(0);
   });
 
   test('設主辦需先確認；取消時不寫入任何資料', async ({ page }) => {
