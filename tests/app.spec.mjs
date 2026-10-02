@@ -29,6 +29,16 @@ test.describe('啟動', () => {
   });
 });
 
+test('花費名稱與付款人含 HTML 時只當文字顯示', async ({ page }) => {
+  const seed = structuredClone(SEED);
+  seed.tripgo.groups.TEST01.expenses['-ex'] = { name: '<img id="xss-exp" src=x>', amt: 100, payer: '<img id="xss-payer" src=x>', split: 4, per: 25, time: '10/2 12:00', uid: 'u1', currency: 'NTD' };
+  await page.addInitScript((s) => { window.__TG_SEED = s; }, seed);
+  await enterTrip(page);
+  await page.locator('.tab[data-pane="expense"]').click();
+  await expect(page.locator('#pane-expense .exp-nm', { hasText: 'xss-exp' })).toHaveCount(1);
+  expect(await page.locator('#xss-exp, #xss-payer').count()).toBe(0);
+});
+
 test.describe('分頁', () => {
   test('每個分頁都能切換，且無 JS 錯誤', async ({ page }) => {
     await enterTrip(page);

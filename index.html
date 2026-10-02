@@ -3070,7 +3070,7 @@ function msExpense(){
   var html='<div style="font-size:11px;color:var(--text2);margin-bottom:8px">景點：'+names.join('、')+'</div>';
   if(!matched.length){ html+='<div style="font-size:12px;color:var(--gray)">這幾個景點尚無花費記錄</div>'; }
   else {
-    matched.forEach(function(e){ html+='<div class="seg-row"><div><div>'+e.name+'</div><div class="seg-sub">付：'+e.payer+' · '+e.split+'人 · NT$'+e.per+'</div></div><div style="font-weight:700;color:var(--blue)">NT$'+e.amt.toLocaleString()+'</div></div>'; });
+    matched.forEach(function(e){ html+='<div class="seg-row"><div><div>'+escHtml(e.name)+'</div><div class="seg-sub">付：'+escHtml(e.payer)+' · '+e.split+'人 · NT$'+e.per+'</div></div><div style="font-weight:700;color:var(--blue)">NT$'+e.amt.toLocaleString()+'</div></div>'; });
     html+='<div class="seg-row" style="border-top:2px solid var(--border);margin-top:4px"><b>合計</b><b style="color:var(--blue)">NT$'+total.toLocaleString()+'</b></div>';
     var balance={};
     Object.keys(paid).forEach(function(n){balance[n]=(paid[n]||0)-(share[n]||0);});
@@ -3516,14 +3516,14 @@ function renderExpenses(){
     var perAmt2=Math.round(e.amt/(splitCnt||1));
     var splitLabel=e.splitMembers?e.splitMembers.join('、')+'（'+e.splitMembers.length+'人）':uLen+'人全體';
     card.innerHTML='<div class="exp-top">'+
-      '<span class="exp-nm">'+e.name+'</span>'+
+      '<span class="exp-nm">'+escHtml(e.name)+'</span>'+
       '<div style="display:flex;align-items:center;gap:2px">'+
         '<span class="exp-amt">'+(e.currency||'NTD')+' '+e.amt.toLocaleString()+'</span>'+
         '<button class="exp-act-btn" data-act="edit"><i class="ti ti-pencil"></i></button>'+
         '<button class="exp-act-btn red" data-act="del"><i class="ti ti-trash"></i></button>'+
       '</div>'+
     '</div>'+
-    '<div class="exp-meta">付款：'+e.payer+' · 每人 '+(e.currency||'NTD')+' '+perAmt2.toLocaleString()+'</div>'+
+    '<div class="exp-meta">付款：'+escHtml(e.payer)+' · 每人 '+(e.currency||'NTD')+' '+perAmt2.toLocaleString()+'</div>'+
     '<div class="exp-meta" style="margin-top:2px;color:var(--text2)">分攤：'+splitLabel+'</div>';
     card.querySelector('[data-act="edit"]').addEventListener('click',function(ev){ev.stopPropagation();editExpense(key,e);});
     card.querySelector('[data-act="del"]').addEventListener('click',function(ev){ev.stopPropagation();deleteExpense(key);});
