@@ -545,6 +545,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   letter-spacing:.5px;text-transform:uppercase;
   padding:10px 16px 4px;
 }
+.day-hdr.day-today,.rest-day-hdr.day-today{background:#EEF4FF;border-left:3px solid var(--blue);padding-left:13px}
+.day-badge{display:inline-block;margin-left:6px;font-size:9px;font-weight:700;color:#fff;background:var(--blue);border-radius:8px;padding:1px 7px;vertical-align:middle;text-transform:none;letter-spacing:0}
 .stop-wrap{
   position:relative;overflow:hidden;
 }
@@ -917,6 +919,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .wx-tbar-wrap{position:relative;height:4px;background:rgba(0,0,0,.08);border-radius:2px;margin-top:5px;overflow:hidden}
 .wx-tbar{position:absolute;top:0;height:4px;border-radius:2px;background:linear-gradient(90deg,#58A7FF,#FFB547)}
 /* location row spans all 3 grid columns */
+.wx-day-card.wx-today{border:2px solid var(--blue);padding:9px 13px;box-shadow:0 2px 10px rgba(43,95,142,.18)}
+.wx-day-card.wx-past{opacity:.5}
+.wx-today-badge{display:block;width:fit-content;margin-top:3px;font-size:10px;font-weight:700;color:#fff;background:var(--blue);border-radius:8px;padding:1px 7px;line-height:1.5}
 .wx-loc-bar{grid-column:1/-1;font-size:11px;color:var(--text2);border-top:1px solid rgba(0,0,0,.07);margin-top:7px;padding-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* trip summary strip */
 .wx-summary{padding:8px 12px;background:var(--bg2);border-radius:10px;margin-bottom:2px;display:flex;gap:14px;align-items:center;font-size:11px;color:var(--text2);flex-wrap:wrap}
@@ -2301,6 +2306,7 @@ function startApp(code, uid, name, tripName, isOrg){
   setTimeout(function(){ if(map) google.maps.event.trigger(map,'resize'); },300);
 
   // Reset UI state for new trip
+  _centeredToday=false;
   document.getElementById('detail').classList.remove('show');
   if(stopMarker){stopMarker.setMap(null);stopMarker=null;}
   document.querySelectorAll('.stop-expand.open').forEach(function(p){p.classList.remove('open');});
@@ -2395,6 +2401,8 @@ function startApp(code, uid, name, tripName, isOrg){
 // STOPS
 // ════════════════════════════════
 var _scrollToStopKey=null;
+var _centeredToday=false;   // centre today's block once per trip entry (not on every re-render)
+var _todayKey='';           // date the lists were last rendered for
 
 // ── Find index of next upcoming stop (first stop whose arrive time is in the future) ──
 // ── Fetch live transit time for the next stop via Directions API ──
@@ -2573,7 +2581,7 @@ function renderStops(){
   var lastDay='',html='';
   var nextIdx=findNextStopIdx();
   S.stops.forEach(function(s,i){
-    if(s.day&&s.day!==lastDay){ lastDay=s.day; html+='<div class="day-hdr">'+s.day+'</div>'; }
+    if(s.day&&s.day!==lastDay){ lastDay=s.day; var _dh=dayHdrAttrs(s.day); html+='<div class="day-hdr'+_dh.cls+'" data-date="'+_dh.iso+'">'+s.day+_dh.badge+'</div>'; }
     var sel=MS_SET.has(i);
     // Build activities preview
     var actsHtml='';
@@ -2620,7 +2628,7 @@ function renderStops(){
         if(_st>0) stayStr=' · <span style="color:var(--green);font-weight:700">停留 '+(_sh?_sh+'時':'')+(_sm?_sm+'分':'')+'</span>';}
     }
     html+='<div class="stop-wrap'+pastCls+'" id="sw-'+i+'">' +
-      '<div class="stop-row" id="sr-'+i+(isNext?' stop-next-row':'')+'" style="position:relative">' +
+      '<div class="stop-row'+(isNext?' stop-next-row':'')+'" id="sr-'+i+'" style="position:relative">' +
         '<div class="stop-cb'+(sel?' on':'')+'" id="cb-'+i+'"></div>' +
         '<div class="stop-txt" id="st-'+i+'">' +
           '<div class="stop-name"'+(tbadge?' style="padding-right:95px"':'')+'>'+
@@ -2665,6 +2673,12 @@ function renderStops(){
     _liveTransitTimer=setTimeout(function(){ fetchLiveTransit(nextIdx); },800);
   }
 
+  // ── Open on today: centre today's block once per trip entry ──
+  _todayKey=todayISO();
+  if(!_centeredToday){
+    setTimeout(function(){ if(centerItineraryToday()) _centeredToday=true; },350);
+  }
+
   // ── Scroll back to the stop that was just updated ──
   if(_scrollToStopKey){
     var targetKey=_scrollToStopKey;
@@ -2681,6 +2695,15 @@ function renderStops(){
       },80);
     }
   }
+}
+
+// Returns false when the pane isn't visible yet (caller retries later)
+function centerItineraryToday(){
+  var box=document.getElementById('pane-itinerary'), list=document.getElementById('stop-list');
+  if(!box||!list||!box.classList.contains('on')) return false;
+  var hdr=pickFocusHdr(list,'.day-hdr');
+  if(hdr) centerBlock(box,hdr,dayBlockEnd(hdr,'.day-hdr'));
+  return true;
 }
 
 function onStopListClick(e){
@@ -3864,6 +3887,55 @@ function getTripCoords(){
   return null;
 }
 
+// ── "Today" helpers (device-local date; ISO strings compare correctly as text) ──
+function todayISO(){
+  var n=new Date();
+  return n.getFullYear()+'-'+('0'+(n.getMonth()+1)).slice(-2)+'-'+('0'+n.getDate()).slice(-2);
+}
+// 'today' | 'past' | 'future' for an ISO date; '' when it isn't a date
+function dateState(iso){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(iso||'')) return '';
+  var t=todayISO();
+  return iso===t?'today':(iso<t?'past':'future');
+}
+function wxDayClass(iso){ var st=dateState(iso); return (st==='today'||st==='past')?' wx-'+st:''; }
+function wxDayBadge(iso){ return dateState(iso)==='today'?'<span class="wx-today-badge">今天</span>':''; }
+// Scroll `box` so the block from `first` to `last` sits in the vertical middle;
+// a block taller than the view is aligned to its top instead.
+function centerBlock(box,first,last){
+  if(!box||!first) return;
+  last=last||first;
+  var b=box.getBoundingClientRect(); if(!b.height) return;   // pane hidden
+  var f=first.getBoundingClientRect(), l=last.getBoundingClientRect();
+  var top=f.top-b.top+box.scrollTop, h=l.bottom-f.top;
+  box.scrollTop=h>=box.clientHeight?top-8:top-(box.clientHeight-h)/2;
+}
+// Header to focus: today's; otherwise the next upcoming day (only when earlier days sit above it)
+function pickFocusHdr(container,sel){
+  var hs=container.querySelectorAll(sel), pick=null, hasPast=false;
+  for(var i=0;i<hs.length;i++){
+    var st=dateState(hs[i].getAttribute('data-date')||'');
+    if(st==='today') return hs[i];
+    if(st==='past') hasPast=true;
+    else if(st==='future'&&!pick) pick=hs[i];
+  }
+  return hasPast?pick:null;
+}
+// Last element of a day's block: walk siblings until the next header
+function dayBlockEnd(hdr,sel){
+  var e=hdr; while(e.nextElementSibling&&!e.nextElementSibling.matches(sel)) e=e.nextElementSibling; return e;
+}
+function dayHdrAttrs(label){
+  var iso=labelToDate(label), st=dateState(iso);
+  return {iso:iso, cls:st==='today'?' day-today':'', badge:st==='today'?'<span class="day-badge">今天</span>':''};
+}
+// Weather: bring today's card to the middle when earlier days are listed above it
+function wxScrollToToday(scroll){
+  var el=scroll.querySelector('.wx-today');
+  if(!el||!scroll.querySelector('.wx-past')) return;
+  centerBlock(scroll,el);
+}
+
 // Background tint per WMO weather code
 function wxTint(code){
   if(code===0||code===1) return '#FFFCEE';   // sunny
@@ -4019,9 +4091,9 @@ function renderWxCards(daily,locName){
     var rain=daily.precipitation_sum[i];
     var bL=((minT-tripMin)/span*100).toFixed(1);
     var bW=Math.max((maxT-minT)/span*100,6).toFixed(1);
-    html+='<div class="wx-day-card" style="background:'+wxTint(code)+'">'+
+    html+='<div class="wx-day-card'+wxDayClass(daily.time[i])+'" style="background:'+wxTint(code)+'">'+
       '<div class="wx-grid">'+
-        '<div class="wx-date">'+dateStr+'</div>'+
+        '<div class="wx-date">'+dateStr+wxDayBadge(daily.time[i])+'</div>'+
         '<div class="wx-icon">'+wmoEmoji(code)+'</div>'+
         '<div class="wx-temps">'+
           '<span>'+maxT+'° / '+minT+'°C</span>'+
@@ -4033,6 +4105,7 @@ function renderWxCards(daily,locName){
     '</div>';
   }
   scroll.innerHTML=html;
+  wxScrollToToday(scroll);
 }
 
 // Per-day weather render: one card per trip day with its own location
@@ -4065,9 +4138,9 @@ function renderWxCardsByDay(dayStarts,dateToWx){
     var dateStr=(dt.getMonth()+1)+'/'+dt.getDate()+'（'+WDAY[dt.getDay()]+'）';
     var loc=ds.locName||'';
     if(!wx){
-      html+='<div class="wx-day-card" style="background:#F6F8FB">'+
+      html+='<div class="wx-day-card'+wxDayClass(ds.date)+'" style="background:#F6F8FB">'+
         '<div class="wx-grid">'+
-          '<div class="wx-date">'+dateStr+'</div>'+
+          '<div class="wx-date">'+dateStr+wxDayBadge(ds.date)+'</div>'+
           '<div class="wx-icon">❓</div>'+
           '<div class="wx-temps"><span style="color:var(--text2);font-weight:500">超出預報範圍</span></div>'+
           (loc?'<div class="wx-loc-bar">📍 '+loc+'</div>':'')+
@@ -4081,9 +4154,9 @@ function renderWxCardsByDay(dayStarts,dateToWx){
     var rain=wx.precipitation_sum;
     var bL=((minT-tripMin)/span*100).toFixed(1);
     var bW=Math.max((maxT-minT)/span*100,6).toFixed(1);
-    html+='<div class="wx-day-card" style="background:'+wxTint(code)+'">'+
+    html+='<div class="wx-day-card'+wxDayClass(ds.date)+'" style="background:'+wxTint(code)+'">'+
       '<div class="wx-grid">'+
-        '<div class="wx-date">'+dateStr+'</div>'+
+        '<div class="wx-date">'+dateStr+wxDayBadge(ds.date)+'</div>'+
         '<div class="wx-icon">'+wmoEmoji(code)+'</div>'+
         '<div class="wx-temps">'+
           '<span>'+maxT+'° / '+minT+'°C</span>'+
@@ -4096,6 +4169,7 @@ function renderWxCardsByDay(dayStarts,dateToWx){
     '</div>';
   });
   scroll.innerHTML=html;
+  wxScrollToToday(scroll);
 }
 
 var FOOD_KW=['早餐','午餐','中餐','晚餐','宵夜','餐廳','咖啡','Breakfast','Lunch','Dinner','Brunch','Cafe','Food','Restaurant'];
@@ -4104,7 +4178,7 @@ function isFood(s){
   var t=(s.note||'')+' '+(s.activities||[]).map(function(a){return a.text||a||'';}).join(' ');
   return FOOD_KW.some(function(k){return t.toLowerCase().includes(k.toLowerCase());});
 }
-function renderRestaurant(){
+function renderRestaurant(center){
   var list=document.getElementById('restaurant-list'); if(!list) return;
   var stops=S.stops.filter(function(s){return isFood(s);});
   var countEl=document.getElementById('restaurant-count');
@@ -4118,7 +4192,8 @@ function renderRestaurant(){
   dayOrd.sort(function(a,b){var da=labelToDate(a)||a,db=labelToDate(b)||b;return da<db?-1:da>db?1:0;});
   var html='';
   dayOrd.forEach(function(day){
-    html+='<div class="rest-day-hdr">'+day+'</div>';
+    var _rh=dayHdrAttrs(day);
+    html+='<div class="rest-day-hdr'+_rh.cls+'" data-date="'+_rh.iso+'">'+day+_rh.badge+'</div>';
     days[day].forEach(function(s){
       var icon=s.category==='住宿'?'🏨':s.category==='景點'?'📍':'🍽';
       var t=(s.arrive||'')+(s.depart?' ~ '+s.depart:'');
@@ -4129,6 +4204,12 @@ function renderRestaurant(){
     });
   });
   list.innerHTML=html;
+  if(center){
+    setTimeout(function(){
+      var hdr=pickFocusHdr(list,'.rest-day-hdr');
+      if(hdr) centerBlock(list,hdr,dayBlockEnd(hdr,'.rest-day-hdr'));
+    },50);
+  }
   list.querySelectorAll('.rest-card').forEach(function(card){
     card.addEventListener('click',function(){
       var key=this.dataset.key, idx=S.stops.findIndex(function(s){return s._key===key;});
@@ -4168,8 +4249,9 @@ function showPane(name){
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('on');});
   var tab=document.querySelector('.tab[data-pane="'+name+'"]'); if(tab) tab.classList.add('on');
   if(name==='locations'){ renderAvatars(); renderMembers(); }
-  if(name==='restaurant'){ renderRestaurant(); }
+  if(name==='restaurant'){ renderRestaurant(true); }
   if(name==='weather'){ renderWeather(); }
+  if(name==='itinerary'&&!_centeredToday&&S.stops.length){ setTimeout(function(){ if(centerItineraryToday()) _centeredToday=true; },300); }
 
   // Chat pane: collapse the map to make room for conversation (manual drag still works once inside)
   var mw=document.getElementById('map-wrap');
@@ -6019,6 +6101,14 @@ window.addEventListener('load',function(){
   // Offline badge
   document.getElementById('offline-badge').addEventListener('click',function(){
     if(navigator.onLine) window.FB.manualSync(); else showToast('目前無網路連線，上線後自動同步',2000);
+  });
+
+  // The app can stay open for days: when it comes back to the foreground on a new date, refresh "today"
+  document.addEventListener('visibilitychange',function(){
+    if(document.visibilityState!=='visible'||!S.groupCode||!_todayKey||todayISO()===_todayKey) return;
+    _centeredToday=false; renderStops();
+    if(document.getElementById('pane-restaurant').classList.contains('on')) renderRestaurant(true);
+    if(document.getElementById('pane-weather').classList.contains('on')) renderWeather();
   });
 
   // Init

@@ -1,5 +1,21 @@
 import { test, expect, enterTrip, login, writes, SEED } from './harness.mjs';
 
+
+// Distance (px) between the vertical centre of `sel` and the centre of the scroll box `box`
+const centreOffset = (page, box, sel) => page.evaluate(([box, sel]) => {
+  const b = document.querySelector(box).getBoundingClientRect();
+  const e = document.querySelector(sel).getBoundingClientRect();
+  return Math.abs((e.top + e.bottom) / 2 - (b.top + b.bottom) / 2);
+}, [box, sel]);
+
+// Trip Oct 2–4 (seed) + one stop per day Oct 5–20; every added stop is a restaurant
+const longTrip = () => {
+  const seed = structuredClone(SEED);
+  const stops = seed.tripgo.groups.TEST01.stops;
+  for (let d = 5; d <= 20; d++) stops['-b' + d] = { name: 'Dinner ' + d, day: 'Oct ' + d, arrive: '18:00', depart: '19:30', lat: 34.7, lng: 135.5, category: '餐廳', createdAt: 100 + d };
+  return seed;
+};
+
 test.afterEach(async ({ errors }, info) => {
   // Any uncaught JS error fails the test, whatever it was checking.
   if (info.status === 'passed') expect(errors, 'JS errors during test').toEqual([]);
@@ -68,6 +84,121 @@ test.describe('分頁', () => {
     // fixed grid: icon column lines up across cards
     const xs = await cards.locator('.wx-icon').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().left)));
     expect(new Set(xs).size).toBe(1);
+  });
+});
+
+test.describe('天氣：今天', () => {
+  test('今天的卡片有「今天」標示、過去的日期變淡；晴天的淡黃色不是今天標示', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-03T12:00:00+08:00'));   // trip is Oct 2–4
+    await enterTrip(page);
+    await page.locator('.tab[data-pane="weather"]').click();
+    await expect(page.locator('.wx-day-card')).toHaveCount(3, { timeout: 8000 });
+    const today = page.locator('.wx-day-card.wx-today');
+    await expect(today).toHaveCount(1);
+    await expect(today.locator('.wx-date')).toContainText('10/3');
+    await expect(today.locator('.wx-today-badge')).toHaveText('今天');
+    await expect(page.locator('.wx-day-card.wx-past')).toHaveCount(1);
+    await expect(page.locator('.wx-day-card.wx-past .wx-date')).toContainText('10/2');
+    await expect(page.locator('.wx-today-badge')).toHaveCount(1);
+  });
+
+  test('今天往後的日期不變淡；行程結束後全部變淡、沒有「今天」', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-20T12:00:00+08:00'));
+    await enterTrip(page);
+    await page.locator('.tab[data-pane="weather"]').click();
+    await expect(page.locator('.wx-day-card')).toHaveCount(3, { timeout: 8000 });
+    await expect(page.locator('.wx-day-card.wx-past')).toHaveCount(3);
+    await expect(page.locator('.wx-today-badge')).toHaveCount(0);
+  });
+
+  test('今天在清單中間時，自動捲到畫面中間', async ({ page }) => {
+    const seed = structuredClone(SEED);
+    const stops = seed.tripgo.groups.TEST01.stops;
+    // enough cards after today (Oct 10) that it can be scrolled to the top
+    for (let d = 5; d <= 20; d++) stops['-b' + d] = { name: 'Day ' + d, day: 'Oct ' + d, arrive: '09:00', depart: '10:00', lat: 34.7, lng: 135.5, category: 'sight', createdAt: 100 + d };
+    await page.addInitScript((s) => { window.__TG_SEED = s; }, seed);
+    await page.clock.setFixedTime(new Date('2026-10-10T12:00:00+08:00'));
+    await enterTrip(page);
+    await page.locator('.tab[data-pane="weather"]').click();
+    await expect(page.locator('.wx-day-card.wx-today')).toHaveCount(1, { timeout: 8000 });
+    await expect.poll(() => centreOffset(page, '#wx-scroll', '.wx-day-card.wx-today')).toBeLessThan(80);
+  });
+});
+
+test.describe('行程／餐廳：今天', () => {
+  test('行程頁：今天的日期標題有「今天」標示，開啟時自動置中', async ({ page }) => {
+    await page.addInitScript((s) => { window.__TG_SEED = s; }, longTrip());
+    await page.clock.setFixedTime(new Date('2026-10-10T12:00:00+08:00'));
+    await enterTrip(page);
+    const hdr = page.locator('.day-hdr.day-today');
+    await expect(hdr).toHaveCount(1);
+    await expect(hdr).toContainText('Oct 10');
+    await expect(hdr.locator('.day-badge')).toHaveText('今天');
+    // today's block (header + its stop) is in the middle of the pane
+    await expect.poll(() => page.evaluate(() => {
+      const box = document.getElementById('pane-itinerary').getBoundingClientRect();
+      const h = document.querySelector('.day-hdr.day-today').getBoundingClientRect();
+      const last = document.querySelector('.day-hdr.day-today').nextElementSibling.getBoundingClientRect();
+      return Math.abs((h.top + last.bottom) / 2 - (box.top + box.bottom) / 2);
+    })).toBeLessThan(80);
+  });
+
+  test('行程頁：行程還沒開始時不標示、也不捲動', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-09-20T12:00:00+08:00'));
+    await enterTrip(page);
+    await page.waitForTimeout(700);
+    await expect(page.locator('.day-hdr.day-today')).toHaveCount(0);
+    expect(await page.locator('#pane-itinerary').evaluate((el) => el.scrollTop)).toBe(0);
+  });
+
+  test('行程頁：今天沒有行程時，置中到下一個有行程的日子', async ({ page }) => {
+    const seed = longTrip();
+    delete seed.tripgo.groups.TEST01.stops['-b10'];                        // nothing planned on Oct 10
+    await page.addInitScript((s) => { window.__TG_SEED = s; }, seed);
+    await page.clock.setFixedTime(new Date('2026-10-10T12:00:00+08:00'));
+    await enterTrip(page);
+    await expect(page.locator('.day-hdr.day-today')).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => {
+      const box = document.getElementById('pane-itinerary').getBoundingClientRect();
+      const h = [...document.querySelectorAll('.day-hdr')].find((x) => x.textContent.includes('Oct 11'));
+      const a = h.getBoundingClientRect(), z = h.nextElementSibling.getBoundingClientRect();
+      return Math.abs((a.top + z.bottom) / 2 - (box.top + box.bottom) / 2);
+    })).toBeLessThan(80);
+  });
+
+  test('「下一站」那一列有底色，且 id 沒被塞進 class 名稱', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-03T09:00:00+08:00'));  // next stop = 大阪城 09:30
+    await enterTrip(page);
+    await expect(page.locator('.stop-row.stop-next-row')).toHaveCount(1);
+    await expect(page.locator('.stop-row.stop-next-row .stop-name')).toContainText('大阪城');
+    expect(await page.locator('[id^="sr-"]').evaluateAll((els) => els.filter((e) => /\s/.test(e.id)).length)).toBe(0);
+  });
+
+  test('餐廳頁：今天的日期標題有標示，切換進來時自動置中', async ({ page }) => {
+    await page.addInitScript((s) => { window.__TG_SEED = s; }, longTrip());
+    await page.clock.setFixedTime(new Date('2026-10-10T12:00:00+08:00'));
+    await enterTrip(page);
+    await page.locator('.tab[data-pane="restaurant"]').click();
+    const hdr = page.locator('.rest-day-hdr.day-today');
+    await expect(hdr).toHaveCount(1);
+    await expect(hdr).toContainText('Oct 10');
+    await expect(hdr.locator('.day-badge')).toHaveText('今天');
+    await expect.poll(() => page.evaluate(() => {
+      const box = document.getElementById('restaurant-list').getBoundingClientRect();
+      const h = document.querySelector('.rest-day-hdr.day-today');
+      const a = h.getBoundingClientRect(), z = h.nextElementSibling.getBoundingClientRect();
+      return Math.abs((a.top + z.bottom) / 2 - (box.top + box.bottom) / 2);
+    })).toBeLessThan(80);
+  });
+
+  test('App 放在背景跨過午夜，回到前景時「今天」會更新', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-03T12:00:00+08:00'));
+    await enterTrip(page);
+    await expect(page.locator('.day-hdr.day-today')).toContainText('Oct 3');
+    await page.clock.setFixedTime(new Date('2026-10-04T08:00:00+08:00'));
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await expect(page.locator('.day-hdr.day-today')).toContainText('Oct 4');
+    await expect(page.locator('.day-hdr.day-today')).toHaveCount(1);
   });
 });
 
