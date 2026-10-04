@@ -7,7 +7,58 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="TripGo"/>
 <title>TripGo</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.0%3C/text%3E%3C/svg%3E"/>
+<script>
+/* ── TripGo boot: version, preview isolation, early error capture ──
+   Must run before any other script touches localStorage or Firebase. */
+(function(){
+  window.TG_VERSION='5.1';
+  var PV=/\/preview\//.test(location.pathname)||/[?&]preview=1(&|$)/.test(location.search);
+  window.TG_PREVIEW=PV;
+
+  // Capture errors before Firebase is ready; drained by the FB wrapper.
+  var q=window.__tgErrQ=[];
+  window.addEventListener('error',function(e){
+    q.push({msg:e.message,src:e.filename,line:e.lineno,col:e.colno,stack:e.error&&e.error.stack});
+    if(window.__tgReportErr) window.__tgReportErr();
+  });
+  window.addEventListener('unhandledrejection',function(e){
+    var r=e.reason||{};
+    q.push({msg:'Unhandled rejection: '+(r.message||String(r)),stack:r.stack});
+    if(window.__tgReportErr) window.__tgReportErr();
+  });
+
+  if(!PV) return;
+  // Preview build: keep every localStorage key separate from the live version
+  // (same origin on GitHub Pages), seeded once from the live keys so the
+  // user stays logged in. The live keys are never written from preview.
+  try{
+    var ls=window.localStorage, SP=Storage.prototype;
+    var g=SP.getItem, s=SP.setItem, r=SP.removeItem;
+    if(g.call(ls,'pv__seeded')===null){
+      var keys=[];
+      for(var i=0;i<ls.length;i++) keys.push(ls.key(i));
+      keys.forEach(function(k){
+        if(!k||k.indexOf('pv_')===0||k==='tg_oq'||k.indexOf('tg_cache_')===0) return;
+        s.call(ls,'pv_'+k,g.call(ls,k));
+      });
+      s.call(ls,'pv__seeded','1');
+    }
+    SP.getItem=function(k){ return this===ls?g.call(this,'pv_'+k):g.call(this,k); };
+    SP.setItem=function(k,v){ return this===ls?s.call(this,'pv_'+k,v):s.call(this,k,v); };
+    SP.removeItem=function(k){ return this===ls?r.call(this,'pv_'+k):r.call(this,k); };
+  }catch(e){}
+  document.addEventListener('DOMContentLoaded',function(){
+    var b=document.createElement('div');
+    b.id='tg-preview-badge';
+    b.textContent='預覽版 v'+window.TG_VERSION+'・資料與正式版分開';
+    b.style.cssText='position:fixed;bottom:10px;left:10px;z-index:9999;'+
+      'background:#F4A523;color:#fff;font-size:10px;font-weight:700;padding:2px 10px;'+
+      'border-radius:10px;pointer-events:none;opacity:.92;box-shadow:0 1px 4px rgba(0,0,0,.2)';
+    document.body.appendChild(b);
+  });
+})();
+</script>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.1%3C/text%3E%3C/svg%3E"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="TripGo"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -494,6 +545,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   letter-spacing:.5px;text-transform:uppercase;
   padding:10px 16px 4px;
 }
+.day-hdr.day-today,.rest-day-hdr.day-today{background:#EEF4FF;border-left:3px solid var(--blue);padding-left:13px}
+.day-badge{display:inline-block;margin-left:6px;font-size:9px;font-weight:700;color:#fff;background:var(--blue);border-radius:8px;padding:1px 7px;vertical-align:middle;text-transform:none;letter-spacing:0}
 .stop-wrap{
   position:relative;overflow:hidden;
 }
@@ -866,6 +919,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .wx-tbar-wrap{position:relative;height:4px;background:rgba(0,0,0,.08);border-radius:2px;margin-top:5px;overflow:hidden}
 .wx-tbar{position:absolute;top:0;height:4px;border-radius:2px;background:linear-gradient(90deg,#58A7FF,#FFB547)}
 /* location row spans all 3 grid columns */
+.wx-day-card.wx-today{border:2px solid var(--blue);padding:9px 13px;box-shadow:0 2px 10px rgba(43,95,142,.18)}
+.wx-day-card.wx-past{opacity:.5}
+.wx-today-badge{display:block;width:fit-content;margin-top:3px;font-size:10px;font-weight:700;color:#fff;background:var(--blue);border-radius:8px;padding:1px 7px;line-height:1.5}
 .wx-loc-bar{grid-column:1/-1;font-size:11px;color:var(--text2);border-top:1px solid rgba(0,0,0,.07);margin-top:7px;padding-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* trip summary strip */
 .wx-summary{padding:8px 12px;background:var(--bg2);border-radius:10px;margin-bottom:2px;display:flex;gap:14px;align-items:center;font-size:11px;color:var(--text2);flex-wrap:wrap}
@@ -911,6 +967,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   padding:5px 10px;border-radius:8px;border:1px solid var(--blue);
   background:#fff;cursor:pointer;font-size:11px;color:var(--blue);flex-shrink:0;
 }
+/* avatar colours (av0–av6), used by member rows and chat */
+.av0{background:#2B5F8E}.av1{background:#E8710A}.av2{background:#188038}.av3{background:#A142F4}
+.av4{background:#D93025}.av5{background:#12A4AF}.av6{background:#B06000}
 /* ── Members compact list (Option A) ── */
 .mem-list-wrap{overflow-y:auto;flex:1}
 .mem-clist-row{
@@ -1177,7 +1236,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <button class="login-submit" id="btn-pin-submit" disabled>登入 / 建立帳號</button>
       <div class="login-err-msg" id="login-err"></div>
     </div>
-    <div class="login-footer">TripGo v5.0</div>
+    <div class="login-footer">TripGo v5.1</div>
   </div>
 
 <div id="S-join" class="hide">
@@ -1194,7 +1253,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.0 &nbsp;·&nbsp; 2026-09-29</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.1 &nbsp;·&nbsp; 2026-10-02</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -1564,7 +1623,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <button id="btn-rename-ok" style="padding:8px 14px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">更新</button>
     </div>
   </div>
-  <div id="mem-list"></div>
+  <div id="mem-list-modal"></div>
   <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
     <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">手動新增成員</div>
     <div style="display:flex;gap:7px"><input class="m-inp" id="new-mem-name" placeholder="名字" style="flex:1"/><button class="m-ok" id="btn-add-member" style="flex:0;padding:9px 12px;white-space:nowrap">新增</button></div>
@@ -1635,6 +1694,37 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   }, 'tripgo');
   var rtdb = firebase.database(db);
 
+  // ── Preview isolation ──
+  // Preview build reads/writes under "tripgo-preview/". The first time a group
+  // (or account, etc.) is touched, it is copied once from the live "tripgo/"
+  // node. Live data is only ever READ from preview, never written.
+  var PV = !!window.TG_PREVIEW;
+  var PV_ROOT = 'tripgo-preview';
+  function mapP(p){ return PV ? String(p).replace(/^tripgo(\/|$)/, PV_ROOT+'$1') : p; }
+  var _clones = {};
+  function cloneNode(p){
+    var m = /^tripgo\/(groups|accounts|create_tokens|trash)\/([^\/]+)/.exec(p);
+    if(m) return 'tripgo/'+m[1]+'/'+m[2];
+    if(/^tripgo\/admin(\/|$)/.test(p)) return 'tripgo/admin';
+    return null;
+  }
+  function ensureClone(p){
+    if(!PV) return Promise.resolve();
+    var node = cloneNode(p); if(!node) return Promise.resolve();
+    if(_clones[node]) return _clones[node];
+    var mark = PV_ROOT+'/_cloned/'+node.replace(/\//g,'__');
+    _clones[node] = rtdb.ref(mark).once('value').then(function(ms){
+      if(ms.exists()) return;
+      return rtdb.ref(node).once('value').then(function(real){
+        var ops = [];
+        if(real.exists()) ops.push(rtdb.ref(mapP(node)).set(real.val()));
+        ops.push(rtdb.ref(mark).set(Date.now()));
+        return Promise.all(ops);
+      });
+    }).catch(function(e){ console.warn('[preview] clone failed', node, e); });
+    return _clones[node];
+  }
+
   // Offline queue
   var _q = [];
   try { _q = JSON.parse(localStorage.getItem('tg_oq')||'[]'); } catch(e){}
@@ -1669,9 +1759,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
     var q=_q.splice(0); saveQ(); updateNetUI();
     q.forEach(function(op){
       try{
-        if(op.t==='set') rtdb.ref(op.p).set(op.d);
-        else if(op.t==='push') rtdb.ref(op.p).push(op.d);
-        else if(op.t==='remove') rtdb.ref(op.p).remove();
+        if(op.t==='set') rtdb.ref(mapP(op.p)).set(op.d);
+        else if(op.t==='push') rtdb.ref(mapP(op.p)).push(op.d);
+        else if(op.t==='remove') rtdb.ref(mapP(op.p)).remove();
       }catch(e){ _q.push(op); }
     });
     saveQ();
@@ -1690,17 +1780,29 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   setTimeout(function(){ _netInitDone=true; },2000); // 避免頁面載入時誤觸發
 
   function safeSet(path, data){
-    if(_online) return rtdb.ref(path).set(data);
+    if(_online){
+      if(!PV) return rtdb.ref(path).set(data);
+      return ensureClone(path).then(function(){ return rtdb.ref(mapP(path)).set(data); });
+    }
     _q.push({t:'set',p:path,d:data}); saveQ(); updateNetUI();
     return Promise.resolve();
   }
   function safePush(path, data){
-    if(_online) return rtdb.ref(path).push(data);
+    if(_online){
+      if(!PV) return rtdb.ref(path).push(data);
+      var nref = rtdb.ref(mapP(path)).push();   // key is generated client-side, synchronously
+      var pr = ensureClone(path).then(function(){ return nref.set(data); });
+      pr.key = nref.key;
+      return pr;
+    }
     _q.push({t:'push',p:path,d:data}); saveQ(); updateNetUI();
     return Promise.resolve({key:'-local-'+Date.now()});
   }
   function safeRemove(path){
-    if(_online) return rtdb.ref(path).remove();
+    if(_online){
+      if(!PV) return rtdb.ref(path).remove();
+      return ensureClone(path).then(function(){ return rtdb.ref(mapP(path)).remove(); });
+    }
     _q.push({t:'remove',p:path}); saveQ(); updateNetUI();
     return Promise.resolve();
   }
@@ -1712,37 +1814,58 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
     _listeners = [];
   }
 
+  function listen(path, ev, cb){
+    var ref = rtdb.ref(mapP(path)), off = false;
+    _listeners.push(function(){ off = true; ref.off(ev, cb); });
+    if(!PV){ ref.on(ev, cb); return; }
+    ensureClone(path).then(function(){ if(!off) ref.on(ev, cb); });
+  }
+
   window.FB = {
     ready: true,
     ref: function(path){ return path; },
     set: safeSet,
     push: safePush,
     remove: safeRemove,
-    get: function(path){ return rtdb.ref(path).once('value'); },
-    onValue: function(path, cb){
-      var ref = rtdb.ref(path);
-      ref.on('value', cb);
-      _listeners.push(function(){ ref.off('value', cb); });
+    get: function(path){
+      if(!PV) return rtdb.ref(path).once('value');
+      return ensureClone(path).then(function(){ return rtdb.ref(mapP(path)).once('value'); });
     },
-    onChildAdded: function(path, cb){
-      var ref = rtdb.ref(path);
-      ref.on('child_added', cb);
-      _listeners.push(function(){ ref.off('child_added', cb); });
-    },
-    onChildChanged: function(path, cb){
-      var ref = rtdb.ref(path);
-      ref.on('child_changed', cb);
-      _listeners.push(function(){ ref.off('child_changed', cb); });
-    },
-    onChildRemoved: function(path, cb){
-      var ref = rtdb.ref(path);
-      ref.on('child_removed', cb);
-      _listeners.push(function(){ ref.off('child_removed', cb); });
-    },
+    onValue: function(path, cb){ listen(path, 'value', cb); },
+    onChildAdded: function(path, cb){ listen(path, 'child_added', cb); },
+    onChildChanged: function(path, cb){ listen(path, 'child_changed', cb); },
+    onChildRemoved: function(path, cb){ listen(path, 'child_removed', cb); },
     clearListeners: clearListeners,
     flush: flush,
     manualSync: flush
   };
+
+  // ── Error reporting → <root>/errors (read daily by a GitHub Action) ──
+  var _errSent = 0, _errSeen = {};
+  window.__tgReportErr = function(){
+    var q = window.__tgErrQ || [];
+    while(q.length){
+      var e = q.shift();
+      var msg = String(e.msg||'');
+      if(!msg || msg==='Script error.' || _errSeen[msg] || _errSent>=20) continue;
+      _errSeen[msg] = true; _errSent++;
+      if(!_online) continue;
+      try{
+        rtdb.ref(mapP('tripgo/errors')).push({
+          msg: msg.slice(0,500),
+          src: String(e.src||'').replace(location.origin,'').slice(0,200),
+          line: e.line||0, col: e.col||0,
+          stack: String(e.stack||'').slice(0,1500),
+          ua: navigator.userAgent.slice(0,200),
+          path: location.pathname,
+          ver: window.TG_VERSION||'',
+          preview: PV,
+          ts: Date.now()
+        });
+      }catch(x){}
+    }
+  };
+  window.__tgReportErr();
 
   window._fbReady = true;
   requestAnimationFrame(updateNetUI);
@@ -1753,7 +1876,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 <!-- Main App JS -->
 <script>
 'use strict';
-// TripGo v5.0
+// TripGo v5.1
 
 // ════════════════════════════════
 // STATE
@@ -1770,7 +1893,9 @@ var MS_MODE = false, MS_SET = new Set();
 // ════════════════════════════════
 // READY FLAGS
 // ════════════════════════════════
-window._fbReady = false;
+// The Firebase block above runs first and may already have set _fbReady=true;
+// keep that value, otherwise checkInit() never runs (no auto-resume, false "slow network" warning).
+window._fbReady = !!window._fbReady;
 window._mapsReady = false;
 window._onFbReady = function(){ window._fbReady = true; checkInit(); };
 
@@ -2181,6 +2306,7 @@ function startApp(code, uid, name, tripName, isOrg){
   setTimeout(function(){ if(map) google.maps.event.trigger(map,'resize'); },300);
 
   // Reset UI state for new trip
+  _centeredToday=false;
   document.getElementById('detail').classList.remove('show');
   if(stopMarker){stopMarker.setMap(null);stopMarker=null;}
   document.querySelectorAll('.stop-expand.open').forEach(function(p){p.classList.remove('open');});
@@ -2275,6 +2401,8 @@ function startApp(code, uid, name, tripName, isOrg){
 // STOPS
 // ════════════════════════════════
 var _scrollToStopKey=null;
+var _centeredToday=false;   // centre today's block once per trip entry (not on every re-render)
+var _todayKey='';           // date the lists were last rendered for
 
 // ── Find index of next upcoming stop (first stop whose arrive time is in the future) ──
 // ── Fetch live transit time for the next stop via Directions API ──
@@ -2453,7 +2581,7 @@ function renderStops(){
   var lastDay='',html='';
   var nextIdx=findNextStopIdx();
   S.stops.forEach(function(s,i){
-    if(s.day&&s.day!==lastDay){ lastDay=s.day; html+='<div class="day-hdr">'+s.day+'</div>'; }
+    if(s.day&&s.day!==lastDay){ lastDay=s.day; var _dh=dayHdrAttrs(s.day); html+='<div class="day-hdr'+_dh.cls+'" data-date="'+_dh.iso+'">'+s.day+_dh.badge+'</div>'; }
     var sel=MS_SET.has(i);
     // Build activities preview
     var actsHtml='';
@@ -2500,7 +2628,7 @@ function renderStops(){
         if(_st>0) stayStr=' · <span style="color:var(--green);font-weight:700">停留 '+(_sh?_sh+'時':'')+(_sm?_sm+'分':'')+'</span>';}
     }
     html+='<div class="stop-wrap'+pastCls+'" id="sw-'+i+'">' +
-      '<div class="stop-row" id="sr-'+i+(isNext?' stop-next-row':'')+'" style="position:relative">' +
+      '<div class="stop-row'+(isNext?' stop-next-row':'')+'" id="sr-'+i+'" style="position:relative">' +
         '<div class="stop-cb'+(sel?' on':'')+'" id="cb-'+i+'"></div>' +
         '<div class="stop-txt" id="st-'+i+'">' +
           '<div class="stop-name"'+(tbadge?' style="padding-right:95px"':'')+'>'+
@@ -2545,6 +2673,12 @@ function renderStops(){
     _liveTransitTimer=setTimeout(function(){ fetchLiveTransit(nextIdx); },800);
   }
 
+  // ── Open on today: centre today's block once per trip entry ──
+  _todayKey=todayISO();
+  if(!_centeredToday){
+    setTimeout(function(){ if(centerItineraryToday()) _centeredToday=true; },350);
+  }
+
   // ── Scroll back to the stop that was just updated ──
   if(_scrollToStopKey){
     var targetKey=_scrollToStopKey;
@@ -2561,6 +2695,15 @@ function renderStops(){
       },80);
     }
   }
+}
+
+// Returns false when the pane isn't visible yet (caller retries later)
+function centerItineraryToday(){
+  var box=document.getElementById('pane-itinerary'), list=document.getElementById('stop-list');
+  if(!box||!list||!box.classList.contains('on')) return false;
+  var hdr=pickFocusHdr(list,'.day-hdr');
+  if(hdr) centerBlock(box,hdr,dayBlockEnd(hdr,'.day-hdr'));
+  return true;
 }
 
 function onStopListClick(e){
@@ -2950,14 +3093,14 @@ function msExpense(){
   var html='<div style="font-size:11px;color:var(--text2);margin-bottom:8px">景點：'+names.join('、')+'</div>';
   if(!matched.length){ html+='<div style="font-size:12px;color:var(--gray)">這幾個景點尚無花費記錄</div>'; }
   else {
-    matched.forEach(function(e){ html+='<div class="seg-row"><div><div>'+e.name+'</div><div class="seg-sub">付：'+e.payer+' · '+e.split+'人 · NT$'+e.per+'</div></div><div style="font-weight:700;color:var(--blue)">NT$'+e.amt.toLocaleString()+'</div></div>'; });
+    matched.forEach(function(e){ html+='<div class="seg-row"><div><div>'+escHtml(e.name)+'</div><div class="seg-sub">付：'+escHtml(e.payer)+' · '+e.split+'人 · NT$'+e.per+'</div></div><div style="font-weight:700;color:var(--blue)">NT$'+e.amt.toLocaleString()+'</div></div>'; });
     html+='<div class="seg-row" style="border-top:2px solid var(--border);margin-top:4px"><b>合計</b><b style="color:var(--blue)">NT$'+total.toLocaleString()+'</b></div>';
     var balance={};
     Object.keys(paid).forEach(function(n){balance[n]=(paid[n]||0)-(share[n]||0);});
     var cr=[],db=[];
     Object.entries(balance).forEach(function(e){if(e[1]>10)cr.push({name:e[0],amt:e[1]});else if(e[1]<-10)db.push({name:e[0],amt:-e[1]});});
     if(db.length){ html+='<div style="font-size:11px;font-weight:700;color:#1E7A3C;margin-top:8px">結算</div>';
-      db.forEach(function(d){cr.forEach(function(c){if(d.amt>0&&c.amt>0){var t=Math.min(d.amt,c.amt);html+='<div class="seg-row"><span>'+d.name+' → '+c.name+'</span><span style="color:#1E7A3C;font-weight:700">NT$'+Math.round(t)+'</span></div>';d.amt-=t;c.amt-=t;}});});
+      db.forEach(function(d){cr.forEach(function(c){if(d.amt>0&&c.amt>0){var t=Math.min(d.amt,c.amt);html+='<div class="seg-row"><span>'+escHtml(d.name)+' → '+escHtml(c.name)+'</span><span style="color:#1E7A3C;font-weight:700">NT$'+Math.round(t)+'</span></div>';d.amt-=t;c.amt-=t;}});});
     }
   }
   document.getElementById('seg-content').innerHTML=html;
@@ -3396,14 +3539,14 @@ function renderExpenses(){
     var perAmt2=Math.round(e.amt/(splitCnt||1));
     var splitLabel=e.splitMembers?e.splitMembers.join('、')+'（'+e.splitMembers.length+'人）':uLen+'人全體';
     card.innerHTML='<div class="exp-top">'+
-      '<span class="exp-nm">'+e.name+'</span>'+
+      '<span class="exp-nm">'+escHtml(e.name)+'</span>'+
       '<div style="display:flex;align-items:center;gap:2px">'+
         '<span class="exp-amt">'+(e.currency||'NTD')+' '+e.amt.toLocaleString()+'</span>'+
         '<button class="exp-act-btn" data-act="edit"><i class="ti ti-pencil"></i></button>'+
         '<button class="exp-act-btn red" data-act="del"><i class="ti ti-trash"></i></button>'+
       '</div>'+
     '</div>'+
-    '<div class="exp-meta">付款：'+e.payer+' · 每人 '+(e.currency||'NTD')+' '+perAmt2.toLocaleString()+'</div>'+
+    '<div class="exp-meta">付款：'+escHtml(e.payer)+' · 每人 '+(e.currency||'NTD')+' '+perAmt2.toLocaleString()+'</div>'+
     '<div class="exp-meta" style="margin-top:2px;color:var(--text2)">分攤：'+splitLabel+'</div>';
     card.querySelector('[data-act="edit"]').addEventListener('click',function(ev){ev.stopPropagation();editExpense(key,e);});
     card.querySelector('[data-act="del"]').addEventListener('click',function(ev){ev.stopPropagation();deleteExpense(key);});
@@ -3448,7 +3591,7 @@ function calcSettle(){
   var cr=[],db=[];
   Object.entries(balance).forEach(function(e){if(e[1]>10)cr.push({name:e[0],amt:e[1]});else if(e[1]<-10)db.push({name:e[0],amt:-e[1]});});
   var html='';
-  db.forEach(function(d){cr.forEach(function(c){if(d.amt>0&&c.amt>0){var t=Math.min(d.amt,c.amt);html+='<div class="settle-row"><span>'+d.name+' → '+c.name+'</span><span class="settle-amt">'+base+' '+Math.round(t).toLocaleString()+'</span></div>';d.amt-=t;c.amt-=t;}});});
+  db.forEach(function(d){cr.forEach(function(c){if(d.amt>0&&c.amt>0){var t=Math.min(d.amt,c.amt);html+='<div class="settle-row"><span>'+escHtml(d.name)+' → '+escHtml(c.name)+'</span><span class="settle-amt">'+base+' '+Math.round(t).toLocaleString()+'</span></div>';d.amt-=t;c.amt-=t;}});});
   document.getElementById('settle-rows').innerHTML=html||'<div style="font-size:11px;color:var(--gray)">目前無需結算 ✅</div>';
   var st=document.querySelector('.settle-title'); if(st) st.textContent='💰 結算（以 '+(S.primaryCurrency||'NTD')+' 計）';
   }); // end fetchRates
@@ -3512,7 +3655,8 @@ function uniqueMembers(){
     if(!seen[m.name]){ seen[m.name]=true; result.push(m); }
     else if(m.id===S.myUid){
       var idx=result.findIndex(function(x){return x.name===m.name;});
-      if(idx>=0) result[idx]=m;
+      // prefer this device's entry, but keep the person's organizer role
+      if(idx>=0) result[idx]=Object.assign({},m,{role:(result[idx].role==='organizer'||m.role==='organizer')?'organizer':m.role});
     }
   });
   return result;
@@ -3606,7 +3750,7 @@ function renderSplitCheckboxes(selectedNames){
   var ul=uniqueMembers();
   var html=ul.map(function(m){
     var chk=(selectedNames===null||selectedNames.indexOf(m.name)>=0)?'checked':'';
-    return '<label class="split-chk-label"><input type="checkbox" class="split-chk" value="'+m.name+'" '+chk+'><span>'+m.name+'</span></label>';
+    return '<label class="split-chk-label"><input type="checkbox" class="split-chk" value="'+escHtml(m.name)+'" '+chk+'><span>'+escHtml(m.name)+'</span></label>';
   }).join('');
   list.innerHTML=html||'<div style="padding:8px;font-size:12px;color:var(--text2)">尚無成員</div>';
 }
@@ -3628,11 +3772,8 @@ function renderAvatars(){
   if(el) el.textContent=uniqueMembers().length+'位成員';
 }
 function renderMembers(){
-  var el=document.getElementById('mem-list');
   var uMembers=uniqueMembers(); var devCounts=memberDeviceCounts();
   var cntEl=document.getElementById('mem-count'); if(cntEl) cntEl.textContent=uMembers.length+'位';
-  el.style.cssText='display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden';
-
   var rows='<div class="mem-list-wrap">';
   uMembers.forEach(function(m,i){
     var isOrg=m.role==='organizer';
@@ -3644,10 +3785,10 @@ function renderMembers(){
     subParts.push(isOrg?'👑 組織者':'團員');
     if(multi) subParts.push(devCounts[m.name]+'台裝置');
     rows+='<div class="mem-clist-row'+(isSelf?' is-self':'')+'">'+
-      '<div class="mem-av av'+(i%7)+'">'+m.name.substring(0,2).toUpperCase()+'</div>'+
+      '<div class="mem-av av'+(i%7)+'">'+escHtml(m.name.substring(0,2).toUpperCase())+'</div>'+
       '<div style="flex:1;min-width:0">'+
         '<div class="mem-nm">'+
-          m.name+
+          escHtml(m.name)+
           (isSelf?'<span class="mem-tag mem-tag-me">我</span>':'')+
           (isOrg?'<span class="mem-tag mem-tag-org">組織者</span>':'')+
           (multi?'<span class="mem-tag mem-tag-multi">'+devCounts[m.name]+'台</span>':'')+
@@ -3662,18 +3803,23 @@ function renderMembers(){
   });
   rows+='</div>';
 
-  el.innerHTML=rows;
-  el.querySelectorAll('[data-action]').forEach(function(btn){
-    btn.addEventListener('click',function(){
-      var a=this.dataset.action, mid=this.dataset.mid;
-      if(a==='setorg') setOrg(mid); else if(a==='delmember') delMember(mid);
+  // Same list in the members pane and in the 成員管理 sheet
+  ['mem-list','mem-list-modal'].forEach(function(id){
+    var el=document.getElementById(id); if(!el) return;
+    if(id==='mem-list') el.style.cssText='display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden';
+    el.innerHTML=rows;
+    el.querySelectorAll('[data-action]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var a=this.dataset.action, mid=this.dataset.mid;
+        if(a==='setorg') setOrg(mid); else if(a==='delmember') delMember(mid);
+      });
     });
   });
 }
 function setOrg(id){
   var target=S.members.find(function(m){return m.id===id;});
   var name=target?target.name:'此成員';
-  showCustomConfirm('👑','設為組織者？','確定將「'+name+'」設為組織者？原組織者將降為團員。','確定變更',function(){
+  showCustomConfirm('👑','設為組織者？','確定將「'+escHtml(name)+'」設為組織者？原組織者將降為團員。','確定變更',function(){
     S.members.forEach(function(m){
       window.FB.set('tripgo/groups/'+S.groupCode+'/members/'+m.id+'/role', m.id===id?'organizer':'member');
     });
@@ -3739,6 +3885,55 @@ function getTripCoords(){
     }
   }
   return null;
+}
+
+// ── "Today" helpers (device-local date; ISO strings compare correctly as text) ──
+function todayISO(){
+  var n=new Date();
+  return n.getFullYear()+'-'+('0'+(n.getMonth()+1)).slice(-2)+'-'+('0'+n.getDate()).slice(-2);
+}
+// 'today' | 'past' | 'future' for an ISO date; '' when it isn't a date
+function dateState(iso){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(iso||'')) return '';
+  var t=todayISO();
+  return iso===t?'today':(iso<t?'past':'future');
+}
+function wxDayClass(iso){ var st=dateState(iso); return (st==='today'||st==='past')?' wx-'+st:''; }
+function wxDayBadge(iso){ return dateState(iso)==='today'?'<span class="wx-today-badge">今天</span>':''; }
+// Scroll `box` so the block from `first` to `last` sits in the vertical middle;
+// a block taller than the view is aligned to its top instead.
+function centerBlock(box,first,last){
+  if(!box||!first) return;
+  last=last||first;
+  var b=box.getBoundingClientRect(); if(!b.height) return;   // pane hidden
+  var f=first.getBoundingClientRect(), l=last.getBoundingClientRect();
+  var top=f.top-b.top+box.scrollTop, h=l.bottom-f.top;
+  box.scrollTop=h>=box.clientHeight?top-8:top-(box.clientHeight-h)/2;
+}
+// Header to focus: today's; otherwise the next upcoming day (only when earlier days sit above it)
+function pickFocusHdr(container,sel){
+  var hs=container.querySelectorAll(sel), pick=null, hasPast=false;
+  for(var i=0;i<hs.length;i++){
+    var st=dateState(hs[i].getAttribute('data-date')||'');
+    if(st==='today') return hs[i];
+    if(st==='past') hasPast=true;
+    else if(st==='future'&&!pick) pick=hs[i];
+  }
+  return hasPast?pick:null;
+}
+// Last element of a day's block: walk siblings until the next header
+function dayBlockEnd(hdr,sel){
+  var e=hdr; while(e.nextElementSibling&&!e.nextElementSibling.matches(sel)) e=e.nextElementSibling; return e;
+}
+function dayHdrAttrs(label){
+  var iso=labelToDate(label), st=dateState(iso);
+  return {iso:iso, cls:st==='today'?' day-today':'', badge:st==='today'?'<span class="day-badge">今天</span>':''};
+}
+// Weather: bring today's card to the middle when earlier days are listed above it
+function wxScrollToToday(scroll){
+  var el=scroll.querySelector('.wx-today');
+  if(!el||!scroll.querySelector('.wx-past')) return;
+  centerBlock(scroll,el);
 }
 
 // Background tint per WMO weather code
@@ -3896,9 +4091,9 @@ function renderWxCards(daily,locName){
     var rain=daily.precipitation_sum[i];
     var bL=((minT-tripMin)/span*100).toFixed(1);
     var bW=Math.max((maxT-minT)/span*100,6).toFixed(1);
-    html+='<div class="wx-day-card" style="background:'+wxTint(code)+'">'+
+    html+='<div class="wx-day-card'+wxDayClass(daily.time[i])+'" style="background:'+wxTint(code)+'">'+
       '<div class="wx-grid">'+
-        '<div class="wx-date">'+dateStr+'</div>'+
+        '<div class="wx-date">'+dateStr+wxDayBadge(daily.time[i])+'</div>'+
         '<div class="wx-icon">'+wmoEmoji(code)+'</div>'+
         '<div class="wx-temps">'+
           '<span>'+maxT+'° / '+minT+'°C</span>'+
@@ -3910,6 +4105,7 @@ function renderWxCards(daily,locName){
     '</div>';
   }
   scroll.innerHTML=html;
+  wxScrollToToday(scroll);
 }
 
 // Per-day weather render: one card per trip day with its own location
@@ -3942,9 +4138,9 @@ function renderWxCardsByDay(dayStarts,dateToWx){
     var dateStr=(dt.getMonth()+1)+'/'+dt.getDate()+'（'+WDAY[dt.getDay()]+'）';
     var loc=ds.locName||'';
     if(!wx){
-      html+='<div class="wx-day-card" style="background:#F6F8FB">'+
+      html+='<div class="wx-day-card'+wxDayClass(ds.date)+'" style="background:#F6F8FB">'+
         '<div class="wx-grid">'+
-          '<div class="wx-date">'+dateStr+'</div>'+
+          '<div class="wx-date">'+dateStr+wxDayBadge(ds.date)+'</div>'+
           '<div class="wx-icon">❓</div>'+
           '<div class="wx-temps"><span style="color:var(--text2);font-weight:500">超出預報範圍</span></div>'+
           (loc?'<div class="wx-loc-bar">📍 '+loc+'</div>':'')+
@@ -3958,9 +4154,9 @@ function renderWxCardsByDay(dayStarts,dateToWx){
     var rain=wx.precipitation_sum;
     var bL=((minT-tripMin)/span*100).toFixed(1);
     var bW=Math.max((maxT-minT)/span*100,6).toFixed(1);
-    html+='<div class="wx-day-card" style="background:'+wxTint(code)+'">'+
+    html+='<div class="wx-day-card'+wxDayClass(ds.date)+'" style="background:'+wxTint(code)+'">'+
       '<div class="wx-grid">'+
-        '<div class="wx-date">'+dateStr+'</div>'+
+        '<div class="wx-date">'+dateStr+wxDayBadge(ds.date)+'</div>'+
         '<div class="wx-icon">'+wmoEmoji(code)+'</div>'+
         '<div class="wx-temps">'+
           '<span>'+maxT+'° / '+minT+'°C</span>'+
@@ -3973,6 +4169,7 @@ function renderWxCardsByDay(dayStarts,dateToWx){
     '</div>';
   });
   scroll.innerHTML=html;
+  wxScrollToToday(scroll);
 }
 
 var FOOD_KW=['早餐','午餐','中餐','晚餐','宵夜','餐廳','咖啡','Breakfast','Lunch','Dinner','Brunch','Cafe','Food','Restaurant'];
@@ -3981,7 +4178,7 @@ function isFood(s){
   var t=(s.note||'')+' '+(s.activities||[]).map(function(a){return a.text||a||'';}).join(' ');
   return FOOD_KW.some(function(k){return t.toLowerCase().includes(k.toLowerCase());});
 }
-function renderRestaurant(){
+function renderRestaurant(center){
   var list=document.getElementById('restaurant-list'); if(!list) return;
   var stops=S.stops.filter(function(s){return isFood(s);});
   var countEl=document.getElementById('restaurant-count');
@@ -3995,7 +4192,8 @@ function renderRestaurant(){
   dayOrd.sort(function(a,b){var da=labelToDate(a)||a,db=labelToDate(b)||b;return da<db?-1:da>db?1:0;});
   var html='';
   dayOrd.forEach(function(day){
-    html+='<div class="rest-day-hdr">'+day+'</div>';
+    var _rh=dayHdrAttrs(day);
+    html+='<div class="rest-day-hdr'+_rh.cls+'" data-date="'+_rh.iso+'">'+day+_rh.badge+'</div>';
     days[day].forEach(function(s){
       var icon=s.category==='住宿'?'🏨':s.category==='景點'?'📍':'🍽';
       var t=(s.arrive||'')+(s.depart?' ~ '+s.depart:'');
@@ -4006,6 +4204,12 @@ function renderRestaurant(){
     });
   });
   list.innerHTML=html;
+  if(center){
+    setTimeout(function(){
+      var hdr=pickFocusHdr(list,'.rest-day-hdr');
+      if(hdr) centerBlock(list,hdr,dayBlockEnd(hdr,'.rest-day-hdr'));
+    },50);
+  }
   list.querySelectorAll('.rest-card').forEach(function(card){
     card.addEventListener('click',function(){
       var key=this.dataset.key, idx=S.stops.findIndex(function(s){return s._key===key;});
@@ -4020,8 +4224,8 @@ function renderLocList(){
   S.members.forEach(function(m,i){
     var loc=S.allLocs[m.id], ago=formatTimeAgo(loc&&loc.at);
     html+='<div class="loc-row">'+
-      '<div class="loc-av av'+(i%7)+'">'+getInitials(m.name)+'</div>'+
-      '<div style="flex:1"><div class="loc-nm">'+(m.role==='organizer'?'👑 ':'')+m.name+'</div>'+
+      '<div class="loc-av av'+(i%7)+'">'+escHtml(getInitials(m.name))+'</div>'+
+      '<div style="flex:1"><div class="loc-nm">'+(m.role==='organizer'?'👑 ':'')+escHtml(m.name)+'</div>'+
       '<div class="loc-st">'+(loc?'📍 '+ago:'未分享位置')+'</div></div>'+
       (loc?'<button class="loc-see" data-uid="'+m.id+'">查看</button>':'')+
     '</div>';
@@ -4045,8 +4249,9 @@ function showPane(name){
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('on');});
   var tab=document.querySelector('.tab[data-pane="'+name+'"]'); if(tab) tab.classList.add('on');
   if(name==='locations'){ renderAvatars(); renderMembers(); }
-  if(name==='restaurant'){ renderRestaurant(); }
+  if(name==='restaurant'){ renderRestaurant(true); }
   if(name==='weather'){ renderWeather(); }
+  if(name==='itinerary'&&!_centeredToday&&S.stops.length){ setTimeout(function(){ if(centerItineraryToday()) _centeredToday=true; },300); }
 
   // Chat pane: collapse the map to make room for conversation (manual drag still works once inside)
   var mw=document.getElementById('map-wrap');
@@ -4901,7 +5106,9 @@ function afterLogin(uid, name){
   hideLoginScreen();
   var nameEl=document.getElementById('js-home-name');
   if(nameEl){ nameEl.value=name; renderTripsPreview(name); }
-  document.getElementById('S-join').classList.remove('hide');
+  // Don't cover a trip that checkInit() already resumed
+  if(!document.getElementById('S-app').classList.contains('show'))
+    document.getElementById('S-join').classList.remove('hide');
 }
 
 function getPinValue(){
@@ -5088,7 +5295,7 @@ function renderTripsPreview(inputName, _skipFbSearch){
   if(!_skipFbSearch) searchFirebaseForName(name, nl, matched); // fire-and-forget fallback, debounced+cached; skip on the result-render to avoid loops
   if(!matched.length){
     preview.style.display='flex';
-    list.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.6)">找不到「'+name+'」的旅程，搜尋雲端中…</div>';
+    list.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.6)">找不到「'+escHtml(name)+'」的旅程，搜尋雲端中…</div>';
     countEl.textContent=''; return;
   }
   var active=matched.filter(function(t){return !t.completed;});
@@ -5817,7 +6024,7 @@ window.addEventListener('load',function(){
       // 版本號
       ctx.fillStyle='rgba(255,255,255,0.65)';
       ctx.font='bold 28px system-ui,-apple-system,sans-serif';
-      ctx.fillText('v5.0',90,152);
+      ctx.fillText('v5.1',90,152);
       // 插入 apple-touch-icon
       var lnk=document.querySelector('link[rel="apple-touch-icon"]')||document.createElement('link');
       lnk.rel='apple-touch-icon'; lnk.href=c.toDataURL('image/png');
@@ -5894,6 +6101,14 @@ window.addEventListener('load',function(){
   // Offline badge
   document.getElementById('offline-badge').addEventListener('click',function(){
     if(navigator.onLine) window.FB.manualSync(); else showToast('目前無網路連線，上線後自動同步',2000);
+  });
+
+  // The app can stay open for days: when it comes back to the foreground on a new date, refresh "today"
+  document.addEventListener('visibilitychange',function(){
+    if(document.visibilityState!=='visible'||!S.groupCode||!_todayKey||todayISO()===_todayKey) return;
+    _centeredToday=false; renderStops();
+    if(document.getElementById('pane-restaurant').classList.contains('on')) renderRestaurant(true);
+    if(document.getElementById('pane-weather').classList.contains('on')) renderWeather();
   });
 
   // Init
