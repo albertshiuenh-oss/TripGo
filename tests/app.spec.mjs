@@ -172,3 +172,11 @@ test('未捕捉的錯誤會回報到 tripgo/errors', async ({ page, errors }) =>
   expect(reported[0].ver).toBe(await page.evaluate(() => window.TG_VERSION));
   errors.length = 0; // this error was intentional
 });
+
+test('首頁搜尋旅程時，輸入的名字含 HTML 只當文字顯示', async ({ page }) => {
+  await login(page);
+  await page.goto('/');
+  await page.evaluate(() => renderTripsPreview('<img id="xss-search" src=x>', true));
+  await expect(page.locator('#jtp-list')).toContainText('xss-search');
+  expect(await page.locator('#xss-search').count()).toBe(0);
+});

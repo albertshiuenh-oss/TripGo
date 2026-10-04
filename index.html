@@ -5213,7 +5213,7 @@ function renderTripsPreview(inputName, _skipFbSearch){
   if(!_skipFbSearch) searchFirebaseForName(name, nl, matched); // fire-and-forget fallback, debounced+cached; skip on the result-render to avoid loops
   if(!matched.length){
     preview.style.display='flex';
-    list.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.6)">找不到「'+name+'」的旅程，搜尋雲端中…</div>';
+    list.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.6)">找不到「'+escHtml(name)+'」的旅程，搜尋雲端中…</div>';
     countEl.textContent=''; return;
   }
   var active=matched.filter(function(t){return !t.completed;});
