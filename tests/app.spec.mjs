@@ -311,3 +311,14 @@ test('首頁搜尋旅程時，輸入的名字含 HTML 只當文字顯示', async
   await expect(page.locator('#jtp-list')).toContainText('xss-search');
   expect(await page.locator('#xss-search').count()).toBe(0);
 });
+
+test('景點的活動與備註含 HTML 時只當文字顯示', async ({ page }) => {
+  await enterTrip(page);
+  await page.evaluate(() => {
+    renderActs({ activities: [{ label: '<img id="xss-act" src=x>', done: false }] });
+    renderNotes({ notes: ['<img id="xss-note" src=x>'] });
+  });
+  await expect(page.locator('#act-list')).toContainText('xss-act');
+  await expect(page.locator('#note-list')).toContainText('xss-note');
+  expect(await page.locator('#xss-act, #xss-note').count()).toBe(0);
+});
