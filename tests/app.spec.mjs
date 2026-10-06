@@ -322,3 +322,13 @@ test('景點的活動與備註含 HTML 時只當文字顯示', async ({ page }) 
   await expect(page.locator('#note-list')).toContainText('xss-note');
   expect(await page.locator('#xss-act, #xss-note').count()).toBe(0);
 });
+
+test('管理員垃圾桶：旅程名稱含 HTML 時只當文字顯示', async ({ page }) => {
+  const seed = structuredClone(SEED);
+  seed.tripgo.trash = { OLD01: { tripName: '<img id="xss-trash" src=x>', _trashedAt: Date.now() } };
+  await page.addInitScript((s) => { window.__TG_SEED = s; }, seed);
+  await enterTrip(page);
+  await page.evaluate(() => loadTrashBin());
+  await expect(page.locator('#adm-trash-list')).toContainText('xss-trash');
+  expect(await page.locator('#xss-trash').count()).toBe(0);
+});

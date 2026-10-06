@@ -4632,7 +4632,7 @@ function loadTrashBin(){
       var stopCount=g.stops?Object.keys(g.stops).length:0;
       var daysLeft=g._trashedAt?daysDiff(g._trashedAt):'?';
       html+='<div class="adm-trash-card">'+
-        '<div class="adm-trash-name">'+(g.tripName||'(未命名)')+'</div>'+
+        '<div class="adm-trash-name">'+escHtml(g.tripName||'(未命名)')+'</div>'+
         '<div class="adm-trash-meta">邀請碼：'+code+' · '+memberCount+'人 · '+stopCount+'個景點</div>'+
         '<div class="adm-trash-expire">⏰ 還有 '+daysLeft+' 天永久刪除</div>'+
         '<div class="adm-trash-actions">'+
