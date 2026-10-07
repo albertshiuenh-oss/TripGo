@@ -4484,12 +4484,12 @@ function loadTokenList(){
       var used=!!(t.usedAt);
       html+='<div class="adm-token-card">'+
         '<div style="display:flex;align-items:center;gap:8px">'+
-          '<span class="adm-token-code">'+code+'</span>'+
+          '<span class="adm-token-code">'+escHtml(code)+'</span>'+
           '<span class="adm-token-badge '+(used?'used':'ok')+'">'+(used?'已使用':'未使用')+'</span>'+
-          (used&&t.usedBy?'<span style="font-size:10px;color:var(--text2)">by '+t.usedBy+'</span>':'')+
-          '<button class="adm-token-del" data-code="'+code+'" title="撤銷"><i class="ti ti-trash"></i></button>'+
+          (used&&t.usedBy?'<span style="font-size:10px;color:var(--text2)">by '+escHtml(t.usedBy)+'</span>':'')+
+          '<button class="adm-token-del" data-code="'+escHtml(code)+'" title="撤銷"><i class="ti ti-trash"></i></button>'+
         '</div>'+
-        (t.note?'<div style="font-size:11px;color:var(--text2);margin-top:4px">📝 '+t.note+'</div>':'')+
+        (t.note?'<div style="font-size:11px;color:var(--text2);margin-top:4px">📝 '+escHtml(t.note)+'</div>':'')+
       '</div>';
     });
     list.innerHTML=html||'<div style="font-size:12px;color:var(--text2)">尚無授權碼</div>';

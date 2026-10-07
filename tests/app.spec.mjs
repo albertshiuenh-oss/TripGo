@@ -332,3 +332,14 @@ test('管理員垃圾桶：旅程名稱含 HTML 時只當文字顯示', async ({
   await expect(page.locator('#adm-trash-list')).toContainText('xss-trash');
   expect(await page.locator('#xss-trash').count()).toBe(0);
 });
+
+test('管理員授權碼列表：備註與使用者名稱含 HTML 時只當文字顯示', async ({ page }) => {
+  const seed = structuredClone(SEED);
+  seed.tripgo.create_tokens = { 'BUILD-AAAA': { note: '<img id="xss-note2" src=x>', usedAt: 1, usedBy: '<img id="xss-by" src=x>' } };
+  await page.addInitScript((s) => { window.__TG_SEED = s; }, seed);
+  await enterTrip(page);
+  await page.evaluate(() => loadTokenList());
+  await expect(page.locator('#adm-token-list')).toContainText('xss-by');
+  await expect(page.locator('#adm-token-list')).toContainText('xss-note2');
+  expect(await page.locator('#xss-by, #xss-note2').count()).toBe(0);
+});
