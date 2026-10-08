@@ -343,3 +343,14 @@ test('管理員授權碼列表：備註與使用者名稱含 HTML 時只當文�
   await expect(page.locator('#adm-token-list')).toContainText('xss-note2');
   expect(await page.locator('#xss-by, #xss-note2').count()).toBe(0);
 });
+
+test('行程列表的景點名稱含 HTML 時只當文字顯示', async ({ page }) => {
+  await enterTrip(page);
+  await page.evaluate(() => {
+    S.stops = [{ name: '<img id="xss-stop" src=x>', category: '景點', arrive: '09:00', depart: '10:00' }];
+    renderStops();
+    showSimplePc({ name: 'x', note: '<img id="xss-pcnote" src=x>' });
+  });
+  await expect(page.locator('#pc-info')).toContainText('xss-pcnote');
+  expect(await page.locator('#xss-stop, #xss-pcnote').count()).toBe(0);
+});
