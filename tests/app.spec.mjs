@@ -354,3 +354,17 @@ test('行程列表的景點名稱含 HTML 時只當文字顯示', async ({ page 
   await expect(page.locator('#pc-info')).toContainText('xss-pcnote');
   expect(await page.locator('#xss-stop, #xss-pcnote').count()).toBe(0);
 });
+
+test('景點編輯面板：活動與備註含 HTML 時只當文字顯示', async ({ page }) => {
+  await enterTrip(page);
+  await page.evaluate(() => {
+    const s = { activities: [{ label: '<img id="xss-eact" src=x>', done: false }], notes: ['<img id="xss-enote" src=x>'] };
+    const box = document.createElement('div');
+    box.id = 'xss-box';
+    box.innerHTML = renderActsEditable(s) + renderNotesEditable(s);
+    document.body.appendChild(box);
+  });
+  await expect(page.locator('#xss-box')).toContainText('xss-eact');
+  await expect(page.locator('#xss-box')).toContainText('xss-enote');
+  expect(await page.locator('#xss-eact, #xss-enote').count()).toBe(0);
+});

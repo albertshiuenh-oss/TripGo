@@ -2589,7 +2589,7 @@ function renderStops(){
       s.activities.forEach(function(a,ai){
         actsHtml+='<div class="exp-act-row">'+
           '<div class="exp-chk'+(a.done?' done':'')+'" data-i="'+i+'" data-ai="'+ai+'" data-type="act"></div>'+
-          '<span class="exp-lbl'+(a.done?' done':'')+'">'+a.label+'</span></div>';
+          '<span class="exp-lbl'+(a.done?' done':'')+'">'+escHtml(a.label)+'</span></div>';
       });
     }
     var notesHtml='';
@@ -5527,7 +5527,7 @@ function renderActsEditable(s){
   (s.activities||[]).forEach(function(a,ai){
     html+='<div class="exp-act-row">'+
       '<div class="exp-chk'+(a.done?' done':'')+'" data-ai="'+ai+'" data-type="ief-act"></div>'+
-      '<span class="exp-lbl'+(a.done?' done':'')+'">'+a.label+'</span>'+
+      '<span class="exp-lbl'+(a.done?' done':'')+'">'+escHtml(a.label)+'</span>'+
       '<button class="act-del" data-ai="'+ai+'" data-type="ief-act-del" style="margin-left:auto"><i class="ti ti-x"></i></button>'+
     '</div>';
   });
@@ -5536,7 +5536,7 @@ function renderActsEditable(s){
 function renderNotesEditable(s){
   var html='';
   (s.notes||[]).forEach(function(n,ni){
-    html+='<div class="exp-note-row"><div class="exp-dot"></div><span style="flex:1">'+n+'</span>'+
+    html+='<div class="exp-note-row"><div class="exp-dot"></div><span style="flex:1">'+escHtml(n)+'</span>'+
       '<button class="note-del" data-ni="'+ni+'" data-type="ief-note-del"><i class="ti ti-x"></i></button></div>';
   });
   return html;
@@ -5691,7 +5691,7 @@ function closeInlineEdit(i, collapse){
     s.activities.forEach(function(a,ai){
       actsHtml+='<div class="exp-act-row">'+
         '<div class="exp-chk'+(a.done?' done':'')+'" data-i="'+i+'" data-ai="'+ai+'" data-type="act"></div>'+
-        '<span class="exp-lbl'+(a.done?' done':'')+'">'+a.label+'</span></div>';
+        '<span class="exp-lbl'+(a.done?' done':'')+'">'+escHtml(a.label)+'</span></div>';
     });
   }
   var notesHtml='';
