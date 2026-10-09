@@ -311,3 +311,60 @@ test('首頁搜尋旅程時，輸入的名字含 HTML 只當文字顯示', async
   await expect(page.locator('#jtp-list')).toContainText('xss-search');
   expect(await page.locator('#xss-search').count()).toBe(0);
 });
+
+test('景點的活動與備註含 HTML 時只當文字顯示', async ({ page }) => {
+  await enterTrip(page);
+  await page.evaluate(() => {
+    renderActs({ activities: [{ label: '<img id="xss-act" src=x>', done: false }] });
+    renderNotes({ notes: ['<img id="xss-note" src=x>'] });
+  });
+  await expect(page.locator('#act-list')).toContainText('xss-act');
+  await expect(page.locator('#note-list')).toContainText('xss-note');
+  expect(await page.locator('#xss-act, #xss-note').count()).toBe(0);
+});
+
+test('管理員垃圾桶：旅程名稱含 HTML 時只當文字顯示', async ({ page }) => {
+  const seed = structuredClone(SEED);
+  seed.tripgo.trash = { OLD01: { tripName: '<img id="xss-trash" src=x>', _trashedAt: Date.now() } };
+  await page.addInitScript((s) => { window.__TG_SEED = s; }, seed);
+  await enterTrip(page);
+  await page.evaluate(() => loadTrashBin());
+  await expect(page.locator('#adm-trash-list')).toContainText('xss-trash');
+  expect(await page.locator('#xss-trash').count()).toBe(0);
+});
+
+test('管理員授權碼列表：備註與使用者名稱含 HTML 時只當文字顯示', async ({ page }) => {
+  const seed = structuredClone(SEED);
+  seed.tripgo.create_tokens = { 'BUILD-AAAA': { note: '<img id="xss-note2" src=x>', usedAt: 1, usedBy: '<img id="xss-by" src=x>' } };
+  await page.addInitScript((s) => { window.__TG_SEED = s; }, seed);
+  await enterTrip(page);
+  await page.evaluate(() => loadTokenList());
+  await expect(page.locator('#adm-token-list')).toContainText('xss-by');
+  await expect(page.locator('#adm-token-list')).toContainText('xss-note2');
+  expect(await page.locator('#xss-by, #xss-note2').count()).toBe(0);
+});
+
+test('行程列表的景點名稱含 HTML 時只當文字顯示', async ({ page }) => {
+  await enterTrip(page);
+  await page.evaluate(() => {
+    S.stops = [{ name: '<img id="xss-stop" src=x>', category: '景點', arrive: '09:00', depart: '10:00' }];
+    renderStops();
+    showSimplePc({ name: 'x', note: '<img id="xss-pcnote" src=x>' });
+  });
+  await expect(page.locator('#pc-info')).toContainText('xss-pcnote');
+  expect(await page.locator('#xss-stop, #xss-pcnote').count()).toBe(0);
+});
+
+test('景點編輯面板：活動與備註含 HTML 時只當文字顯示', async ({ page }) => {
+  await enterTrip(page);
+  await page.evaluate(() => {
+    const s = { activities: [{ label: '<img id="xss-eact" src=x>', done: false }], notes: ['<img id="xss-enote" src=x>'] };
+    const box = document.createElement('div');
+    box.id = 'xss-box';
+    box.innerHTML = renderActsEditable(s) + renderNotesEditable(s);
+    document.body.appendChild(box);
+  });
+  await expect(page.locator('#xss-box')).toContainText('xss-eact');
+  await expect(page.locator('#xss-box')).toContainText('xss-enote');
+  expect(await page.locator('#xss-eact, #xss-enote').count()).toBe(0);
+});
