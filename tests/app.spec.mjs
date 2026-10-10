@@ -368,3 +368,18 @@ test('景點編輯面板：活動與備註含 HTML 時只當文字顯示', async
   await expect(page.locator('#xss-box')).toContainText('xss-enote');
   expect(await page.locator('#xss-eact, #xss-enote').count()).toBe(0);
 });
+
+test('「刪除景點？」確認視窗：景點名稱含 HTML 時只當文字顯示', async ({ page }) => {
+  await enterTrip(page);
+  await page.evaluate(() => {
+    S.stops = [{ name: '<img id="xss-del" src=x>', category: '景點', arrive: '09:00', depart: '10:00', _key: 'k1' }];
+    renderStops();
+    const b = document.createElement('button');
+    b.className = 'exp-del-btn';
+    b.dataset.i = '0';
+    document.getElementById('stop-list').appendChild(b);
+    b.click();
+  });
+  await expect(page.locator('#cd-msg')).toContainText('xss-del');
+  expect(await page.locator('#xss-del').count()).toBe(0);
+});
