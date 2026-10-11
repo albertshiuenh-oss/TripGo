@@ -4818,8 +4818,8 @@ function openTripSwitcher(){
   if(cur){
     curEl.innerHTML='<div class="tsw-trip-card current">'+
       '<div class="tsw-trip-ic"><i class="ti ti-map-2"></i></div>'+
-      '<div style="flex:1"><div class="tsw-trip-name">'+cur.tripName+'</div>'+
-      '<div class="tsw-trip-meta">'+(cur.isOrg?'👑 建立者':'👤 成員')+' · '+cur.name+' · '+cur.code+'</div>'+
+      '<div style="flex:1"><div class="tsw-trip-name">'+escHtml(cur.tripName||'')+'</div>'+
+      '<div class="tsw-trip-meta">'+(cur.isOrg?'👑 建立者':'👤 成員')+' · '+escHtml(cur.name||'')+' · '+escHtml(cur.code||'')+'</div>'+
       '<div class="tsw-trip-actions">'+
         (cur.isOrg?'<button class="tsw-action-btn danger" id="tsw-del-cur"><i class="ti ti-trash" style="font-size:12px"></i>刪除旅程</button>':
                    '<button class="tsw-action-btn leave" id="tsw-leave-cur"><i class="ti ti-logout" style="font-size:12px"></i>離開旅程</button>')+
@@ -4839,8 +4839,8 @@ function openTripSwitcher(){
     othEl.innerHTML=others.map(function(t,i){
       return '<div class="tsw-trip-card" data-i="'+i+'">'+
         '<div class="tsw-trip-ic"><i class="ti ti-map-2"></i></div>'+
-        '<div style="flex:1"><div class="tsw-trip-name">'+t.tripName+'</div>'+
-        '<div class="tsw-trip-meta">'+(t.isOrg?'👑 建立者':'👤 成員')+' · '+t.name+'</div>'+
+        '<div style="flex:1"><div class="tsw-trip-name">'+escHtml(t.tripName||'')+'</div>'+
+        '<div class="tsw-trip-meta">'+(t.isOrg?'👑 建立者':'👤 成員')+' · '+escHtml(t.name||'')+'</div>'+
         '<div class="tsw-trip-actions">'+
           (t.isOrg?'<button class="tsw-action-btn danger tsw-del" data-code="'+t.code+'"><i class="ti ti-trash" style="font-size:12px"></i>刪除旅程</button>':
                    '<button class="tsw-action-btn leave tsw-leave" data-code="'+t.code+'" data-uid="'+t.uid+'"><i class="ti ti-logout" style="font-size:12px"></i>離開旅程</button>')+

@@ -383,3 +383,17 @@ test('「刪除景點？」確認視窗：景點名稱含 HTML 時只當文字�
   await expect(page.locator('#cd-msg')).toContainText('xss-del');
   expect(await page.locator('#xss-del').count()).toBe(0);
 });
+
+test('旅程切換面板：旅程名稱與使用者名稱含 HTML 時只當文字顯示', async ({ page }) => {
+  await enterTrip(page);
+  await page.evaluate(() => {
+    saveStoredTrips([
+      { code: S.groupCode, tripName: '<img id="xss-cur" src=x>', name: '<img id="xss-curn" src=x>', isOrg: true, uid: 'u1' },
+      { code: 'ZZZ99', tripName: '<img id="xss-oth" src=x>', name: '<img id="xss-othn" src=x>', isOrg: false, uid: 'u9' }
+    ]);
+    openTripSwitcher();
+  });
+  await expect(page.locator('#tsw-current')).toContainText('xss-cur');
+  await expect(page.locator('#trip-switcher')).toContainText('xss-oth');
+  expect(await page.locator('#xss-cur, #xss-curn, #xss-oth, #xss-othn').count()).toBe(0);
+});
