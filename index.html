@@ -3449,8 +3449,8 @@ function appendMsg(uid,name,text,isSticker,time,key){
   var div=document.createElement('div'); div.className='msg'+(me?' me':'');
   div.dataset.key=key||''; div.dataset.uid=uid||'';
   div.innerHTML='<div class="av '+avC+'" style="width:22px;height:22px;font-size:8px;flex-shrink:0">'+(uid||'?').substring(0,2).toUpperCase()+'</div>'+
-    '<div>'+(me?'':'<div class="msg-nm">'+(name||uid)+'</div>')+
-    '<div class="bubble'+(isSticker?' sticker-bubble':'')+'">'+text+'</div></div>'+
+    '<div>'+(me?'':'<div class="msg-nm">'+escHtml(name||uid)+'</div>')+
+    '<div class="bubble'+(isSticker?' sticker-bubble':'')+'">'+escHtml(text)+'</div></div>'+
     '<span class="msg-t">'+(time||'')+'</span>';
   // Action button for own messages or admin (not for stickers)
   if(key && !isSticker && (me||_isAdmin)){

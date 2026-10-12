@@ -397,3 +397,13 @@ test('旅程切換面板：旅程名稱與使用者名稱含 HTML 時只當文�
   await expect(page.locator('#trip-switcher')).toContainText('xss-oth');
   expect(await page.locator('#xss-cur, #xss-curn, #xss-oth, #xss-othn').count()).toBe(0);
 });
+
+test('聊天室：訊息內容與暱稱含 HTML 時只當文字顯示', async ({ page }) => {
+  await enterTrip(page);
+  await page.evaluate(() => {
+    appendMsg('u2', '<img id="xss-chat-nm" src=x>', '<img id="xss-chat-tx" src=x>', false, '1/1 00:00', 'k-xss');
+  });
+  await expect(page.locator('#msg-list')).toContainText('xss-chat-tx');
+  await expect(page.locator('#msg-list')).toContainText('xss-chat-nm');
+  expect(await page.locator('#xss-chat-nm, #xss-chat-tx').count()).toBe(0);
+});
