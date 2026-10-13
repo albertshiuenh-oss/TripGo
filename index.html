@@ -2581,7 +2581,7 @@ function renderStops(){
   var lastDay='',html='';
   var nextIdx=findNextStopIdx();
   S.stops.forEach(function(s,i){
-    if(s.day&&s.day!==lastDay){ lastDay=s.day; var _dh=dayHdrAttrs(s.day); html+='<div class="day-hdr'+_dh.cls+'" data-date="'+_dh.iso+'">'+s.day+_dh.badge+'</div>'; }
+    if(s.day&&s.day!==lastDay){ lastDay=s.day; var _dh=dayHdrAttrs(s.day); html+='<div class="day-hdr'+_dh.cls+'" data-date="'+_dh.iso+'">'+escHtml(s.day)+_dh.badge+'</div>'; }
     var sel=MS_SET.has(i);
     // Build activities preview
     var actsHtml='';
@@ -2634,7 +2634,7 @@ function renderStops(){
           '<div class="stop-name"'+(tbadge?' style="padding-right:95px"':'')+'>'+
             '<i class="ti ti-chevron-right stop-arr" id="sa-'+i+'" style="font-size:12px;font-weight:700;vertical-align:middle;margin-right:4px;transition:transform .2s;color:inherit;opacity:1"></i>'+escHtml(s.name||'')+nextTag+(s.category?'<span class="cat-tag cat-'+s.category+'">'+(s.category==='住宿'?'🏨':s.category==='景點'?'📍':s.category==='餐廳'?'🍽':'📌')+' '+s.category+'</span>':'')+
           '</div>' +
-          '<div class="stop-time">'+((s.day?s.day+' ':'')+(s.arrive||'')+(s.depart?' ~ '+s.depart:'')+stayStr+(s.note?' · '+s.note.substring(0,25):''))+'</div>' +
+          '<div class="stop-time">'+escHtml((s.day?s.day+' ':'')+(s.arrive||'')+(s.depart?' ~ '+s.depart:''))+stayStr+(s.note?' · '+escHtml(s.note.substring(0,25)):'')+'</div>' +
         '</div>' +
         (MS_MODE?'':(tbadge?'<div style="position:absolute;top:11px;right:14px;display:flex;align-items:center;gap:4px;">'+tbadge+'</div>':'')) +
       '</div>' +
@@ -4193,7 +4193,7 @@ function renderRestaurant(center){
   var html='';
   dayOrd.forEach(function(day){
     var _rh=dayHdrAttrs(day);
-    html+='<div class="rest-day-hdr'+_rh.cls+'" data-date="'+_rh.iso+'">'+day+_rh.badge+'</div>';
+    html+='<div class="rest-day-hdr'+_rh.cls+'" data-date="'+_rh.iso+'">'+escHtml(day)+_rh.badge+'</div>';
     days[day].forEach(function(s){
       var icon=s.category==='住宿'?'🏨':s.category==='景點'?'📍':'🍽';
       var t=(s.arrive||'')+(s.depart?' ~ '+s.depart:'');
@@ -5175,7 +5175,7 @@ function generateBriefingHTML(){
 
   var rows='';
   dayOrd.forEach(function(day,di){
-    rows+='<tr><td colspan="4" style="background:#0D2137;color:#E8B84B;font-weight:700;font-size:11px;padding:5px 8px;letter-spacing:.5px">'+day+'</td></tr>';
+    rows+='<tr><td colspan="4" style="background:#0D2137;color:#E8B84B;font-weight:700;font-size:11px;padding:5px 8px;letter-spacing:.5px">'+escHtml(day)+'</td></tr>';
     (days[day]||[]).forEach(function(s,i){
       var dur=stayStr(s);
       var transit=s.transit&&s.transit.minutes?s.transit.minutes+'min':'';

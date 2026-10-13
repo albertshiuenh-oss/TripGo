@@ -407,3 +407,15 @@ test('聊天室：訊息內容與暱稱含 HTML 時只當文字顯示', async ({
   await expect(page.locator('#msg-list')).toContainText('xss-chat-nm');
   expect(await page.locator('#xss-chat-nm, #xss-chat-tx').count()).toBe(0);
 });
+
+test('行程列表與餐廳列表的日期標題含 HTML 時只當文字顯示', async ({ page }) => {
+  await enterTrip(page);
+  await page.evaluate(() => {
+    S.stops = [{ name: 'a', category: '餐廳', day: '<img id="xss-day" src=x>', note: '<img id="xss-snote" src=x>', arrive: '09:00', depart: '10:00' }];
+    renderStops();
+    renderRestaurant();
+  });
+  await expect(page.locator('#stop-list, .day-hdr').first()).toContainText('xss-day');
+  expect(await page.locator('#xss-day, #xss-snote').count()).toBe(0);
+  await expect(page.locator('.stop-time .stop-time-stay, .stop-time span').first()).toBeVisible();
+});
