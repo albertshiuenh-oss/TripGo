@@ -419,3 +419,13 @@ test('行程列表與餐廳列表的日期標題含 HTML 時只當文字顯示',
   expect(await page.locator('#xss-day, #xss-snote').count()).toBe(0);
   await expect(page.locator('.stop-time .stop-time-stay, .stop-time span').first()).toBeVisible();
 });
+
+test('費用卡片：分攤成員名稱與幣別含 HTML 時只當文字顯示', async ({ page }) => {
+  await enterTrip(page);
+  await page.evaluate(() => {
+    S.expenses = { kx: { name: 'x', amt: 100, payer: 'Albert', currency: '<img id="xss-cur2" src=x>', splitMembers: ['<img id="xss-split" src=x>', 'Anna'] } };
+    renderExpenses();
+  });
+  await expect(page.locator('#exp-list')).toContainText('xss-split');
+  expect(await page.locator('#xss-split, #xss-cur2').count()).toBe(0);
+});

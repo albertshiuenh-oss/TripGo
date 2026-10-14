@@ -3537,16 +3537,16 @@ function renderExpenses(){
     var uLen=uniqueMembers().length;
     var splitCnt=e.splitMembers?e.splitMembers.length:uLen;
     var perAmt2=Math.round(e.amt/(splitCnt||1));
-    var splitLabel=e.splitMembers?e.splitMembers.join('、')+'（'+e.splitMembers.length+'人）':uLen+'人全體';
+    var splitLabel=e.splitMembers?e.splitMembers.map(escHtml).join('、')+'（'+e.splitMembers.length+'人）':uLen+'人全體';
     card.innerHTML='<div class="exp-top">'+
       '<span class="exp-nm">'+escHtml(e.name)+'</span>'+
       '<div style="display:flex;align-items:center;gap:2px">'+
-        '<span class="exp-amt">'+(e.currency||'NTD')+' '+e.amt.toLocaleString()+'</span>'+
+        '<span class="exp-amt">'+escHtml(e.currency||'NTD')+' '+e.amt.toLocaleString()+'</span>'+
         '<button class="exp-act-btn" data-act="edit"><i class="ti ti-pencil"></i></button>'+
         '<button class="exp-act-btn red" data-act="del"><i class="ti ti-trash"></i></button>'+
       '</div>'+
     '</div>'+
-    '<div class="exp-meta">付款：'+escHtml(e.payer)+' · 每人 '+(e.currency||'NTD')+' '+perAmt2.toLocaleString()+'</div>'+
+    '<div class="exp-meta">付款：'+escHtml(e.payer)+' · 每人 '+escHtml(e.currency||'NTD')+' '+perAmt2.toLocaleString()+'</div>'+
     '<div class="exp-meta" style="margin-top:2px;color:var(--text2)">分攤：'+splitLabel+'</div>';
     card.querySelector('[data-act="edit"]').addEventListener('click',function(ev){ev.stopPropagation();editExpense(key,e);});
     card.querySelector('[data-act="del"]').addEventListener('click',function(ev){ev.stopPropagation();deleteExpense(key);});
