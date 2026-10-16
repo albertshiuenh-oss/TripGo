@@ -443,3 +443,17 @@ test('首頁旅程列表：一般團員也能把旅程標為「完成」，但�
   await page.locator('#confirm-dialog button', { hasText: '確定完成' }).click();
   await expect(page.locator('#jtp-done-section')).toContainText('大阪');
 });
+
+test('行前簡報圖片：旅程名稱、景點、成員、幣別含 HTML 時只當文字顯示', async ({ page }) => {
+  await enterTrip(page);
+  const r = await page.evaluate(() => {
+    S.tripName = '<img id="xss-bt" src=x>';
+    S.stops = [{ name: '<img id="xss-bs" src=x>', day: 'Oct 2', arrive: '09:00', depart: '10:00' }];
+    S.members = [{ id: 'u9', name: '<img id="xss-bm" src=x>', role: 'member' }];
+    S.expenses = { k: { name: 'x', amt: 100, payer: 'a', currency: '<img id="xss-bc" src=x>' } };
+    const d = document.createElement('div'); d.innerHTML = generateBriefingHTML();
+    return { n: d.querySelectorAll('#xss-bt, #xss-bs, #xss-bm, #xss-bc').length, t: d.textContent };
+  });
+  expect(r.n).toBe(0);
+  for (const k of ['xss-bt', 'xss-bs', 'xss-bm', 'xss-bc']) expect(r.t).toContain(k);
+});

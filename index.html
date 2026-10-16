@@ -5181,14 +5181,14 @@ function generateBriefingHTML(){
       var transit=s.transit&&s.transit.minutes?s.transit.minutes+'min':'';
       rows+='<tr style="border-bottom:1px solid #eee">'
         +'<td style="padding:5px 8px;font-size:10px;color:#888;width:55px;white-space:nowrap">'+(s.arrive||'')+(s.depart?' ~<br>'+s.depart:'')+'</td>'
-        +'<td style="padding:5px 8px;font-size:12px;font-weight:600;color:#1C2B3A">'+(s.name||'')+'</td>'
+        +'<td style="padding:5px 8px;font-size:12px;font-weight:600;color:#1C2B3A">'+escHtml(s.name||'')+'</td>'
         +'<td style="padding:5px 8px;font-size:10px;color:#2E7D32;white-space:nowrap">'+dur+'</td>'
         +'<td style="padding:5px 8px;font-size:10px;color:#7A99B8;white-space:nowrap">'+transit+'</td>'
         +'</tr>';
     });
   });
 
-  var memStr=mems.map(function(m){return m.name;}).join('、');
+  var memStr=mems.map(function(m){return escHtml(m.name);}).join('、');
 
   // 花費
   var expTotal=0; var expCur='NTD';
@@ -5197,9 +5197,9 @@ function generateBriefingHTML(){
   return '<div id="briefing-content" style="font-family:\'Noto Sans TC\',system-ui,sans-serif;background:#fff;width:800px;padding:0">'
     +'<div style="background:#0D2137;color:#fff;padding:20px 24px;display:flex;justify-content:space-between;align-items:center">'
     +'<div><div style="font-size:9px;letter-spacing:2px;color:#E8B84B;margin-bottom:6px">TRIP ITINERARY</div>'
-    +'<div style="font-size:22px;font-weight:700;line-height:1.1">'+tName+'</div></div>'
+    +'<div style="font-size:22px;font-weight:700;line-height:1.1">'+escHtml(tName)+'</div></div>'
     +'<div style="text-align:right"><div style="font-size:11px;color:#7A99B8;margin-bottom:4px">👥 '+memStr+'</div>'
-    +(expTotal>0?'<div style="font-size:11px;color:#E8B84B">💰 '+expCur+' '+expTotal.toLocaleString()+'</div>':'')
+    +(expTotal>0?'<div style="font-size:11px;color:#E8B84B">💰 '+escHtml(expCur)+' '+expTotal.toLocaleString()+'</div>':'')
     +'</div></div>'
     +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
     +'<thead><tr style="background:#f5f8ff"><th style="padding:5px 8px;text-align:left;font-size:9px;color:#888;font-weight:600">時間</th><th style="padding:5px 8px;text-align:left;font-size:9px;color:#888;font-weight:600">景點</th><th style="padding:5px 8px;text-align:left;font-size:9px;color:#888;font-weight:600">停留</th><th style="padding:5px 8px;text-align:left;font-size:9px;color:#888;font-weight:600">交通</th></tr></thead>'
