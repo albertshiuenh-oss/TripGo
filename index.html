@@ -5313,7 +5313,9 @@ function renderTripsPreview(inputName, _skipFbSearch){
       '</div>'+
       (isDone
         ? '<span class="jtp-done-badge">✓ 已完成</span><button class="jtp-undo-btn" data-code="'+t.code+'">恢復</button>'
-        : (t.isOrg?'<button class="jtp-export-btn" data-code="'+t.code+'" data-trip="'+escHtml(t.tripName)+'"><i class="ti ti-file-export"></i> 匯出</button><button class="jtp-complete-btn" data-code="'+t.code+'">✓ 完成</button><button class="jtp-del" data-code="'+t.code+'">🗑</button>':'')+
+        : (t.isOrg?'<button class="jtp-export-btn" data-code="'+t.code+'" data-trip="'+escHtml(t.tripName)+'"><i class="ti ti-file-export"></i> 匯出</button>':'')+
+          '<button class="jtp-complete-btn" data-code="'+t.code+'">✓ 完成</button>'+
+          (t.isOrg?'<button class="jtp-del" data-code="'+t.code+'">🗑</button>':'')+
           '<i class="ti ti-chevron-right" style="font-size:14px;color:var(--blue);opacity:.5;flex-shrink:0"></i>'
       )+'</div>';
   }

@@ -429,3 +429,17 @@ test('費用卡片：分攤成員名稱與幣別含 HTML 時只當文字顯示',
   await expect(page.locator('#exp-list')).toContainText('xss-split');
   expect(await page.locator('#xss-split, #xss-cur2').count()).toBe(0);
 });
+
+test('首頁旅程列表：一般團員也能把旅程標為「完成」，但不能刪除', async ({ page }) => {
+  await login(page);
+  await page.goto('/');
+  await page.evaluate(() => {
+    localStorage.setItem('tg_trips', JSON.stringify([{ code: 'TEST01', uid: 'u2', name: 'Anna', tripName: '大阪', isOrg: false }]));
+    renderTripsPreview('Anna', true);
+  });
+  await expect(page.locator('#jtp-list .jtp-complete-btn')).toHaveCount(1);
+  expect(await page.locator('#jtp-list .jtp-del').count()).toBe(0);
+  await page.locator('#jtp-list .jtp-complete-btn').click();
+  await page.locator('#confirm-dialog button', { hasText: '確定完成' }).click();
+  await expect(page.locator('#jtp-done-section')).toContainText('大阪');
+});
