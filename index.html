@@ -4940,7 +4940,7 @@ function exportTripKML(code, tripName){
     // 去重成員
     var seenN={}, uMems=[];
     mems.forEach(function(m){ if(!seenN[m.name]){seenN[m.name]=true;uMems.push(m);} });
-    var memStr=uMems.map(function(m){return m.name+(m.role==='organizer'?'（召集人）':'');}).join('、');
+    var memStr=uMems.map(function(m){return escHtml(m.name)+(m.role==='organizer'?'（召集人）':'');}).join('、');
     // 景點排序
     stops.sort(function(a,b){
       var da=labelToDate(a.day)||a.day||'', db=labelToDate(b.day)||b.day||'';
@@ -4984,9 +4984,9 @@ function exportTripKML(code, tripName){
           var modeMap={car:'開車',walk:'步行',bus:'公車',train:'火車'};
           desc+='🚌 前段交通：'+s.transit.minutes+'分（'+(modeMap[s.transit.mode]||s.transit.mode)+'）<br>';
         }
-        if(s.note) desc+='📝 '+s.note+'<br>';
-        if(s.activities&&s.activities.length) desc+='✅ '+s.activities.map(function(a){return a.text||a;}).join('、')+'<br>';
-        if(s.budget&&s.budget!=='NT$ 0') desc+='💰 預算：'+s.budget+'<br>';
+        if(s.note) desc+='📝 '+escHtml(s.note)+'<br>';
+        if(s.activities&&s.activities.length) desc+='✅ '+s.activities.map(function(a){return escHtml(a.text||a);}).join('、')+'<br>';
+        if(s.budget&&s.budget!=='NT$ 0') desc+='💰 預算：'+escHtml(s.budget)+'<br>';
         x+='<description><![CDATA['+desc+']]></description>\n<styleUrl>#stp</styleUrl>\n';
         if(s.lat&&s.lng) x+='<Point><coordinates>'+s.lng+','+s.lat+',0</coordinates></Point>\n';
         x+='</Placemark>\n';

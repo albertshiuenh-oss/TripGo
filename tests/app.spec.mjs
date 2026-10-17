@@ -457,3 +457,20 @@ test('行前簡報圖片：旅程名稱、景點、成員、幣別含 HTML 時�
   expect(r.n).toBe(0);
   for (const k of ['xss-bt', 'xss-bs', 'xss-bm', 'xss-bc']) expect(r.t).toContain(k);
 });
+
+test('匯出 KML：景點備註、活動、預算與成員名稱含 HTML 時會跳脫', async ({ page }) => {
+  await enterTrip(page);
+  const kml = await page.evaluate(async () => {
+    const snap = (o) => ({ exists: () => true, val: () => o });
+    window.FB.get = (path) => Promise.resolve(snap(
+      path.endsWith('/stops') ? { a: { name: 's', day: 'Oct 2', note: '<img id="xss-kn" src=x>', activities: [{ text: '<img id="xss-ka" src=x>' }], budget: '<img id="xss-kb" src=x>' } }
+        : path.endsWith('/members') ? { m: { name: '<img id="xss-km" src=x>', role: 'member' } } : {}));
+    let blob; URL.createObjectURL = (b) => { blob = b; return 'blob:x'; };
+    window.open = () => null; HTMLAnchorElement.prototype.click = () => {};
+    exportTripKML('TEST01', 't');
+    for (let i = 0; i < 50 && !blob; i++) await new Promise(r => setTimeout(r, 50));
+    return blob.text();
+  });
+  expect(kml).not.toMatch(/<img/);
+  for (const k of ['xss-kn', 'xss-ka', 'xss-kb', 'xss-km']) expect(kml).toContain(k);
+});
