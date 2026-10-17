@@ -11,7 +11,7 @@
 /* ── TripGo boot: version, preview isolation, early error capture ──
    Must run before any other script touches localStorage or Firebase. */
 (function(){
-  window.TG_VERSION='5.1';
+  window.TG_VERSION='5.2';
   var PV=/\/preview\//.test(location.pathname)||/[?&]preview=1(&|$)/.test(location.search);
   window.TG_PREVIEW=PV;
 
@@ -58,7 +58,7 @@
   });
 })();
 </script>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.1%3C/text%3E%3C/svg%3E"/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.2%3C/text%3E%3C/svg%3E"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="TripGo"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -1236,7 +1236,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <button class="login-submit" id="btn-pin-submit" disabled>登入 / 建立帳號</button>
       <div class="login-err-msg" id="login-err"></div>
     </div>
-    <div class="login-footer">TripGo v5.1</div>
+    <div class="login-footer">TripGo v5.2</div>
   </div>
 
 <div id="S-join" class="hide">
@@ -1253,7 +1253,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.1 &nbsp;·&nbsp; 2026-10-02</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.2 &nbsp;·&nbsp; 2026-10-06</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -1876,7 +1876,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 <!-- Main App JS -->
 <script>
 'use strict';
-// TripGo v5.1
+// TripGo v5.2
 
 // ════════════════════════════════
 // STATE
@@ -2581,7 +2581,7 @@ function renderStops(){
   var lastDay='',html='';
   var nextIdx=findNextStopIdx();
   S.stops.forEach(function(s,i){
-    if(s.day&&s.day!==lastDay){ lastDay=s.day; var _dh=dayHdrAttrs(s.day); html+='<div class="day-hdr'+_dh.cls+'" data-date="'+_dh.iso+'">'+s.day+_dh.badge+'</div>'; }
+    if(s.day&&s.day!==lastDay){ lastDay=s.day; var _dh=dayHdrAttrs(s.day); html+='<div class="day-hdr'+_dh.cls+'" data-date="'+_dh.iso+'">'+escHtml(s.day)+_dh.badge+'</div>'; }
     var sel=MS_SET.has(i);
     // Build activities preview
     var actsHtml='';
@@ -2589,7 +2589,7 @@ function renderStops(){
       s.activities.forEach(function(a,ai){
         actsHtml+='<div class="exp-act-row">'+
           '<div class="exp-chk'+(a.done?' done':'')+'" data-i="'+i+'" data-ai="'+ai+'" data-type="act"></div>'+
-          '<span class="exp-lbl'+(a.done?' done':'')+'">'+a.label+'</span></div>';
+          '<span class="exp-lbl'+(a.done?' done':'')+'">'+escHtml(a.label)+'</span></div>';
       });
     }
     var notesHtml='';
@@ -2632,9 +2632,9 @@ function renderStops(){
         '<div class="stop-cb'+(sel?' on':'')+'" id="cb-'+i+'"></div>' +
         '<div class="stop-txt" id="st-'+i+'">' +
           '<div class="stop-name"'+(tbadge?' style="padding-right:95px"':'')+'>'+
-            '<i class="ti ti-chevron-right stop-arr" id="sa-'+i+'" style="font-size:12px;font-weight:700;vertical-align:middle;margin-right:4px;transition:transform .2s;color:inherit;opacity:1"></i>'+s.name+nextTag+(s.category?'<span class="cat-tag cat-'+s.category+'">'+(s.category==='住宿'?'🏨':s.category==='景點'?'📍':s.category==='餐廳'?'🍽':'📌')+' '+s.category+'</span>':'')+
+            '<i class="ti ti-chevron-right stop-arr" id="sa-'+i+'" style="font-size:12px;font-weight:700;vertical-align:middle;margin-right:4px;transition:transform .2s;color:inherit;opacity:1"></i>'+escHtml(s.name||'')+nextTag+(s.category?'<span class="cat-tag cat-'+s.category+'">'+(s.category==='住宿'?'🏨':s.category==='景點'?'📍':s.category==='餐廳'?'🍽':'📌')+' '+s.category+'</span>':'')+
           '</div>' +
-          '<div class="stop-time">'+((s.day?s.day+' ':'')+(s.arrive||'')+(s.depart?' ~ '+s.depart:'')+stayStr+(s.note?' · '+s.note.substring(0,25):''))+'</div>' +
+          '<div class="stop-time">'+escHtml((s.day?s.day+' ':'')+(s.arrive||'')+(s.depart?' ~ '+s.depart:''))+stayStr+(s.note?' · '+escHtml(s.note.substring(0,25)):'')+'</div>' +
         '</div>' +
         (MS_MODE?'':(tbadge?'<div style="position:absolute;top:11px;right:14px;display:flex;align-items:center;gap:4px;">'+tbadge+'</div>':'')) +
       '</div>' +
@@ -2763,7 +2763,7 @@ function onStopListClick(e){
   if(delBtn){
     var si=parseInt(delBtn.dataset.i);
     var s=S.stops[si]; if(!s) return;
-    showCustomConfirm('🗑️','刪除景點？','「'+s.name+'」將從行程中移除，此動作無法復原。','確定刪除',function(){
+    showCustomConfirm('🗑️','刪除景點？','「'+escHtml(s.name)+'」將從行程中移除，此動作無法復原。','確定刪除',function(){
       deleteStop(s._key);
     });
     return;
@@ -2870,7 +2870,7 @@ function showSimplePc(s){
   document.getElementById('pc-rating').innerHTML='';
   var info='';
   if(s.arrive||s.depart) info+='<div class="pc-info-row"><i class="ti ti-clock"></i><span>'+(s.arrive||'')+(s.depart?' → '+s.depart:'')+'</span></div>';
-  if(s.note) info+='<div class="pc-info-row"><i class="ti ti-info-circle"></i><span>'+s.note+'</span></div>';
+  if(s.note) info+='<div class="pc-info-row"><i class="ti ti-info-circle"></i><span>'+escHtml(s.note)+'</span></div>';
   document.getElementById('pc-info').innerHTML=info;
   document.getElementById('place-card').classList.add('show');
 }
@@ -3185,7 +3185,7 @@ function renderActs(s){
   acts.forEach(function(a,i){
     html+='<div class="act-row">'+
       '<div class="act-chk'+(a.done?' done':'')+'" data-i="'+i+'"><i class="ti ti-check"></i></div>'+
-      '<span class="act-lbl'+(a.done?' done':'')+'">'+a.label+'</span>'+
+      '<span class="act-lbl'+(a.done?' done':'')+'">'+escHtml(a.label)+'</span>'+
       '<button class="act-del" data-i="'+i+'"><i class="ti ti-x"></i></button></div>';
   });
   document.getElementById('act-list').innerHTML=html;
@@ -3199,7 +3199,7 @@ function renderActs(s){
 function renderNotes(s){
   var notes=(s&&s.notes)||[], html='';
   notes.forEach(function(n,i){
-    html+='<div class="note-row"><div class="note-dot"></div><span class="note-txt">'+n+'</span>'+
+    html+='<div class="note-row"><div class="note-dot"></div><span class="note-txt">'+escHtml(n)+'</span>'+
       '<button class="note-del" data-i="'+i+'"><i class="ti ti-x"></i></button></div>';
   });
   document.getElementById('note-list').innerHTML=html;
@@ -3449,8 +3449,8 @@ function appendMsg(uid,name,text,isSticker,time,key){
   var div=document.createElement('div'); div.className='msg'+(me?' me':'');
   div.dataset.key=key||''; div.dataset.uid=uid||'';
   div.innerHTML='<div class="av '+avC+'" style="width:22px;height:22px;font-size:8px;flex-shrink:0">'+(uid||'?').substring(0,2).toUpperCase()+'</div>'+
-    '<div>'+(me?'':'<div class="msg-nm">'+(name||uid)+'</div>')+
-    '<div class="bubble'+(isSticker?' sticker-bubble':'')+'">'+text+'</div></div>'+
+    '<div>'+(me?'':'<div class="msg-nm">'+escHtml(name||uid)+'</div>')+
+    '<div class="bubble'+(isSticker?' sticker-bubble':'')+'">'+escHtml(text)+'</div></div>'+
     '<span class="msg-t">'+(time||'')+'</span>';
   // Action button for own messages or admin (not for stickers)
   if(key && !isSticker && (me||_isAdmin)){
@@ -3537,16 +3537,16 @@ function renderExpenses(){
     var uLen=uniqueMembers().length;
     var splitCnt=e.splitMembers?e.splitMembers.length:uLen;
     var perAmt2=Math.round(e.amt/(splitCnt||1));
-    var splitLabel=e.splitMembers?e.splitMembers.join('、')+'（'+e.splitMembers.length+'人）':uLen+'人全體';
+    var splitLabel=e.splitMembers?e.splitMembers.map(escHtml).join('、')+'（'+e.splitMembers.length+'人）':uLen+'人全體';
     card.innerHTML='<div class="exp-top">'+
       '<span class="exp-nm">'+escHtml(e.name)+'</span>'+
       '<div style="display:flex;align-items:center;gap:2px">'+
-        '<span class="exp-amt">'+(e.currency||'NTD')+' '+e.amt.toLocaleString()+'</span>'+
+        '<span class="exp-amt">'+escHtml(e.currency||'NTD')+' '+e.amt.toLocaleString()+'</span>'+
         '<button class="exp-act-btn" data-act="edit"><i class="ti ti-pencil"></i></button>'+
         '<button class="exp-act-btn red" data-act="del"><i class="ti ti-trash"></i></button>'+
       '</div>'+
     '</div>'+
-    '<div class="exp-meta">付款：'+escHtml(e.payer)+' · 每人 '+(e.currency||'NTD')+' '+perAmt2.toLocaleString()+'</div>'+
+    '<div class="exp-meta">付款：'+escHtml(e.payer)+' · 每人 '+escHtml(e.currency||'NTD')+' '+perAmt2.toLocaleString()+'</div>'+
     '<div class="exp-meta" style="margin-top:2px;color:var(--text2)">分攤：'+splitLabel+'</div>';
     card.querySelector('[data-act="edit"]').addEventListener('click',function(ev){ev.stopPropagation();editExpense(key,e);});
     card.querySelector('[data-act="del"]').addEventListener('click',function(ev){ev.stopPropagation();deleteExpense(key);});
@@ -4193,7 +4193,7 @@ function renderRestaurant(center){
   var html='';
   dayOrd.forEach(function(day){
     var _rh=dayHdrAttrs(day);
-    html+='<div class="rest-day-hdr'+_rh.cls+'" data-date="'+_rh.iso+'">'+day+_rh.badge+'</div>';
+    html+='<div class="rest-day-hdr'+_rh.cls+'" data-date="'+_rh.iso+'">'+escHtml(day)+_rh.badge+'</div>';
     days[day].forEach(function(s){
       var icon=s.category==='住宿'?'🏨':s.category==='景點'?'📍':'🍽';
       var t=(s.arrive||'')+(s.depart?' ~ '+s.depart:'');
@@ -4484,12 +4484,12 @@ function loadTokenList(){
       var used=!!(t.usedAt);
       html+='<div class="adm-token-card">'+
         '<div style="display:flex;align-items:center;gap:8px">'+
-          '<span class="adm-token-code">'+code+'</span>'+
+          '<span class="adm-token-code">'+escHtml(code)+'</span>'+
           '<span class="adm-token-badge '+(used?'used':'ok')+'">'+(used?'已使用':'未使用')+'</span>'+
-          (used&&t.usedBy?'<span style="font-size:10px;color:var(--text2)">by '+t.usedBy+'</span>':'')+
-          '<button class="adm-token-del" data-code="'+code+'" title="撤銷"><i class="ti ti-trash"></i></button>'+
+          (used&&t.usedBy?'<span style="font-size:10px;color:var(--text2)">by '+escHtml(t.usedBy)+'</span>':'')+
+          '<button class="adm-token-del" data-code="'+escHtml(code)+'" title="撤銷"><i class="ti ti-trash"></i></button>'+
         '</div>'+
-        (t.note?'<div style="font-size:11px;color:var(--text2);margin-top:4px">📝 '+t.note+'</div>':'')+
+        (t.note?'<div style="font-size:11px;color:var(--text2);margin-top:4px">📝 '+escHtml(t.note)+'</div>':'')+
       '</div>';
     });
     list.innerHTML=html||'<div style="font-size:12px;color:var(--text2)">尚無授權碼</div>';
@@ -4632,7 +4632,7 @@ function loadTrashBin(){
       var stopCount=g.stops?Object.keys(g.stops).length:0;
       var daysLeft=g._trashedAt?daysDiff(g._trashedAt):'?';
       html+='<div class="adm-trash-card">'+
-        '<div class="adm-trash-name">'+(g.tripName||'(未命名)')+'</div>'+
+        '<div class="adm-trash-name">'+escHtml(g.tripName||'(未命名)')+'</div>'+
         '<div class="adm-trash-meta">邀請碼：'+code+' · '+memberCount+'人 · '+stopCount+'個景點</div>'+
         '<div class="adm-trash-expire">⏰ 還有 '+daysLeft+' 天永久刪除</div>'+
         '<div class="adm-trash-actions">'+
@@ -4818,8 +4818,8 @@ function openTripSwitcher(){
   if(cur){
     curEl.innerHTML='<div class="tsw-trip-card current">'+
       '<div class="tsw-trip-ic"><i class="ti ti-map-2"></i></div>'+
-      '<div style="flex:1"><div class="tsw-trip-name">'+cur.tripName+'</div>'+
-      '<div class="tsw-trip-meta">'+(cur.isOrg?'👑 建立者':'👤 成員')+' · '+cur.name+' · '+cur.code+'</div>'+
+      '<div style="flex:1"><div class="tsw-trip-name">'+escHtml(cur.tripName||'')+'</div>'+
+      '<div class="tsw-trip-meta">'+(cur.isOrg?'👑 建立者':'👤 成員')+' · '+escHtml(cur.name||'')+' · '+escHtml(cur.code||'')+'</div>'+
       '<div class="tsw-trip-actions">'+
         (cur.isOrg?'<button class="tsw-action-btn danger" id="tsw-del-cur"><i class="ti ti-trash" style="font-size:12px"></i>刪除旅程</button>':
                    '<button class="tsw-action-btn leave" id="tsw-leave-cur"><i class="ti ti-logout" style="font-size:12px"></i>離開旅程</button>')+
@@ -4839,8 +4839,8 @@ function openTripSwitcher(){
     othEl.innerHTML=others.map(function(t,i){
       return '<div class="tsw-trip-card" data-i="'+i+'">'+
         '<div class="tsw-trip-ic"><i class="ti ti-map-2"></i></div>'+
-        '<div style="flex:1"><div class="tsw-trip-name">'+t.tripName+'</div>'+
-        '<div class="tsw-trip-meta">'+(t.isOrg?'👑 建立者':'👤 成員')+' · '+t.name+'</div>'+
+        '<div style="flex:1"><div class="tsw-trip-name">'+escHtml(t.tripName||'')+'</div>'+
+        '<div class="tsw-trip-meta">'+(t.isOrg?'👑 建立者':'👤 成員')+' · '+escHtml(t.name||'')+'</div>'+
         '<div class="tsw-trip-actions">'+
           (t.isOrg?'<button class="tsw-action-btn danger tsw-del" data-code="'+t.code+'"><i class="ti ti-trash" style="font-size:12px"></i>刪除旅程</button>':
                    '<button class="tsw-action-btn leave tsw-leave" data-code="'+t.code+'" data-uid="'+t.uid+'"><i class="ti ti-logout" style="font-size:12px"></i>離開旅程</button>')+
@@ -4940,7 +4940,7 @@ function exportTripKML(code, tripName){
     // 去重成員
     var seenN={}, uMems=[];
     mems.forEach(function(m){ if(!seenN[m.name]){seenN[m.name]=true;uMems.push(m);} });
-    var memStr=uMems.map(function(m){return m.name+(m.role==='organizer'?'（召集人）':'');}).join('、');
+    var memStr=uMems.map(function(m){return escHtml(m.name)+(m.role==='organizer'?'（召集人）':'');}).join('、');
     // 景點排序
     stops.sort(function(a,b){
       var da=labelToDate(a.day)||a.day||'', db=labelToDate(b.day)||b.day||'';
@@ -4984,9 +4984,9 @@ function exportTripKML(code, tripName){
           var modeMap={car:'開車',walk:'步行',bus:'公車',train:'火車'};
           desc+='🚌 前段交通：'+s.transit.minutes+'分（'+(modeMap[s.transit.mode]||s.transit.mode)+'）<br>';
         }
-        if(s.note) desc+='📝 '+s.note+'<br>';
-        if(s.activities&&s.activities.length) desc+='✅ '+s.activities.map(function(a){return a.text||a;}).join('、')+'<br>';
-        if(s.budget&&s.budget!=='NT$ 0') desc+='💰 預算：'+s.budget+'<br>';
+        if(s.note) desc+='📝 '+escHtml(s.note)+'<br>';
+        if(s.activities&&s.activities.length) desc+='✅ '+s.activities.map(function(a){return escHtml(a.text||a);}).join('、')+'<br>';
+        if(s.budget&&s.budget!=='NT$ 0') desc+='💰 預算：'+escHtml(s.budget)+'<br>';
         x+='<description><![CDATA['+desc+']]></description>\n<styleUrl>#stp</styleUrl>\n';
         if(s.lat&&s.lng) x+='<Point><coordinates>'+s.lng+','+s.lat+',0</coordinates></Point>\n';
         x+='</Placemark>\n';
@@ -5175,20 +5175,20 @@ function generateBriefingHTML(){
 
   var rows='';
   dayOrd.forEach(function(day,di){
-    rows+='<tr><td colspan="4" style="background:#0D2137;color:#E8B84B;font-weight:700;font-size:11px;padding:5px 8px;letter-spacing:.5px">'+day+'</td></tr>';
+    rows+='<tr><td colspan="4" style="background:#0D2137;color:#E8B84B;font-weight:700;font-size:11px;padding:5px 8px;letter-spacing:.5px">'+escHtml(day)+'</td></tr>';
     (days[day]||[]).forEach(function(s,i){
       var dur=stayStr(s);
       var transit=s.transit&&s.transit.minutes?s.transit.minutes+'min':'';
       rows+='<tr style="border-bottom:1px solid #eee">'
         +'<td style="padding:5px 8px;font-size:10px;color:#888;width:55px;white-space:nowrap">'+(s.arrive||'')+(s.depart?' ~<br>'+s.depart:'')+'</td>'
-        +'<td style="padding:5px 8px;font-size:12px;font-weight:600;color:#1C2B3A">'+(s.name||'')+'</td>'
+        +'<td style="padding:5px 8px;font-size:12px;font-weight:600;color:#1C2B3A">'+escHtml(s.name||'')+'</td>'
         +'<td style="padding:5px 8px;font-size:10px;color:#2E7D32;white-space:nowrap">'+dur+'</td>'
         +'<td style="padding:5px 8px;font-size:10px;color:#7A99B8;white-space:nowrap">'+transit+'</td>'
         +'</tr>';
     });
   });
 
-  var memStr=mems.map(function(m){return m.name;}).join('、');
+  var memStr=mems.map(function(m){return escHtml(m.name);}).join('、');
 
   // 花費
   var expTotal=0; var expCur='NTD';
@@ -5197,9 +5197,9 @@ function generateBriefingHTML(){
   return '<div id="briefing-content" style="font-family:\'Noto Sans TC\',system-ui,sans-serif;background:#fff;width:800px;padding:0">'
     +'<div style="background:#0D2137;color:#fff;padding:20px 24px;display:flex;justify-content:space-between;align-items:center">'
     +'<div><div style="font-size:9px;letter-spacing:2px;color:#E8B84B;margin-bottom:6px">TRIP ITINERARY</div>'
-    +'<div style="font-size:22px;font-weight:700;line-height:1.1">'+tName+'</div></div>'
+    +'<div style="font-size:22px;font-weight:700;line-height:1.1">'+escHtml(tName)+'</div></div>'
     +'<div style="text-align:right"><div style="font-size:11px;color:#7A99B8;margin-bottom:4px">👥 '+memStr+'</div>'
-    +(expTotal>0?'<div style="font-size:11px;color:#E8B84B">💰 '+expCur+' '+expTotal.toLocaleString()+'</div>':'')
+    +(expTotal>0?'<div style="font-size:11px;color:#E8B84B">💰 '+escHtml(expCur)+' '+expTotal.toLocaleString()+'</div>':'')
     +'</div></div>'
     +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
     +'<thead><tr style="background:#f5f8ff"><th style="padding:5px 8px;text-align:left;font-size:9px;color:#888;font-weight:600">時間</th><th style="padding:5px 8px;text-align:left;font-size:9px;color:#888;font-weight:600">景點</th><th style="padding:5px 8px;text-align:left;font-size:9px;color:#888;font-weight:600">停留</th><th style="padding:5px 8px;text-align:left;font-size:9px;color:#888;font-weight:600">交通</th></tr></thead>'
@@ -5313,7 +5313,9 @@ function renderTripsPreview(inputName, _skipFbSearch){
       '</div>'+
       (isDone
         ? '<span class="jtp-done-badge">✓ 已完成</span><button class="jtp-undo-btn" data-code="'+t.code+'">恢復</button>'
-        : (t.isOrg?'<button class="jtp-export-btn" data-code="'+t.code+'" data-trip="'+escHtml(t.tripName)+'"><i class="ti ti-file-export"></i> 匯出</button><button class="jtp-complete-btn" data-code="'+t.code+'">✓ 完成</button><button class="jtp-del" data-code="'+t.code+'">🗑</button>':'')+
+        : (t.isOrg?'<button class="jtp-export-btn" data-code="'+t.code+'" data-trip="'+escHtml(t.tripName)+'"><i class="ti ti-file-export"></i> 匯出</button>':'')+
+          '<button class="jtp-complete-btn" data-code="'+t.code+'">✓ 完成</button>'+
+          (t.isOrg?'<button class="jtp-del" data-code="'+t.code+'">🗑</button>':'')+
           '<i class="ti ti-chevron-right" style="font-size:14px;color:var(--blue);opacity:.5;flex-shrink:0"></i>'
       )+'</div>';
   }
@@ -5527,7 +5529,7 @@ function renderActsEditable(s){
   (s.activities||[]).forEach(function(a,ai){
     html+='<div class="exp-act-row">'+
       '<div class="exp-chk'+(a.done?' done':'')+'" data-ai="'+ai+'" data-type="ief-act"></div>'+
-      '<span class="exp-lbl'+(a.done?' done':'')+'">'+a.label+'</span>'+
+      '<span class="exp-lbl'+(a.done?' done':'')+'">'+escHtml(a.label)+'</span>'+
       '<button class="act-del" data-ai="'+ai+'" data-type="ief-act-del" style="margin-left:auto"><i class="ti ti-x"></i></button>'+
     '</div>';
   });
@@ -5536,7 +5538,7 @@ function renderActsEditable(s){
 function renderNotesEditable(s){
   var html='';
   (s.notes||[]).forEach(function(n,ni){
-    html+='<div class="exp-note-row"><div class="exp-dot"></div><span style="flex:1">'+n+'</span>'+
+    html+='<div class="exp-note-row"><div class="exp-dot"></div><span style="flex:1">'+escHtml(n)+'</span>'+
       '<button class="note-del" data-ni="'+ni+'" data-type="ief-note-del"><i class="ti ti-x"></i></button></div>';
   });
   return html;
@@ -5602,7 +5604,7 @@ function renderInlineEditForm(i){
   document.getElementById('ief-cancel').addEventListener('click',function(){ closeInlineEdit(i); });
   document.getElementById('ief-del').addEventListener('click',function(){
     var s=S.stops[i]; if(!s) return;
-    showCustomConfirm('🗑️','刪除景點？','「'+s.name+'」將從行程中移除，此動作無法復原。','確定刪除',function(){
+    showCustomConfirm('🗑️','刪除景點？','「'+escHtml(s.name)+'」將從行程中移除，此動作無法復原。','確定刪除',function(){
       closeInlineEdit(i);
       deleteStop(s._key);
     });
@@ -5691,7 +5693,7 @@ function closeInlineEdit(i, collapse){
     s.activities.forEach(function(a,ai){
       actsHtml+='<div class="exp-act-row">'+
         '<div class="exp-chk'+(a.done?' done':'')+'" data-i="'+i+'" data-ai="'+ai+'" data-type="act"></div>'+
-        '<span class="exp-lbl'+(a.done?' done':'')+'">'+a.label+'</span></div>';
+        '<span class="exp-lbl'+(a.done?' done':'')+'">'+escHtml(a.label)+'</span></div>';
     });
   }
   var notesHtml='';
@@ -5940,7 +5942,7 @@ window.addEventListener('load',function(){
   // det-e-name focus handler removed (openDetMap deprecated)
   document.getElementById('det-del-btn').addEventListener('click',function(){
     var s=S.stops[S.currentStop]; if(!s) return;
-    showCustomConfirm('🗑️','刪除景點？','「'+s.name+'」將從行程中移除。','確定刪除',function(){
+    showCustomConfirm('🗑️','刪除景點？','「'+escHtml(s.name)+'」將從行程中移除。','確定刪除',function(){
       window.FB.remove('tripgo/groups/'+S.groupCode+'/stops/'+s._key);
       closeDetail();
       if(stopMarker){stopMarker.setMap(null);stopMarker=null;}
@@ -6024,7 +6026,7 @@ window.addEventListener('load',function(){
       // 版本號
       ctx.fillStyle='rgba(255,255,255,0.65)';
       ctx.font='bold 28px system-ui,-apple-system,sans-serif';
-      ctx.fillText('v5.1',90,152);
+      ctx.fillText('v5.2',90,152);
       // 插入 apple-touch-icon
       var lnk=document.querySelector('link[rel="apple-touch-icon"]')||document.createElement('link');
       lnk.rel='apple-touch-icon'; lnk.href=c.toDataURL('image/png');
