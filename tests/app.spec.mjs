@@ -333,6 +333,18 @@ test('管理員垃圾桶：旅程名稱含 HTML 時只當文字顯示', async ({
   expect(await page.locator('#xss-trash').count()).toBe(0);
 });
 
+test('管理員旅程總覽：旅程名稱與成員名稱含 HTML 時只當文字顯示', async ({ page }) => {
+  const seed = structuredClone(SEED);
+  seed.tripgo.groups.EVIL01 = { tripName: '<img id="xss-trip" src=x>', members: { m1: { name: '<img id="xss-mem" src=x>' } } };
+  seed.tripgo.groups.EVIL02 = { tripName: '"><img id="xss-attr" src=x>', members: {} };
+  await page.addInitScript((s) => { window.__TG_SEED = s; }, seed);
+  await enterTrip(page);
+  await page.evaluate(() => loadAllTrips());
+  await expect(page.locator('#adm-trip-list')).toContainText('xss-trip');
+  await expect(page.locator('#adm-trip-list')).toContainText('xss-mem');
+  expect(await page.locator('#xss-trip, #xss-mem, #xss-attr').count()).toBe(0);
+});
+
 test('管理員授權碼列表：備註與使用者名稱含 HTML 時只當文字顯示', async ({ page }) => {
   const seed = structuredClone(SEED);
   seed.tripgo.create_tokens = { 'BUILD-AAAA': { note: '<img id="xss-note2" src=x>', usedAt: 1, usedBy: '<img id="xss-by" src=x>' } };

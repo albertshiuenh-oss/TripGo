@@ -4667,14 +4667,14 @@ function loadAllTrips(){
       var g=data[code];
       var memberCount=g.members?Object.keys(g.members).length:0;
       var stopCount=g.stops?Object.keys(g.stops).length:0;
-      var members=g.members?Object.values(g.members).map(function(m){return m.name;}).join('、'):'';
+      var members=g.members?Object.values(g.members).map(function(m){return escHtml(m.name);}).join('、'):'';
       html+='<div class="adm-trip-card">'+
-        '<div class="adm-trip-name">'+(g.tripName||'(未命名)')+'</div>'+
+        '<div class="adm-trip-name">'+escHtml(g.tripName||'(未命名)')+'</div>'+
         '<div class="adm-trip-meta">成員：'+(members||'無')+' ('+memberCount+'人) · 景點：'+stopCount+'個</div>'+
         '<div style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap">'+
           '<div class="adm-trip-code" style="flex:1">'+code+'</div>'+
           '<button class="adm-trip-copy" data-code="'+code+'">複製</button>'+
-          '<button class="adm-trip-join" data-code="'+code+'" data-name="'+(g.tripName||'旅遊群組')+'" style="padding:2px 8px;border-radius:6px;border:none;background:#E8F0FE;color:var(--blue);font-size:10px;cursor:pointer;font-weight:600"><i class="ti ti-login" style="font-size:10px"></i> 以管理員加入</button>'+
+          '<button class="adm-trip-join" data-code="'+code+'" data-name="'+escHtml(g.tripName||'旅遊群組')+'" style="padding:2px 8px;border-radius:6px;border:none;background:#E8F0FE;color:var(--blue);font-size:10px;cursor:pointer;font-weight:600"><i class="ti ti-login" style="font-size:10px"></i> 以管理員加入</button>'+
           '<button class="adm-trip-del" data-code="'+code+'"><i class="ti ti-trash"></i> 刪除</button>'+
         '</div></div>';
     });
