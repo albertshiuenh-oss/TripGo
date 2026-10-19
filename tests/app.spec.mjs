@@ -311,3 +311,178 @@ test('首頁搜尋旅程時，輸入的名字含 HTML 只當文字顯示', async
   await expect(page.locator('#jtp-list')).toContainText('xss-search');
   expect(await page.locator('#xss-search').count()).toBe(0);
 });
+
+test('景點的活動與備註含 HTML 時只當文字顯示', async ({ page }) => {
+  await enterTrip(page);
+  await page.evaluate(() => {
+    renderActs({ activities: [{ label: '<img id="xss-act" src=x>', done: false }] });
+    renderNotes({ notes: ['<img id="xss-note" src=x>'] });
+  });
+  await expect(page.locator('#act-list')).toContainText('xss-act');
+  await expect(page.locator('#note-list')).toContainText('xss-note');
+  expect(await page.locator('#xss-act, #xss-note').count()).toBe(0);
+});
+
+test('管理員垃圾桶：旅程名稱含 HTML 時只當文字顯示', async ({ page }) => {
+  const seed = structuredClone(SEED);
+  seed.tripgo.trash = { OLD01: { tripName: '<img id="xss-trash" src=x>', _trashedAt: Date.now() } };
+  await page.addInitScript((s) => { window.__TG_SEED = s; }, seed);
+  await enterTrip(page);
+  await page.evaluate(() => loadTrashBin());
+  await expect(page.locator('#adm-trash-list')).toContainText('xss-trash');
+  expect(await page.locator('#xss-trash').count()).toBe(0);
+});
+
+test('管理員旅程總覽：旅程名稱與成員名稱含 HTML 時只當文字顯示', async ({ page }) => {
+  const seed = structuredClone(SEED);
+  seed.tripgo.groups.EVIL01 = { tripName: '<img id="xss-trip" src=x>', members: { m1: { name: '<img id="xss-mem" src=x>' } } };
+  seed.tripgo.groups.EVIL02 = { tripName: '"><img id="xss-attr" src=x>', members: {} };
+  await page.addInitScript((s) => { window.__TG_SEED = s; }, seed);
+  await enterTrip(page);
+  await page.evaluate(() => loadAllTrips());
+  await expect(page.locator('#adm-trip-list')).toContainText('xss-trip');
+  await expect(page.locator('#adm-trip-list')).toContainText('xss-mem');
+  expect(await page.locator('#xss-trip, #xss-mem, #xss-attr').count()).toBe(0);
+});
+
+test('管理員授權碼列表：備註與使用者名稱含 HTML 時只當文字顯示', async ({ page }) => {
+  const seed = structuredClone(SEED);
+  seed.tripgo.create_tokens = { 'BUILD-AAAA': { note: '<img id="xss-note2" src=x>', usedAt: 1, usedBy: '<img id="xss-by" src=x>' } };
+  await page.addInitScript((s) => { window.__TG_SEED = s; }, seed);
+  await enterTrip(page);
+  await page.evaluate(() => loadTokenList());
+  await expect(page.locator('#adm-token-list')).toContainText('xss-by');
+  await expect(page.locator('#adm-token-list')).toContainText('xss-note2');
+  expect(await page.locator('#xss-by, #xss-note2').count()).toBe(0);
+});
+
+test('行程列表的景點名稱含 HTML 時只當文字顯示', async ({ page }) => {
+  await enterTrip(page);
+  await page.evaluate(() => {
+    S.stops = [{ name: '<img id="xss-stop" src=x>', category: '景點', arrive: '09:00', depart: '10:00' }];
+    renderStops();
+    showSimplePc({ name: 'x', note: '<img id="xss-pcnote" src=x>' });
+  });
+  await expect(page.locator('#pc-info')).toContainText('xss-pcnote');
+  expect(await page.locator('#xss-stop, #xss-pcnote').count()).toBe(0);
+});
+
+test('景點編輯面板：活動與備註含 HTML 時只當文字顯示', async ({ page }) => {
+  await enterTrip(page);
+  await page.evaluate(() => {
+    const s = { activities: [{ label: '<img id="xss-eact" src=x>', done: false }], notes: ['<img id="xss-enote" src=x>'] };
+    const box = document.createElement('div');
+    box.id = 'xss-box';
+    box.innerHTML = renderActsEditable(s) + renderNotesEditable(s);
+    document.body.appendChild(box);
+  });
+  await expect(page.locator('#xss-box')).toContainText('xss-eact');
+  await expect(page.locator('#xss-box')).toContainText('xss-enote');
+  expect(await page.locator('#xss-eact, #xss-enote').count()).toBe(0);
+});
+
+test('「刪除景點？」確認視窗：景點名稱含 HTML 時只當文字顯示', async ({ page }) => {
+  await enterTrip(page);
+  await page.evaluate(() => {
+    S.stops = [{ name: '<img id="xss-del" src=x>', category: '景點', arrive: '09:00', depart: '10:00', _key: 'k1' }];
+    renderStops();
+    const b = document.createElement('button');
+    b.className = 'exp-del-btn';
+    b.dataset.i = '0';
+    document.getElementById('stop-list').appendChild(b);
+    b.click();
+  });
+  await expect(page.locator('#cd-msg')).toContainText('xss-del');
+  expect(await page.locator('#xss-del').count()).toBe(0);
+});
+
+test('旅程切換面板：旅程名稱與使用者名稱含 HTML 時只當文字顯示', async ({ page }) => {
+  await enterTrip(page);
+  await page.evaluate(() => {
+    saveStoredTrips([
+      { code: S.groupCode, tripName: '<img id="xss-cur" src=x>', name: '<img id="xss-curn" src=x>', isOrg: true, uid: 'u1' },
+      { code: 'ZZZ99', tripName: '<img id="xss-oth" src=x>', name: '<img id="xss-othn" src=x>', isOrg: false, uid: 'u9' }
+    ]);
+    openTripSwitcher();
+  });
+  await expect(page.locator('#tsw-current')).toContainText('xss-cur');
+  await expect(page.locator('#trip-switcher')).toContainText('xss-oth');
+  expect(await page.locator('#xss-cur, #xss-curn, #xss-oth, #xss-othn').count()).toBe(0);
+});
+
+test('聊天室：訊息內容與暱稱含 HTML 時只當文字顯示', async ({ page }) => {
+  await enterTrip(page);
+  await page.evaluate(() => {
+    appendMsg('u2', '<img id="xss-chat-nm" src=x>', '<img id="xss-chat-tx" src=x>', false, '1/1 00:00', 'k-xss');
+  });
+  await expect(page.locator('#msg-list')).toContainText('xss-chat-tx');
+  await expect(page.locator('#msg-list')).toContainText('xss-chat-nm');
+  expect(await page.locator('#xss-chat-nm, #xss-chat-tx').count()).toBe(0);
+});
+
+test('行程列表與餐廳列表的日期標題含 HTML 時只當文字顯示', async ({ page }) => {
+  await enterTrip(page);
+  await page.evaluate(() => {
+    S.stops = [{ name: 'a', category: '餐廳', day: '<img id="xss-day" src=x>', note: '<img id="xss-snote" src=x>', arrive: '09:00', depart: '10:00' }];
+    renderStops();
+    renderRestaurant();
+  });
+  await expect(page.locator('#stop-list, .day-hdr').first()).toContainText('xss-day');
+  expect(await page.locator('#xss-day, #xss-snote').count()).toBe(0);
+  await expect(page.locator('.stop-time .stop-time-stay, .stop-time span').first()).toBeVisible();
+});
+
+test('費用卡片：分攤成員名稱與幣別含 HTML 時只當文字顯示', async ({ page }) => {
+  await enterTrip(page);
+  await page.evaluate(() => {
+    S.expenses = { kx: { name: 'x', amt: 100, payer: 'Albert', currency: '<img id="xss-cur2" src=x>', splitMembers: ['<img id="xss-split" src=x>', 'Anna'] } };
+    renderExpenses();
+  });
+  await expect(page.locator('#exp-list')).toContainText('xss-split');
+  expect(await page.locator('#xss-split, #xss-cur2').count()).toBe(0);
+});
+
+test('首頁旅程列表：一般團員也能把旅程標為「完成」，但不能刪除', async ({ page }) => {
+  await login(page);
+  await page.goto('/');
+  await page.evaluate(() => {
+    localStorage.setItem('tg_trips', JSON.stringify([{ code: 'TEST01', uid: 'u2', name: 'Anna', tripName: '大阪', isOrg: false }]));
+    renderTripsPreview('Anna', true);
+  });
+  await expect(page.locator('#jtp-list .jtp-complete-btn')).toHaveCount(1);
+  expect(await page.locator('#jtp-list .jtp-del').count()).toBe(0);
+  await page.locator('#jtp-list .jtp-complete-btn').click();
+  await page.locator('#confirm-dialog button', { hasText: '確定完成' }).click();
+  await expect(page.locator('#jtp-done-section')).toContainText('大阪');
+});
+
+test('行前簡報圖片：旅程名稱、景點、成員、幣別含 HTML 時只當文字顯示', async ({ page }) => {
+  await enterTrip(page);
+  const r = await page.evaluate(() => {
+    S.tripName = '<img id="xss-bt" src=x>';
+    S.stops = [{ name: '<img id="xss-bs" src=x>', day: 'Oct 2', arrive: '09:00', depart: '10:00' }];
+    S.members = [{ id: 'u9', name: '<img id="xss-bm" src=x>', role: 'member' }];
+    S.expenses = { k: { name: 'x', amt: 100, payer: 'a', currency: '<img id="xss-bc" src=x>' } };
+    const d = document.createElement('div'); d.innerHTML = generateBriefingHTML();
+    return { n: d.querySelectorAll('#xss-bt, #xss-bs, #xss-bm, #xss-bc').length, t: d.textContent };
+  });
+  expect(r.n).toBe(0);
+  for (const k of ['xss-bt', 'xss-bs', 'xss-bm', 'xss-bc']) expect(r.t).toContain(k);
+});
+
+test('匯出 KML：景點備註、活動、預算與成員名稱含 HTML 時會跳脫', async ({ page }) => {
+  await enterTrip(page);
+  const kml = await page.evaluate(async () => {
+    const snap = (o) => ({ exists: () => true, val: () => o });
+    window.FB.get = (path) => Promise.resolve(snap(
+      path.endsWith('/stops') ? { a: { name: 's', day: 'Oct 2', note: '<img id="xss-kn" src=x>', activities: [{ text: '<img id="xss-ka" src=x>' }], budget: '<img id="xss-kb" src=x>' } }
+        : path.endsWith('/members') ? { m: { name: '<img id="xss-km" src=x>', role: 'member' } } : {}));
+    let blob; URL.createObjectURL = (b) => { blob = b; return 'blob:x'; };
+    window.open = () => null; HTMLAnchorElement.prototype.click = () => {};
+    exportTripKML('TEST01', 't');
+    for (let i = 0; i < 50 && !blob; i++) await new Promise(r => setTimeout(r, 50));
+    return blob.text();
+  });
+  expect(kml).not.toMatch(/<img/);
+  for (const k of ['xss-kn', 'xss-ka', 'xss-kb', 'xss-km']) expect(kml).toContain(k);
+});
