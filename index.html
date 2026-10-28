@@ -1832,6 +1832,19 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
     set: safeSet,
     push: safePush,
     remove: safeRemove,
+    // 只讀每個旅程的名稱與成員（不下載景點、聊天、花費）。先用 REST shallow 取得旅程代碼清單。
+    getGroupSummaries: function(){
+      if(PV) return Promise.reject(new Error('preview'));
+      return fetch('https://tripgo-6b6ed-default-rtdb.firebaseio.com/tripgo/groups.json?shallow=true')
+        .then(function(r){ if(!r.ok) throw new Error('shallow '+r.status); return r.json(); })
+        .then(function(keys){
+          var codes=Object.keys(keys||{}), out={};
+          return Promise.all(codes.map(function(c){
+            return Promise.all([rtdb.ref('tripgo/groups/'+c+'/tripName').once('value'), rtdb.ref('tripgo/groups/'+c+'/members').once('value')])
+              .then(function(r){ out[c]={tripName:r[0].val(), members:r[1].val()}; }).catch(function(){});
+          })).then(function(){ return out; });
+        });
+    },
     get: function(path){
       if(!PV) return rtdb.ref(path).once('value');
       return ensureClone(path).then(function(){ return rtdb.ref(mapP(path)).once('value'); });
@@ -1928,16 +1941,28 @@ function loadBegin(key,label){
 }
 function loadEnd(key){ delete _ld.tasks[key]; _ldRender(); }
 if(!window._fbReady) loadBegin('fb','連線中');
-loadBegin('maps','載入地圖');
+var _mapsLoading=false;
+// 地圖只在進入旅程時才載入，而且不擋住 App：地圖還沒好之前，其他功能照常使用
+function loadMapsScript(){
+  if(_mapsLoading||window._mapsReady) return; _mapsLoading=true;
+  loadBegin('maps','載入地圖');
+  var sc=document.createElement('script');
+  sc.src='https://maps.googleapis.com/maps/api/js?key=AIzaSyAqyQyNtBSvK7qLuVR49RqgkKqU1Y2vUjQ&libraries=places&callback=initMap';
+  sc.async=true; sc.onerror=function(){ _mapsLoading=false; window._mapsFailed(); };
+  document.head.appendChild(sc);
+}
 window._mapsFailed=function(){ loadEnd('maps'); if(typeof showToast==='function') showToast('⚠️ 地圖暫時無法載入，其他功能不受影響',4000); };
 window._onFbReady = function(){ window._fbReady = true; loadEnd('fb'); checkInit(); };
+// Firebase 若在頁面載入前就已就緒，沒有人會再呼叫 _onFbReady，所以載入完成後補一次
+window.addEventListener('load', function(){ if(window._fbReady) checkInit(); });
 
 function checkInit(){
-  if(!window._fbReady || !window._mapsReady) return;
+  if(!window._fbReady) return;
   var code=localStorage.getItem('tg_code'),
       uid=localStorage.getItem('tg_uid'),
       name=localStorage.getItem('tg_name');
-  if(!code||!uid||!name) return;
+  if(!code||!uid||!name||window._resumeStarted) return;
+  window._resumeStarted=true;
   loadBegin('resume','回到上次的旅程');
   window.FB.get('tripgo/groups/'+code+'/members/'+uid).then(function(snap){
     if(!snap.exists()){ loadEnd('resume'); clearStoredSession(); return; }
@@ -1995,7 +2020,8 @@ window.initMap = function(){
   });
   getMyLoc();
   setTimeout(function(){ google.maps.event.trigger(map,'resize'); }, 300);
-  checkInit();
+  // 進入旅程後才載入完成：補上成員標記與行程之間的交通時間
+  if(S.groupCode){ try{ updateMemberMarkers(); renderStops(); }catch(e){} }
 };
 
 function setMapHeight(){
@@ -2103,6 +2129,7 @@ function setTM(mode, btn){
 // ── Route ──
 var _lastRouteDest=null, _lastRouteLabel=null;
 function navTo(dest, label){
+  if(!dsvc){ showToast('地圖還在載入，請稍後再試',1800); return; }
   _lastRouteDest=dest; _lastRouteLabel=label;
   var origin = {lat:S.myLat, lng:S.myLng};
   dsvc.route({origin:origin, destination:dest,
@@ -2316,6 +2343,7 @@ function pcAddToItinerary(){
 // START APP
 // ════════════════════════════════
 function startApp(code, uid, name, tripName, isOrg){
+  loadMapsScript();
   S.groupCode=code; S.myUid=uid; S.myName=name; S.isOrg=isOrg;
   var _nmEl=document.getElementById('tb-myname'); if(_nmEl) _nmEl.textContent=name;
   var _sb=document.getElementById('btn-share-trip'); if(_sb) _sb.style.display='inline-flex';
@@ -3099,6 +3127,7 @@ function exitMS(){ MS_MODE=false; MS_SET.clear(); document.getElementById('ms-ba
 function msRoute(){
   var sel=Array.from(MS_SET).sort(function(a,b){return a-b;});
   if(sel.length<2){showToast('請至少選 2 個景點',1500);return;}
+  if(!dsvc){ showToast('地圖還在載入，請稍後再試',1800); return; }
   var wp=sel.slice(1,-1).map(function(i){return{location:{lat:parseFloat(S.stops[i].lat),lng:parseFloat(S.stops[i].lng)},stopover:true};});
   if(!window._oR) window._oR=new google.maps.DirectionsRenderer({map:map,suppressMarkers:false,
     polylineOptions:{strokeColor:'#FF6D00',strokeWeight:6,strokeOpacity:.9}});
@@ -4929,9 +4958,10 @@ function searchFirebaseForName(name, nl, localMatched){
       return;
     }
     loadBegin('cloud','搜尋雲端旅程');
-    window.FB.get('tripgo/groups').then(function(snap){
+    var _full=function(){ return window.FB.get('tripgo/groups').then(function(snap){ return snap.val()||{}; }); };
+    (window.FB.getGroupSummaries?window.FB.getGroupSummaries().catch(_full):_full()).then(function(data){
       loadEnd('cloud');
-      _allGroupsCache=snap.val()||{};
+      _allGroupsCache=data||{};
       _allGroupsCacheTime=Date.now();
       applyFirebaseNameMatches(name, nl, localMatched, _allGroupsCache);
     }).catch(function(){ loadEnd('cloud'); });
@@ -6034,13 +6064,16 @@ window.addEventListener('load',function(){
     var pin=getPinValue();
     document.getElementById('btn-pin-submit').disabled=pin.length!==4||!this.value.trim();
     var name=this.value.trim();
+    clearTimeout(window._loginHintTimer);
     if(name.length>=2){
       var key='p_'+name.toLowerCase().replace(/\s+/g,'_');
-      window.FB.get('tripgo/accounts/'+key).then(function(snap){
-        var h=document.getElementById('login-hint');
-        if(snap.exists()){h.textContent='✓ 找到帳號，請輸入 PIN 登入';h.className='login-hint ok';}
-        else{h.textContent='新帳號，輸入 PIN 建立帳號';h.className='login-hint new';}
-      }).catch(function(){});
+      window._loginHintTimer=setTimeout(function(){
+        window.FB.get('tripgo/accounts/'+key).then(function(snap){
+          var h=document.getElementById('login-hint');
+          if(snap.exists()){h.textContent='✓ 找到帳號，請輸入 PIN 登入';h.className='login-hint ok';}
+          else{h.textContent='新帳號，輸入 PIN 建立帳號';h.className='login-hint new';}
+        }).catch(function(){});
+      },300);
     }
   });
 
@@ -6175,6 +6208,5 @@ window.addEventListener('load',function(){
 
 <!-- Google Maps -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAqyQyNtBSvK7qLuVR49RqgkKqU1Y2vUjQ&libraries=places&callback=initMap" async defer onerror="window._mapsFailed()"></script>
 </body>
 </html>

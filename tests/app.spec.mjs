@@ -26,7 +26,7 @@ test.describe('啟動', () => {
     await login(page);
     await page.goto('/');
     await expect(page.locator('#S-join')).not.toHaveClass(/hide/);
-    await page.waitForFunction(() => window._mapsReady && window.FB);
+    await page.waitForFunction(() => window.FB);
     await page.waitForTimeout(8600);
     await expect(page.locator('#js-err')).not.toContainText('網路連線較慢');
   });
@@ -490,7 +490,7 @@ test('匯出 KML：景點備註、活動、預算與成員名稱含 HTML 時會�
 test.describe('載入計時器', () => {
   test('等待超過 0.6 秒會出現沙漏與已等待秒數，結束後消失', async ({ page }) => {
     await page.goto('/');
-    await page.waitForFunction(() => window._mapsReady && window.FB);
+    await page.waitForFunction(() => window.FB);
     await page.evaluate(() => loadBegin('t', '測試載入'));
     const pill = page.locator('#ld-pill');
     await expect(pill).toBeVisible();
@@ -502,7 +502,7 @@ test.describe('載入計時器', () => {
 
   test('很快就完成的載入不會閃出計時器', async ({ page }) => {
     await page.goto('/');
-    await page.waitForFunction(() => window._mapsReady && window.FB);
+    await page.waitForFunction(() => window.FB);
     await page.waitForTimeout(700);
     await page.evaluate(() => { loadBegin('q', '很快'); loadEnd('q'); });
     await page.waitForTimeout(800);
@@ -517,12 +517,90 @@ test.describe('載入計時器', () => {
     await expect(page.locator('#ld-pill')).toContainText('網路較慢');
   });
 
-  test('Google 地圖連不上：計時器會結束並提示，App 其他功能照常', async ({ page }) => {
+  test('Google 地圖連不上：進入旅程後計時器會結束並提示，App 其他功能照常', async ({ page }) => {
     await page.route(/maps\.googleapis\.com/, (r) => r.abort());
     await login(page);
+    await page.addInitScript(() => {
+      localStorage.setItem('tg_code', 'TEST01'); localStorage.setItem('tg_uid', 'u1'); localStorage.setItem('tg_name', 'Albert');
+    });
     await page.goto('/');
+    await expect(page.locator('#S-app')).toHaveClass(/show/, { timeout: 5000 });
     await expect(page.locator('#toast, .toast').filter({ hasText: '地圖暫時無法載入' }).first()).toBeVisible({ timeout: 5000 });
     await expect(page.locator('#ld-pill')).toBeHidden();
+    await expect(page.locator('.stop-row').first()).toBeVisible();
+  });
+});
+
+test.describe('載入效能', () => {
+  test('首頁（還沒進入旅程）不載入 Google 地圖；進入旅程後才載入', async ({ page }) => {
+    const mapReqs = [];
+    page.on('request', (r) => { if (r.url().includes('maps.googleapis.com')) mapReqs.push(r.url()); });
+    await login(page);
+    await page.goto('/');
     await expect(page.locator('#S-join')).not.toHaveClass(/hide/);
+    await page.waitForTimeout(600);
+    expect(mapReqs).toEqual([]);
+    await page.evaluate(() => startApp('TEST01', 'u1', 'Albert', '測試團・大阪', true));
+    await page.waitForFunction(() => window._mapsReady);
+    expect(mapReqs.length).toBe(1);
+  });
+
+  test('地圖一直載入不到（逾時）也不會擋住自動回到上次旅程', async ({ page }) => {
+    await page.route(/maps\.googleapis\.com/, () => { /* 永遠不回應 */ });
+    await login(page);
+    await page.addInitScript(() => {
+      localStorage.setItem('tg_code', 'TEST01'); localStorage.setItem('tg_uid', 'u1'); localStorage.setItem('tg_name', 'Albert');
+    });
+    await page.goto('/');
+    await expect(page.locator('#S-app')).toHaveClass(/show/, { timeout: 5000 });
+    await expect(page.locator('.stop-row').first()).toBeVisible();
+    expect(await page.evaluate(() => window._mapsReady)).toBe(false);
+  });
+
+  test('地圖還沒載入時按導航不會出錯，只提示稍後再試', async ({ page }) => {
+    await page.route(/maps\.googleapis\.com/, () => { /* 永遠不回應 */ });
+    await login(page);
+    await page.goto('/');
+    await page.waitForFunction(() => window.FB);
+    await page.evaluate(() => { navTo({ lat: 34.7, lng: 135.5 }, 'x'); });
+    await expect(page.locator('#toast, .toast').filter({ hasText: '地圖還在載入' }).first()).toBeVisible();
+  });
+
+  test('雲端搜尋旅程只讀旅程名稱與成員，不下載景點、聊天、花費', async ({ page }) => {
+    await login(page);
+    await page.goto('/');
+    await page.waitForFunction(() => window.FB);
+    const out = await page.evaluate(async () => {
+      window.__fbStub.reads.length = 0;
+      const g = await FB.getGroupSummaries();
+      return { keys: Object.keys(g), t: g.TEST01.tripName, mems: Object.keys(g.TEST01.members || {}).length, hasStops: 'stops' in g.TEST01, reads: window.__fbStub.reads.slice() };
+    });
+    expect(out.keys).toContain('TEST01');
+    expect(out.t).toBe('測試團・大阪');
+    expect(out.mems).toBeGreaterThan(0);
+    expect(out.hasStops).toBe(false);
+    expect(out.reads.filter((p) => /\/(stops|chat|expenses)/.test(p) || p === 'tripgo/groups')).toEqual([]);
+  });
+
+  test('新裝置登入後，雲端搜尋找得到自己的旅程；shallow 查詢失敗時退回完整查詢也找得到', async ({ page }) => {
+    for (const failShallow of [false, true]) {
+      if (failShallow) await page.route(/firebaseio\.com.*shallow=true/, (r) => r.abort());
+      await page.goto('/');
+      await page.evaluate(() => { try { localStorage.removeItem('tg_trips'); localStorage.removeItem('tg_uid'); } catch (e) {} });
+      await login(page);
+      await page.goto('/');
+      await expect(page.locator('#jtp-list')).toContainText('測試團・大阪', { timeout: 6000 });
+    }
+  });
+
+  test('登入名字輸入：連續打字只在停下來後查一次帳號', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForFunction(() => window.FB);
+    await expect(page.locator('#S-login')).toHaveClass(/show/);
+    await page.evaluate(() => { window.__fbStub.reads.length = 0; });
+    await page.locator('#login-name').pressSequentially('Albert', { delay: 40 });
+    await expect(page.locator('#login-hint')).toContainText('找到帳號');
+    const n = await page.evaluate(() => window.__fbStub.reads.filter((p) => p.startsWith('tripgo/accounts/')).length);
+    expect(n).toBe(1);
   });
 });

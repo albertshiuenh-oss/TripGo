@@ -6,7 +6,7 @@
   var root = clone(window.__TG_SEED) || {};
   var listeners = [];
   var pushN = 0;
-  var stub = window.__fbStub = { writes: [], dump: function () { return clone(root); } };
+  var stub = window.__fbStub = { writes: [], reads: [], dump: function () { return clone(root); } };
 
   function parts(p) { return String(p || '').split('/').filter(Boolean); }
   function norm(p) { return parts(p).join('/'); }
@@ -80,7 +80,7 @@
       off: function (ev, cb) {
         listeners = listeners.filter(function (l) { return !(l.path === p && (!ev || l.ev === ev) && (!cb || l.cb === cb)); });
       },
-      once: function () { return Promise.resolve(snap(lastKey(p), getAt(p))); },
+      once: function () { stub.reads.push(norm(p)); return Promise.resolve(snap(lastKey(p), getAt(p))); },
       set: function (v) { return write('set', p, v); },
       update: function (obj) {
         Object.keys(obj).forEach(function (k) { setAt(p + '/' + k, obj[k]); });
