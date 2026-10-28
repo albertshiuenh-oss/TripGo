@@ -486,3 +486,43 @@ test('匯出 KML：景點備註、活動、預算與成員名稱含 HTML 時會�
   expect(kml).not.toMatch(/<img/);
   for (const k of ['xss-kn', 'xss-ka', 'xss-kb', 'xss-km']) expect(kml).toContain(k);
 });
+
+test.describe('載入計時器', () => {
+  test('等待超過 0.6 秒會出現沙漏與已等待秒數，結束後消失', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForFunction(() => window._mapsReady && window.FB);
+    await page.evaluate(() => loadBegin('t', '測試載入'));
+    const pill = page.locator('#ld-pill');
+    await expect(pill).toBeVisible();
+    await expect(pill).toContainText('⏳');
+    await expect(pill).toContainText(/測試載入… \d+ 秒/);
+    await page.evaluate(() => loadEnd('t'));
+    await expect(pill).toBeHidden();
+  });
+
+  test('很快就完成的載入不會閃出計時器', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForFunction(() => window._mapsReady && window.FB);
+    await page.waitForTimeout(700);
+    await page.evaluate(() => { loadBegin('q', '很快'); loadEnd('q'); });
+    await page.waitForTimeout(800);
+    await expect(page.locator('#ld-pill')).toBeHidden();
+  });
+
+  test('等超過 10 秒會提示網路較慢', async ({ page }) => {
+    await page.clock.install();
+    await page.goto('/');
+    await page.evaluate(() => loadBegin('slow', '很慢的載入'));
+    await page.clock.runFor(11000);
+    await expect(page.locator('#ld-pill')).toContainText('網路較慢');
+  });
+
+  test('Google 地圖連不上：計時器會結束並提示，App 其他功能照常', async ({ page }) => {
+    await page.route(/maps\.googleapis\.com/, (r) => r.abort());
+    await login(page);
+    await page.goto('/');
+    await expect(page.locator('#toast, .toast').filter({ hasText: '地圖暫時無法載入' }).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('#ld-pill')).toBeHidden();
+    await expect(page.locator('#S-join')).not.toHaveClass(/hide/);
+  });
+});
