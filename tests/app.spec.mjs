@@ -26,7 +26,7 @@ test.describe('啟動', () => {
     await login(page);
     await page.goto('/');
     await expect(page.locator('#S-join')).not.toHaveClass(/hide/);
-    await page.waitForFunction(() => window._mapsReady && window.FB);
+    await page.waitForFunction(() => window.FB);
     await page.waitForTimeout(8600);
     await expect(page.locator('#js-err')).not.toContainText('網路連線較慢');
   });
@@ -445,6 +445,7 @@ test('費用卡片：分攤成員名稱與幣別含 HTML 時只當文字顯示',
 test('首頁旅程列表：一般團員也能把旅程標為「完成」，但不能刪除', async ({ page }) => {
   await login(page);
   await page.goto('/');
+  await page.waitForFunction(() => localStorage.getItem('tg_synced_p_albert'));   // 等登入後的雲端同步結束，避免它在測試中途重畫清單
   await page.evaluate(() => {
     localStorage.setItem('tg_trips', JSON.stringify([{ code: 'TEST01', uid: 'u2', name: 'Anna', tripName: '大阪', isOrg: false }]));
     renderTripsPreview('Anna', true);
@@ -485,4 +486,205 @@ test('匯出 KML：景點備註、活動、預算與成員名稱含 HTML 時會�
   });
   expect(kml).not.toMatch(/<img/);
   for (const k of ['xss-kn', 'xss-ka', 'xss-kb', 'xss-km']) expect(kml).toContain(k);
+});
+
+test.describe('載入計時器', () => {
+  test('等待超過 0.6 秒會出現沙漏與已等待秒數，結束後消失', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForFunction(() => window.FB);
+    await page.evaluate(() => loadBegin('t', '測試載入'));
+    const pill = page.locator('#ld-pill');
+    await expect(pill).toBeVisible();
+    await expect(pill).toContainText('⏳');
+    await expect(pill).toContainText(/測試載入… \d+ 秒/);
+    await page.evaluate(() => loadEnd('t'));
+    await expect(pill).toBeHidden();
+  });
+
+  test('很快就完成的載入不會閃出計時器', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForFunction(() => window.FB);
+    await page.waitForTimeout(700);
+    await page.evaluate(() => { loadBegin('q', '很快'); loadEnd('q'); });
+    await page.waitForTimeout(800);
+    await expect(page.locator('#ld-pill')).toBeHidden();
+  });
+
+  test('等超過 10 秒會提示網路較慢', async ({ page }) => {
+    await page.clock.install();
+    await page.goto('/');
+    await page.evaluate(() => loadBegin('slow', '很慢的載入'));
+    await page.clock.runFor(11000);
+    await expect(page.locator('#ld-pill')).toContainText('網路較慢');
+  });
+
+  test('Google 地圖連不上：進入旅程後計時器會結束並提示，App 其他功能照常', async ({ page }) => {
+    await page.route(/maps\.googleapis\.com/, (r) => r.abort());
+    await login(page);
+    await page.addInitScript(() => {
+      localStorage.setItem('tg_code', 'TEST01'); localStorage.setItem('tg_uid', 'u1'); localStorage.setItem('tg_name', 'Albert');
+    });
+    await page.goto('/');
+    await expect(page.locator('#S-app')).toHaveClass(/show/, { timeout: 5000 });
+    await expect(page.locator('#toast, .toast').filter({ hasText: '地圖暫時無法載入' }).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('#ld-pill')).toBeHidden();
+    await expect(page.locator('.stop-row').first()).toBeVisible();
+  });
+});
+
+test.describe('載入效能', () => {
+  test('首頁（還沒進入旅程）不載入 Google 地圖；進入旅程後才載入', async ({ page }) => {
+    const mapReqs = [];
+    page.on('request', (r) => { if (r.url().includes('maps.googleapis.com')) mapReqs.push(r.url()); });
+    await login(page);
+    await page.goto('/');
+    await expect(page.locator('#S-join')).not.toHaveClass(/hide/);
+    await page.waitForTimeout(600);
+    expect(mapReqs).toEqual([]);
+    await page.evaluate(() => startApp('TEST01', 'u1', 'Albert', '測試團・大阪', true));
+    await page.waitForFunction(() => window._mapsReady);
+    expect(mapReqs.length).toBe(1);
+  });
+
+  test('地圖一直載入不到（逾時）也不會擋住自動回到上次旅程', async ({ page }) => {
+    await page.route(/maps\.googleapis\.com/, () => { /* 永遠不回應 */ });
+    await login(page);
+    await page.addInitScript(() => {
+      localStorage.setItem('tg_code', 'TEST01'); localStorage.setItem('tg_uid', 'u1'); localStorage.setItem('tg_name', 'Albert');
+    });
+    await page.goto('/');
+    await expect(page.locator('#S-app')).toHaveClass(/show/, { timeout: 5000 });
+    await expect(page.locator('.stop-row').first()).toBeVisible();
+    expect(await page.evaluate(() => window._mapsReady)).toBe(false);
+  });
+
+  test('地圖還沒載入時按導航不會出錯，只提示稍後再試', async ({ page }) => {
+    await page.route(/maps\.googleapis\.com/, () => { /* 永遠不回應 */ });
+    await login(page);
+    await page.goto('/');
+    await page.waitForFunction(() => window.FB);
+    await page.evaluate(() => { navTo({ lat: 34.7, lng: 135.5 }, 'x'); });
+    await expect(page.locator('#toast, .toast').filter({ hasText: '地圖還在載入' }).first()).toBeVisible();
+  });
+
+  test('雲端搜尋旅程只讀旅程名稱與成員，不下載景點、聊天、花費', async ({ page }) => {
+    await login(page);
+    await page.goto('/');
+    await page.waitForFunction(() => window.FB);
+    const out = await page.evaluate(async () => {
+      window.__fbStub.reads.length = 0;
+      const g = await FB.getGroupSummaries();
+      return { keys: Object.keys(g), t: g.TEST01.tripName, mems: Object.keys(g.TEST01.members || {}).length, hasStops: 'stops' in g.TEST01, reads: window.__fbStub.reads.slice() };
+    });
+    expect(out.keys).toContain('TEST01');
+    expect(out.t).toBe('測試團・大阪');
+    expect(out.mems).toBeGreaterThan(0);
+    expect(out.hasStops).toBe(false);
+    expect(out.reads.filter((p) => /\/(stops|chat|expenses)/.test(p) || p === 'tripgo/groups')).toEqual([]);
+  });
+
+  test('新裝置登入後，雲端搜尋找得到自己的旅程；shallow 查詢失敗時退回完整查詢也找得到', async ({ page }) => {
+    for (const failShallow of [false, true]) {
+      if (failShallow) await page.route(/firebaseio\.com.*shallow=true/, (r) => r.abort());
+      await page.goto('/');
+      await page.evaluate(() => { try { localStorage.removeItem('tg_trips'); localStorage.removeItem('tg_uid'); } catch (e) {} });
+      await login(page);
+      await page.goto('/');
+      await expect(page.locator('#jtp-list')).toContainText('測試團・大阪', { timeout: 6000 });
+    }
+  });
+
+  test('登入名字輸入：連續打字只在停下來後查一次帳號', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForFunction(() => window.FB);
+    await expect(page.locator('#S-login')).toHaveClass(/show/);
+    await page.evaluate(() => { window.__fbStub.reads.length = 0; });
+    await page.locator('#login-name').pressSequentially('Albert', { delay: 40 });
+    await expect(page.locator('#login-hint')).toContainText('找到帳號');
+    const n = await page.evaluate(() => window.__fbStub.reads.filter((p) => p.startsWith('tripgo/accounts/')).length);
+    expect(n).toBe(1);
+  });
+});
+
+test.describe('帳號同步（手機與電腦共用旅程清單與完成狀態）', () => {
+  const withCloud = (trips) => { const sd = structuredClone(SEED); sd.tripgo.accounts.p_albert.trips = trips; return sd; };
+  const cloudOf = (page) => page.evaluate(() => (window.__fbStub.dump().tripgo.accounts.p_albert || {}).trips || null);
+
+  test.describe('新裝置從雲端取得清單', () => {
+    test.use({ seed: withCloud({
+      OZ1: { tripName: 'Oz Escape', uid: 'u9', isOrg: true, completed: false, ts: 300 },
+      TEST01: { tripName: '測試團・大阪', uid: 'u1', isOrg: true, completed: true, ts: 200 },
+    }) });
+    test('清單與「已完成」都跟雲端一致（雲端搜尋找不到的旅程也會出現）', async ({ page }) => {
+      await login(page);
+      await page.goto('/');
+      await expect(page.locator('#jtp-list')).toContainText('Oz Escape', { timeout: 6000 });
+      await expect(page.locator('#jtp-done-section')).toContainText('測試團・大阪');
+      await expect(page.locator('#jtp-list')).not.toContainText('測試團・大阪');
+    });
+  });
+
+  test.describe('雲端旅程名稱含 HTML', () => {
+    test.use({ seed: withCloud({ X1: { tripName: '<img src=x onerror="window.__x=1">', uid: 'u1', isOrg: false, completed: false, ts: 1 } }) });
+    test('旅程名稱只當文字顯示', async ({ page }) => {
+      await login(page);
+      await page.goto('/');
+      await expect(page.locator('#jtp-list')).toContainText('<img', { timeout: 6000 });
+      expect(await page.locator('#jtp-list img').count()).toBe(0);
+      expect(await page.evaluate(() => window.__x)).toBeUndefined();
+    });
+  });
+
+  test.describe('標記完成／恢復', () => {
+    test.use({ seed: withCloud({ TEST01: { tripName: '測試團・大阪', uid: 'u1', isOrg: true, completed: false, ts: 200 } }) });
+    test('標記完成與恢復都會寫進雲端帳號', async ({ page }) => {
+      await login(page);
+      await page.goto('/');
+      await expect(page.locator('#jtp-list')).toContainText('測試團・大阪', { timeout: 6000 });
+      await page.evaluate(() => markTripCompleted('TEST01', true));
+      await expect.poll(async () => (await cloudOf(page)).TEST01.completed).toBe(true);
+      await page.evaluate(() => markTripCompleted('TEST01', false));
+      await expect.poll(async () => (await cloudOf(page)).TEST01.completed).toBe(false);
+    });
+  });
+
+  test.describe('這台裝置還沒同步就進入旅程', () => {
+    test.use({ seed: withCloud({ TEST01: { tripName: '測試團・大阪', uid: 'u1', isOrg: true, completed: true, ts: 200 } }) });
+    test('進入旅程不會把別台標的「已完成」蓋掉', async ({ page }) => {
+      await login(page);
+      await page.goto('/');
+      await page.waitForFunction(() => window.FB && window._currentUser !== undefined);
+      await page.evaluate(() => { _acctKey = 'p_albert'; updateStoredTrip('TEST01', 'u1', 'Albert', '測試團・大阪', true); });
+      await page.waitForTimeout(300);
+      expect((await cloudOf(page)).TEST01.completed).toBe(true);
+    });
+  });
+
+  test('這台裝置第一次同步：把本機舊清單（含已完成）上傳到雲端帳號', async ({ page }) => {
+    await login(page);
+    await page.addInitScript(() => {
+      if (!sessionStorage.getItem('__trips')) {
+        localStorage.setItem('tg_trips', JSON.stringify([{ code: 'TEST01', uid: 'u1', name: 'Albert', tripName: '測試團・大阪', isOrg: true, completed: true }]));
+        sessionStorage.setItem('__trips', '1');
+      }
+    });
+    await page.goto('/');
+    await expect.poll(async () => ((await cloudOf(page)) || {}).TEST01 && (await cloudOf(page)).TEST01.completed, { timeout: 6000 }).toBe(true);
+  });
+
+  test.describe('離開旅程', () => {
+    test.use({ seed: withCloud({ TEST01: { tripName: '測試團・大阪', uid: 'u1', isOrg: true, completed: false, ts: 200 } }) });
+    test('離開旅程後，會從成員名單與雲端帳號清單一起移除，且不會被雲端搜尋加回來', async ({ page }) => {
+      await login(page);
+      await page.goto('/');
+      await expect(page.locator('#jtp-list')).toContainText('測試團・大阪', { timeout: 6000 });
+      // 離開 = 從成員名單移除自己（這裡把 Albert 的所有成員記錄都移除，模擬真的離開）
+      await page.evaluate(() => { ['u1'].forEach((u) => FB.remove('tripgo/groups/TEST01/members/' + u)); });
+      await page.evaluate(() => leaveTrip('TEST01', 'u1'));
+      await page.locator('#cd-yes').click();
+      await expect.poll(async () => ((await cloudOf(page)) || {}).TEST01).toBeUndefined();
+      await page.waitForTimeout(1200);   // 等雲端搜尋跑完，確認不會被加回來
+      expect(((await cloudOf(page)) || {}).TEST01).toBeUndefined();
+    });
+  });
 });

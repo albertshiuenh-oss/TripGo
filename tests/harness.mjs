@@ -36,6 +36,7 @@ export const test = base.extend({
     await page.route(/^https?:\/\/(?!localhost)/, (route) => {
       const url = route.request().url();
       const js = (body) => route.fulfill({ contentType: 'text/javascript', body });
+      if (url.includes('firebaseio.com') && url.includes('shallow=true')) return route.fulfill({ json: Object.fromEntries(Object.keys(seed.tripgo.groups).map((k) => [k, true])) });
       if (url.includes('firebase-app-compat')) return js(FIREBASE_STUB);
       if (url.includes('firebase-database-compat')) return js('');
       if (url.includes('maps.googleapis.com')) return js(MAPS_STUB);
@@ -62,9 +63,10 @@ export async function login(page) {
 export async function enterTrip(page, { path = '/', uid = 'u1', name = 'Albert', isOrg = true } = {}) {
   await login(page);
   await page.goto(path);
-  await page.waitForFunction(() => window._mapsReady && window.FB);
+  await page.waitForFunction(() => window.FB);
   await expect(page.locator('#S-login')).not.toHaveClass(/show/);   // auto-login via saved PIN
   await page.evaluate(([uid, name, isOrg]) => startApp('TEST01', uid, name, '測試團・大阪', isOrg), [uid, name, isOrg]);
   await expect(page.locator('#S-app')).toHaveClass(/show/);
+  await page.waitForFunction(() => window._mapsReady);   // 地圖在進入旅程後才載入
 }
 export const writes = (page) => page.evaluate(() => window.__fbStub.writes);

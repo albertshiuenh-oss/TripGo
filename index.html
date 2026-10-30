@@ -11,7 +11,7 @@
 /* ── TripGo boot: version, preview isolation, early error capture ──
    Must run before any other script touches localStorage or Firebase. */
 (function(){
-  window.TG_VERSION='5.2';
+  window.TG_VERSION='5.3';
   var PV=/\/preview\//.test(location.pathname)||/[?&]preview=1(&|$)/.test(location.search);
   window.TG_PREVIEW=PV;
 
@@ -58,7 +58,7 @@
   });
 })();
 </script>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.2%3C/text%3E%3C/svg%3E"/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.3%3C/text%3E%3C/svg%3E"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="TripGo"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -365,6 +365,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 #map-wrap.map-mini .route-bar,
 #map-wrap.map-mini #place-card{display:none!important}
 #map-wrap.map-hidden{display:none}
+#ld-pill{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:99999;display:none;align-items:center;gap:6px;max-width:92vw;padding:6px 14px;border-radius:999px;background:rgba(20,35,60,.92);color:#fff;font-size:12px;font-weight:600;box-shadow:0 2px 10px rgba(0,0,0,.25);pointer-events:none}
+#ld-pill.show{display:flex}
+#ld-pill .ld-ico{display:inline-block;animation:ldflip 1.6s ease-in-out infinite}
+@keyframes ldflip{0%,40%{transform:rotate(0)}60%,100%{transform:rotate(180deg)}}
+@media (prefers-reduced-motion:reduce){#ld-pill .ld-ico{animation:none}}
 @media(orientation:landscape){
   #map-wrap{height:100%;width:58%;flex-shrink:0}
 }
@@ -1236,7 +1241,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <button class="login-submit" id="btn-pin-submit" disabled>登入 / 建立帳號</button>
       <div class="login-err-msg" id="login-err"></div>
     </div>
-    <div class="login-footer">TripGo v5.2</div>
+    <div class="login-footer">TripGo v5.3</div>
   </div>
 
 <div id="S-join" class="hide">
@@ -1253,7 +1258,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.2 &nbsp;·&nbsp; 2026-10-06</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.3 &nbsp;·&nbsp; 2026-10-28</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -1827,6 +1832,19 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
     set: safeSet,
     push: safePush,
     remove: safeRemove,
+    // 只讀每個旅程的名稱與成員（不下載景點、聊天、花費）。先用 REST shallow 取得旅程代碼清單。
+    getGroupSummaries: function(){
+      if(PV) return Promise.reject(new Error('preview'));
+      return fetch('https://tripgo-6b6ed-default-rtdb.firebaseio.com/tripgo/groups.json?shallow=true')
+        .then(function(r){ if(!r.ok) throw new Error('shallow '+r.status); return r.json(); })
+        .then(function(keys){
+          var codes=Object.keys(keys||{}), out={};
+          return Promise.all(codes.map(function(c){
+            return Promise.all([rtdb.ref('tripgo/groups/'+c+'/tripName').once('value'), rtdb.ref('tripgo/groups/'+c+'/members').once('value')])
+              .then(function(r){ out[c]={tripName:r[0].val(), members:r[1].val()}; }).catch(function(){});
+          })).then(function(){ return out; });
+        });
+    },
     get: function(path){
       if(!PV) return rtdb.ref(path).once('value');
       return ensureClone(path).then(function(){ return rtdb.ref(mapP(path)).once('value'); });
@@ -1876,7 +1894,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 <!-- Main App JS -->
 <script>
 'use strict';
-// TripGo v5.2
+// TripGo v5.3
 
 // ════════════════════════════════
 // STATE
@@ -1897,22 +1915,64 @@ var MS_MODE = false, MS_SET = new Set();
 // keep that value, otherwise checkInit() never runs (no auto-resume, false "slow network" warning).
 window._fbReady = !!window._fbReady;
 window._mapsReady = false;
-window._onFbReady = function(){ window._fbReady = true; checkInit(); };
+// ── 載入計時器：等待超過 0.6 秒才出現，顯示沙漏與已等待秒數 ──
+var _ld={tasks:{},order:[],t0:0,tick:null,pill:null};
+function _ldRender(){
+  var now=Date.now();
+  _ld.order=_ld.order.filter(function(k){ if(_ld.tasks[k]&&now-_ld.tasks[k].t>60000) delete _ld.tasks[k]; return !!_ld.tasks[k]; });
+  if(!_ld.order.length){ if(_ld.pill) _ld.pill.classList.remove('show'); clearInterval(_ld.tick); _ld.tick=null; return; }
+  if(!document.body) return;
+  var secs=Math.floor((now-_ld.t0)/1000);
+  if(now-_ld.t0<600) return;
+  if(!_ld.pill){
+    _ld.pill=document.createElement('div'); _ld.pill.id='ld-pill'; _ld.pill.setAttribute('role','status'); _ld.pill.setAttribute('aria-live','polite');
+    document.body.appendChild(_ld.pill);
+  }
+  _ld.pill.textContent='';
+  var ico=document.createElement('span'); ico.className='ld-ico'; ico.textContent='⏳';
+  var txt=document.createElement('span'); txt.textContent=_ld.tasks[_ld.order[0]].label+'… '+secs+' 秒'+(secs>=10?' · 網路較慢，請再等一下':'');
+  _ld.pill.appendChild(ico); _ld.pill.appendChild(txt); _ld.pill.classList.add('show');
+}
+function loadBegin(key,label){
+  if(!_ld.order.length) _ld.t0=Date.now();
+  if(!_ld.tasks[key]) _ld.order.push(key);
+  _ld.tasks[key]={label:label,t:Date.now()};
+  if(!_ld.tick) _ld.tick=setInterval(_ldRender,250);
+}
+function loadEnd(key){ delete _ld.tasks[key]; _ldRender(); }
+if(!window._fbReady) loadBegin('fb','連線中');
+var _mapsLoading=false;
+// 地圖只在進入旅程時才載入，而且不擋住 App：地圖還沒好之前，其他功能照常使用
+function loadMapsScript(){
+  if(_mapsLoading||window._mapsReady) return; _mapsLoading=true;
+  loadBegin('maps','載入地圖');
+  var sc=document.createElement('script');
+  sc.src='https://maps.googleapis.com/maps/api/js?key=AIzaSyAqyQyNtBSvK7qLuVR49RqgkKqU1Y2vUjQ&libraries=places&callback=initMap';
+  sc.async=true; sc.onerror=function(){ _mapsLoading=false; window._mapsFailed(); };
+  document.head.appendChild(sc);
+}
+window._mapsFailed=function(){ loadEnd('maps'); if(typeof showToast==='function') showToast('⚠️ 地圖暫時無法載入，其他功能不受影響',4000); };
+window._onFbReady = function(){ window._fbReady = true; loadEnd('fb'); checkInit(); };
+// Firebase 若在頁面載入前就已就緒，沒有人會再呼叫 _onFbReady，所以載入完成後補一次
+window.addEventListener('load', function(){ if(window._fbReady) checkInit(); });
 
 function checkInit(){
-  if(!window._fbReady || !window._mapsReady) return;
+  if(!window._fbReady) return;
   var code=localStorage.getItem('tg_code'),
       uid=localStorage.getItem('tg_uid'),
       name=localStorage.getItem('tg_name');
-  if(!code||!uid||!name) return;
+  if(!code||!uid||!name||window._resumeStarted) return;
+  window._resumeStarted=true;
+  loadBegin('resume','回到上次的旅程');
   window.FB.get('tripgo/groups/'+code+'/members/'+uid).then(function(snap){
-    if(!snap.exists()){ clearStoredSession(); return; }
-    window.FB.get('tripgo/groups/'+code).then(function(gs){
-      if(!gs.exists()){ clearStoredSession(); return; }
+    if(!snap.exists()){ loadEnd('resume'); clearStoredSession(); return; }
+    return window.FB.get('tripgo/groups/'+code).then(function(gs){
+      if(!gs.exists()){ loadEnd('resume'); clearStoredSession(); return; }
       var v=gs.val();
+      loadEnd('resume');
       startApp(code, uid, name, v.tripName||'旅遊群組', v.organizer===uid);
     });
-  }).catch(function(){});
+  }).catch(function(){ loadEnd('resume'); });
 }
 function clearStoredSession(){
   ['tg_code','tg_uid','tg_name'].forEach(function(k){localStorage.removeItem(k);});
@@ -1927,7 +1987,7 @@ var memberMarkers = {};
 var aspMap, aspPlSvc, aspMarker;
 
 window.initMap = function(){
-  window._mapsReady = true;
+  window._mapsReady = true; loadEnd('maps');
   map = new google.maps.Map(document.getElementById('gmap'),{
     center:{lat:25.0,lng:121.5}, zoom:10,
     mapTypeControl:false, streetViewControl:false,
@@ -1960,7 +2020,8 @@ window.initMap = function(){
   });
   getMyLoc();
   setTimeout(function(){ google.maps.event.trigger(map,'resize'); }, 300);
-  checkInit();
+  // 進入旅程後才載入完成：補上成員標記與行程之間的交通時間
+  if(S.groupCode){ try{ updateMemberMarkers(); renderStops(); }catch(e){} }
 };
 
 function setMapHeight(){
@@ -2068,6 +2129,7 @@ function setTM(mode, btn){
 // ── Route ──
 var _lastRouteDest=null, _lastRouteLabel=null;
 function navTo(dest, label){
+  if(!dsvc){ showToast('地圖還在載入，請稍後再試',1800); return; }
   _lastRouteDest=dest; _lastRouteLabel=label;
   var origin = {lat:S.myLat, lng:S.myLng};
   dsvc.route({origin:origin, destination:dest,
@@ -2281,6 +2343,7 @@ function pcAddToItinerary(){
 // START APP
 // ════════════════════════════════
 function startApp(code, uid, name, tripName, isOrg){
+  loadMapsScript();
   S.groupCode=code; S.myUid=uid; S.myName=name; S.isOrg=isOrg;
   var _nmEl=document.getElementById('tb-myname'); if(_nmEl) _nmEl.textContent=name;
   var _sb=document.getElementById('btn-share-trip'); if(_sb) _sb.style.display='inline-flex';
@@ -3064,6 +3127,7 @@ function exitMS(){ MS_MODE=false; MS_SET.clear(); document.getElementById('ms-ba
 function msRoute(){
   var sel=Array.from(MS_SET).sort(function(a,b){return a-b;});
   if(sel.length<2){showToast('請至少選 2 個景點',1500);return;}
+  if(!dsvc){ showToast('地圖還在載入，請稍後再試',1800); return; }
   var wp=sel.slice(1,-1).map(function(i){return{location:{lat:parseFloat(S.stops[i].lat),lng:parseFloat(S.stops[i].lng)},stopover:true};});
   if(!window._oR) window._oR=new google.maps.DirectionsRenderer({map:map,suppressMarkers:false,
     polylineOptions:{strokeColor:'#FF6D00',strokeWeight:6,strokeOpacity:.9}});
@@ -4760,13 +4824,47 @@ function getStoredTrips(){
   }
 }
 function saveStoredTrips(arr){ localStorage.setItem('tg_trips',JSON.stringify(arr)); }
+// ── 帳號雲端同步：旅程清單與「已完成」狀態存在 tripgo/accounts/<帳號>/trips/<旅程代碼>，手機與電腦共用 ──
+var _acctKey=null;
+function acctKeyOf(name){ return 'p_'+String(name||'').toLowerCase().replace(/\s+/g,'_'); }
+function _cloudOk(){ return !!(_acctKey&&window.FB&&window.FB.ready); }
+function cloudSaveTrip(t,withCompleted){
+  if(!_cloudOk()||!t||!t.code||/^ADMIN/.test(t.uid||'')) return;
+  var b='tripgo/accounts/'+_acctKey+'/trips/'+t.code;
+  if(withCompleted){ window.FB.set(b,{tripName:t.tripName||'',uid:t.uid||'',isOrg:!!t.isOrg,completed:!!t.completed,ts:Date.now()}); return; }
+  // 進入旅程時只更新名稱與時間，不動「已完成」（避免這台裝置還沒同步時把別台標的完成蓋掉）
+  window.FB.set(b+'/tripName',t.tripName||''); window.FB.set(b+'/uid',t.uid||''); window.FB.set(b+'/isOrg',!!t.isOrg); window.FB.set(b+'/ts',Date.now());
+}
+function cloudRemoveTrip(code){ if(_cloudOk()) window.FB.remove('tripgo/accounts/'+_acctKey+'/trips/'+code); }
+function syncTripsFromCloud(done){
+  if(!_cloudOk()||!_currentUser){ if(done) done(); return; }
+  var key=_acctKey, me=String(_currentUser.name||'').toLowerCase(), flag='tg_synced_'+key;
+  window.FB.get('tripgo/accounts/'+key+'/trips').then(function(snap){
+    if(key!==_acctKey) return;
+    var cloud=snap.val()||{}, local=getStoredTrips(), first=!localStorage.getItem(flag);
+    var mine=function(t){ return String(t.name||'').toLowerCase()===me; };
+    // 雲端 → 本機：新增、更新名稱與「已完成」
+    Object.keys(cloud).forEach(function(code){
+      var c=cloud[code]||{}, t=local.find(function(x){return x.code===code;});
+      if(!t){ local.push({code:code,uid:c.uid||'',name:_currentUser.name,tripName:c.tripName||'(未命名)',isOrg:!!c.isOrg,completed:!!c.completed}); }
+      else{ t.completed=!!c.completed; if(c.tripName) t.tripName=c.tripName; }
+    });
+    if(first){ local.forEach(function(t){ if(mine(t)&&!cloud[t.code]) cloudSaveTrip(t,true); }); }   // 這台裝置第一次同步：把本機旅程上傳
+    else{ local=local.filter(function(t){ return !mine(t)||cloud[t.code]; }); }                 // 之後以雲端為準（別台刪掉的旅程這裡也移除）
+    local.sort(function(a,b){ return ((cloud[b.code]||{}).ts||0)-((cloud[a.code]||{}).ts||0); });
+    saveStoredTrips(local.slice(0,50));
+    try{ localStorage.setItem(flag,'1'); }catch(e){}
+    if(done) done();
+  }).catch(function(){ if(done) done(); });
+}
 function updateStoredTrip(code,uid,name,tripName,isOrg){
   var trips=getStoredTrips();
   var old=trips.find(function(t){return t.code===code;});
   trips=trips.filter(function(t){return t.code!==code;});
   trips.unshift({code:code,uid:uid,name:name,tripName:tripName,isOrg:isOrg,
     completed:!!(old&&old.completed)}); // 保留「已完成」狀態
-  saveStoredTrips(trips.slice(0,20));
+  saveStoredTrips(trips.slice(0,50));
+  cloudSaveTrip(trips[0]);
 }
 function deleteTrip(code){
   showCustomConfirm('🗑️','移至垃圾桶？','旅程將放入垃圾桶，<b>7天後自動永久刪除</b>。如需還原請聯絡管理員。','確定移除',function(){
@@ -4778,7 +4876,7 @@ function deleteTrip(code){
         return window.FB.remove('tripgo/groups/'+code);
       });
     }).then(function(){
-      saveStoredTrips(getStoredTrips().filter(function(t){return t.code!==code;}));
+      saveStoredTrips(getStoredTrips().filter(function(t){return t.code!==code;})); cloudRemoveTrip(code);
       if(code===S.groupCode){
         clearStoredSession();
         document.getElementById('S-app').classList.remove('show');
@@ -4794,7 +4892,7 @@ function deleteTrip(code){
 function leaveTrip(code,uid){
   showCustomConfirm('👋','離開旅程？','你將從成員名單中移除。','確定離開',function(){
     window.FB.remove('tripgo/groups/'+code+'/members/'+uid);
-    saveStoredTrips(getStoredTrips().filter(function(t){return t.code!==code;}));
+    saveStoredTrips(getStoredTrips().filter(function(t){return t.code!==code;})); cloudRemoveTrip(code);
     if(code===S.groupCode){
       clearStoredSession();
       document.getElementById('S-app').classList.remove('show');
@@ -4893,11 +4991,14 @@ function searchFirebaseForName(name, nl, localMatched){
       applyFirebaseNameMatches(name, nl, localMatched, _allGroupsCache);
       return;
     }
-    window.FB.get('tripgo/groups').then(function(snap){
-      _allGroupsCache=snap.val()||{};
+    loadBegin('cloud','搜尋雲端旅程');
+    var _full=function(){ return window.FB.get('tripgo/groups').then(function(snap){ return snap.val()||{}; }); };
+    (window.FB.getGroupSummaries?window.FB.getGroupSummaries().catch(_full):_full()).then(function(data){
+      loadEnd('cloud');
+      _allGroupsCache=data||{};
       _allGroupsCacheTime=Date.now();
       applyFirebaseNameMatches(name, nl, localMatched, _allGroupsCache);
-    });
+    }).catch(function(){ loadEnd('cloud'); });
   },400);
 }
 
@@ -5102,10 +5203,11 @@ function showLoginScreen(){
 function hideLoginScreen(){ document.getElementById('S-login').classList.remove('show'); }
 
 function afterLogin(uid, name){
-  _currentUser={uid:uid,name:name};
+  _currentUser={uid:uid,name:name}; _acctKey=acctKeyOf(name);
   hideLoginScreen();
   var nameEl=document.getElementById('js-home-name');
   if(nameEl){ nameEl.value=name; renderTripsPreview(name); }
+  syncTripsFromCloud(function(){ var ne=document.getElementById('js-home-name'); if(ne&&ne.value.trim()===name) renderTripsPreview(name,true); });
   // Don't cover a trip that checkInit() already resumed
   if(!document.getElementById('S-app').classList.contains('show'))
     document.getElementById('S-join').classList.remove('hide');
@@ -5120,9 +5222,10 @@ function doPinSubmit(){
   var pin=getPinValue(); var err=document.getElementById('login-err'); err.textContent='';
   if(!name){err.textContent='請輸入名字';return;}
   if(pin.length!==4||!/^\d{4}$/.test(pin)){err.textContent='PIN 須為 4 位數字';return;}
-  var sub=document.getElementById('btn-pin-submit'); sub.disabled=true; sub.textContent='驗證中…';
+  var sub=document.getElementById('btn-pin-submit'); sub.disabled=true; sub.textContent='驗證中…'; loadBegin('login','登入驗證');
   var key='p_'+name.toLowerCase().replace(/\s+/g,'_');
   window.FB.get('tripgo/accounts/'+key).then(function(snap){
+    loadEnd('login');
     if(snap.exists()){
       var acct=snap.val();
       if(acct.pin===pin){
@@ -5137,12 +5240,17 @@ function doPinSubmit(){
         sub.disabled=false; sub.textContent='登入 / 建立帳號';
       }).catch(function(e2){err.textContent='建立帳號失敗'; sub.disabled=false; sub.textContent='登入 / 建立帳號';});
     }
-  }).catch(function(){err.textContent='連線錯誤'; sub.disabled=false; sub.textContent='登入 / 建立帳號';});
+  }).catch(function(){loadEnd('login'); err.textContent='連線錯誤'; sub.disabled=false; sub.textContent='登入 / 建立帳號';});
 }
 
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden||!_currentUser||!_acctKey) return;
+  if(document.getElementById('S-app').classList.contains('show')) return;
+  syncTripsFromCloud(function(){ var ne=document.getElementById('js-home-name'); if(ne&&ne.value.trim()===_currentUser.name) renderTripsPreview(_currentUser.name,true); });
+});
 function doLogout(){
   try{localStorage.removeItem('tg_session');localStorage.removeItem('tg_creds');}catch(e){}
-  _currentUser=null;
+  _currentUser=null; _acctKey=null;
   showLoginScreen();
   var ne=document.getElementById('js-home-name'); if(ne) ne.value='';
   document.getElementById('S-join').classList.add('hide');
@@ -5278,6 +5386,7 @@ function markTripCompleted(code, done){
   var trips=getStoredTrips();
   trips=trips.map(function(t){ if(t.code===code){ t.completed=!!done; } return t; });
   saveStoredTrips(trips);
+  cloudSaveTrip(trips.find(function(t){return t.code===code;}),true);
   renderTripsPreview((document.getElementById('js-home-name')||{}).value||'');
   showToast(done?'✅ 已標記完成':'↩️ 已恢復進行中',1500);
 }
@@ -5308,7 +5417,7 @@ function renderTripsPreview(inputName, _skipFbSearch){
     return '<div class="'+cls+'" data-i="'+i+'" data-done="'+(isDone?1:0)+'">' +
       '<span style="font-size:14px;flex-shrink:0">'+(t.isOrg?'👑':'👤')+'</span>' +
       '<div style="flex:1;min-width:0">'+
-        '<div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+t.tripName+'</div>'+
+        '<div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(t.tripName)+'</div>'+
         '<div style="font-size:10px;color:var(--text2)">'+t.code+'</div>'+
       '</div>'+
       (isDone
@@ -5331,10 +5440,12 @@ function renderTripsPreview(inputName, _skipFbSearch){
     } else { doneSection.innerHTML=''; doneSection.style.display='none'; }
   }
   function enterTrip(t){ if(!window.FB||!window.FB.ready){showToast('⏳ 連線中',1500);return;}
+    loadBegin('enter','進入旅程');
     window.FB.get('tripgo/groups/'+t.code).then(function(snap){
+      loadEnd('enter');
       if(snap.exists()) startApp(t.code,t.uid,t.name,t.tripName,t.isOrg);
-      else{ saveStoredTrips(getStoredTrips().filter(function(x){return x.code!==t.code;}));renderTripsPreview(name);showToast('⚠️ 旅程已不存在',2000); }
-    });
+      else{ saveStoredTrips(getStoredTrips().filter(function(x){return x.code!==t.code;})); cloudRemoveTrip(t.code); renderTripsPreview(name);showToast('⚠️ 旅程已不存在',2000); }
+    }).catch(function(){ loadEnd('enter'); });
   }
   list.querySelectorAll('.jtp-card').forEach(function(card,i){
     var t=active[i]; var _b=false;
@@ -5994,13 +6105,16 @@ window.addEventListener('load',function(){
     var pin=getPinValue();
     document.getElementById('btn-pin-submit').disabled=pin.length!==4||!this.value.trim();
     var name=this.value.trim();
+    clearTimeout(window._loginHintTimer);
     if(name.length>=2){
       var key='p_'+name.toLowerCase().replace(/\s+/g,'_');
-      window.FB.get('tripgo/accounts/'+key).then(function(snap){
-        var h=document.getElementById('login-hint');
-        if(snap.exists()){h.textContent='✓ 找到帳號，請輸入 PIN 登入';h.className='login-hint ok';}
-        else{h.textContent='新帳號，輸入 PIN 建立帳號';h.className='login-hint new';}
-      }).catch(function(){});
+      window._loginHintTimer=setTimeout(function(){
+        window.FB.get('tripgo/accounts/'+key).then(function(snap){
+          var h=document.getElementById('login-hint');
+          if(snap.exists()){h.textContent='✓ 找到帳號，請輸入 PIN 登入';h.className='login-hint ok';}
+          else{h.textContent='新帳號，輸入 PIN 建立帳號';h.className='login-hint new';}
+        }).catch(function(){});
+      },300);
     }
   });
 
@@ -6026,7 +6140,7 @@ window.addEventListener('load',function(){
       // 版本號
       ctx.fillStyle='rgba(255,255,255,0.65)';
       ctx.font='bold 28px system-ui,-apple-system,sans-serif';
-      ctx.fillText('v5.2',90,152);
+      ctx.fillText('v5.3',90,152);
       // 插入 apple-touch-icon
       var lnk=document.querySelector('link[rel="apple-touch-icon"]')||document.createElement('link');
       lnk.rel='apple-touch-icon'; lnk.href=c.toDataURL('image/png');
@@ -6135,6 +6249,5 @@ window.addEventListener('load',function(){
 
 <!-- Google Maps -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAqyQyNtBSvK7qLuVR49RqgkKqU1Y2vUjQ&libraries=places&callback=initMap" async defer></script>
 </body>
 </html>

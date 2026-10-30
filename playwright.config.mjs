@@ -3,7 +3,7 @@ export default defineConfig({
   testDir: './tests',
   timeout: 45_000,
   retries: 0,
-  reporter: [['list'], ['html', { open: 'never', outputFolder: 'test-report' }]],
+  reporter: [['list'], ['html', { open: 'never', outputFolder: 'test-report' }], ...(process.env.CI ? [['github']] : [])],
   use: {
     ...devices['Pixel 7'],
     baseURL: 'http://localhost:4173',
