@@ -445,6 +445,7 @@ test('費用卡片：分攤成員名稱與幣別含 HTML 時只當文字顯示',
 test('首頁旅程列表：一般團員也能把旅程標為「完成」，但不能刪除', async ({ page }) => {
   await login(page);
   await page.goto('/');
+  await page.waitForFunction(() => localStorage.getItem('tg_synced_p_albert'));   // 等登入後的雲端同步結束，避免它在測試中途重畫清單
   await page.evaluate(() => {
     localStorage.setItem('tg_trips', JSON.stringify([{ code: 'TEST01', uid: 'u2', name: 'Anna', tripName: '大阪', isOrg: false }]));
     renderTripsPreview('Anna', true);
@@ -671,14 +672,19 @@ test.describe('帳號同步（手機與電腦共用旅程清單與完成狀態�
     await expect.poll(async () => ((await cloudOf(page)) || {}).TEST01 && (await cloudOf(page)).TEST01.completed, { timeout: 6000 }).toBe(true);
   });
 
-  test.describe('刪除旅程', () => {
+  test.describe('離開旅程', () => {
     test.use({ seed: withCloud({ TEST01: { tripName: '測試團・大阪', uid: 'u1', isOrg: true, completed: false, ts: 200 } }) });
-    test('離開／刪除旅程會從雲端帳號移除', async ({ page }) => {
+    test('離開旅程後，會從成員名單與雲端帳號清單一起移除，且不會被雲端搜尋加回來', async ({ page }) => {
       await login(page);
       await page.goto('/');
       await expect(page.locator('#jtp-list')).toContainText('測試團・大阪', { timeout: 6000 });
-      await page.evaluate(() => cloudRemoveTrip('TEST01'));
+      // 離開 = 從成員名單移除自己（這裡把 Albert 的所有成員記錄都移除，模擬真的離開）
+      await page.evaluate(() => { ['u1'].forEach((u) => FB.remove('tripgo/groups/TEST01/members/' + u)); });
+      await page.evaluate(() => leaveTrip('TEST01', 'u1'));
+      await page.locator('#cd-yes').click();
       await expect.poll(async () => ((await cloudOf(page)) || {}).TEST01).toBeUndefined();
+      await page.waitForTimeout(1200);   // 等雲端搜尋跑完，確認不會被加回來
+      expect(((await cloudOf(page)) || {}).TEST01).toBeUndefined();
     });
   });
 });
