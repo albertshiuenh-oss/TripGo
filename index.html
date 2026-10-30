@@ -4824,13 +4824,47 @@ function getStoredTrips(){
   }
 }
 function saveStoredTrips(arr){ localStorage.setItem('tg_trips',JSON.stringify(arr)); }
+// ── 帳號雲端同步：旅程清單與「已完成」狀態存在 tripgo/accounts/<帳號>/trips/<旅程代碼>，手機與電腦共用 ──
+var _acctKey=null;
+function acctKeyOf(name){ return 'p_'+String(name||'').toLowerCase().replace(/\s+/g,'_'); }
+function _cloudOk(){ return !!(_acctKey&&window.FB&&window.FB.ready); }
+function cloudSaveTrip(t,withCompleted){
+  if(!_cloudOk()||!t||!t.code||/^ADMIN/.test(t.uid||'')) return;
+  var b='tripgo/accounts/'+_acctKey+'/trips/'+t.code;
+  if(withCompleted){ window.FB.set(b,{tripName:t.tripName||'',uid:t.uid||'',isOrg:!!t.isOrg,completed:!!t.completed,ts:Date.now()}); return; }
+  // 進入旅程時只更新名稱與時間，不動「已完成」（避免這台裝置還沒同步時把別台標的完成蓋掉）
+  window.FB.set(b+'/tripName',t.tripName||''); window.FB.set(b+'/uid',t.uid||''); window.FB.set(b+'/isOrg',!!t.isOrg); window.FB.set(b+'/ts',Date.now());
+}
+function cloudRemoveTrip(code){ if(_cloudOk()) window.FB.remove('tripgo/accounts/'+_acctKey+'/trips/'+code); }
+function syncTripsFromCloud(done){
+  if(!_cloudOk()||!_currentUser){ if(done) done(); return; }
+  var key=_acctKey, me=String(_currentUser.name||'').toLowerCase(), flag='tg_synced_'+key;
+  window.FB.get('tripgo/accounts/'+key+'/trips').then(function(snap){
+    if(key!==_acctKey) return;
+    var cloud=snap.val()||{}, local=getStoredTrips(), first=!localStorage.getItem(flag);
+    var mine=function(t){ return String(t.name||'').toLowerCase()===me; };
+    // 雲端 → 本機：新增、更新名稱與「已完成」
+    Object.keys(cloud).forEach(function(code){
+      var c=cloud[code]||{}, t=local.find(function(x){return x.code===code;});
+      if(!t){ local.push({code:code,uid:c.uid||'',name:_currentUser.name,tripName:c.tripName||'(未命名)',isOrg:!!c.isOrg,completed:!!c.completed}); }
+      else{ t.completed=!!c.completed; if(c.tripName) t.tripName=c.tripName; }
+    });
+    if(first){ local.forEach(function(t){ if(mine(t)&&!cloud[t.code]) cloudSaveTrip(t,true); }); }   // 這台裝置第一次同步：把本機旅程上傳
+    else{ local=local.filter(function(t){ return !mine(t)||cloud[t.code]; }); }                 // 之後以雲端為準（別台刪掉的旅程這裡也移除）
+    local.sort(function(a,b){ return ((cloud[b.code]||{}).ts||0)-((cloud[a.code]||{}).ts||0); });
+    saveStoredTrips(local.slice(0,50));
+    try{ localStorage.setItem(flag,'1'); }catch(e){}
+    if(done) done();
+  }).catch(function(){ if(done) done(); });
+}
 function updateStoredTrip(code,uid,name,tripName,isOrg){
   var trips=getStoredTrips();
   var old=trips.find(function(t){return t.code===code;});
   trips=trips.filter(function(t){return t.code!==code;});
   trips.unshift({code:code,uid:uid,name:name,tripName:tripName,isOrg:isOrg,
     completed:!!(old&&old.completed)}); // 保留「已完成」狀態
-  saveStoredTrips(trips.slice(0,20));
+  saveStoredTrips(trips.slice(0,50));
+  cloudSaveTrip(trips[0]);
 }
 function deleteTrip(code){
   showCustomConfirm('🗑️','移至垃圾桶？','旅程將放入垃圾桶，<b>7天後自動永久刪除</b>。如需還原請聯絡管理員。','確定移除',function(){
@@ -4842,7 +4876,7 @@ function deleteTrip(code){
         return window.FB.remove('tripgo/groups/'+code);
       });
     }).then(function(){
-      saveStoredTrips(getStoredTrips().filter(function(t){return t.code!==code;}));
+      saveStoredTrips(getStoredTrips().filter(function(t){return t.code!==code;})); cloudRemoveTrip(code);
       if(code===S.groupCode){
         clearStoredSession();
         document.getElementById('S-app').classList.remove('show');
@@ -4858,7 +4892,7 @@ function deleteTrip(code){
 function leaveTrip(code,uid){
   showCustomConfirm('👋','離開旅程？','你將從成員名單中移除。','確定離開',function(){
     window.FB.remove('tripgo/groups/'+code+'/members/'+uid);
-    saveStoredTrips(getStoredTrips().filter(function(t){return t.code!==code;}));
+    saveStoredTrips(getStoredTrips().filter(function(t){return t.code!==code;})); cloudRemoveTrip(code);
     if(code===S.groupCode){
       clearStoredSession();
       document.getElementById('S-app').classList.remove('show');
@@ -5169,10 +5203,11 @@ function showLoginScreen(){
 function hideLoginScreen(){ document.getElementById('S-login').classList.remove('show'); }
 
 function afterLogin(uid, name){
-  _currentUser={uid:uid,name:name};
+  _currentUser={uid:uid,name:name}; _acctKey=acctKeyOf(name);
   hideLoginScreen();
   var nameEl=document.getElementById('js-home-name');
   if(nameEl){ nameEl.value=name; renderTripsPreview(name); }
+  syncTripsFromCloud(function(){ var ne=document.getElementById('js-home-name'); if(ne&&ne.value.trim()===name) renderTripsPreview(name,true); });
   // Don't cover a trip that checkInit() already resumed
   if(!document.getElementById('S-app').classList.contains('show'))
     document.getElementById('S-join').classList.remove('hide');
@@ -5208,9 +5243,14 @@ function doPinSubmit(){
   }).catch(function(){loadEnd('login'); err.textContent='連線錯誤'; sub.disabled=false; sub.textContent='登入 / 建立帳號';});
 }
 
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden||!_currentUser||!_acctKey) return;
+  if(document.getElementById('S-app').classList.contains('show')) return;
+  syncTripsFromCloud(function(){ var ne=document.getElementById('js-home-name'); if(ne&&ne.value.trim()===_currentUser.name) renderTripsPreview(_currentUser.name,true); });
+});
 function doLogout(){
   try{localStorage.removeItem('tg_session');localStorage.removeItem('tg_creds');}catch(e){}
-  _currentUser=null;
+  _currentUser=null; _acctKey=null;
   showLoginScreen();
   var ne=document.getElementById('js-home-name'); if(ne) ne.value='';
   document.getElementById('S-join').classList.add('hide');
@@ -5346,6 +5386,7 @@ function markTripCompleted(code, done){
   var trips=getStoredTrips();
   trips=trips.map(function(t){ if(t.code===code){ t.completed=!!done; } return t; });
   saveStoredTrips(trips);
+  cloudSaveTrip(trips.find(function(t){return t.code===code;}),true);
   renderTripsPreview((document.getElementById('js-home-name')||{}).value||'');
   showToast(done?'✅ 已標記完成':'↩️ 已恢復進行中',1500);
 }
@@ -5376,7 +5417,7 @@ function renderTripsPreview(inputName, _skipFbSearch){
     return '<div class="'+cls+'" data-i="'+i+'" data-done="'+(isDone?1:0)+'">' +
       '<span style="font-size:14px;flex-shrink:0">'+(t.isOrg?'👑':'👤')+'</span>' +
       '<div style="flex:1;min-width:0">'+
-        '<div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+t.tripName+'</div>'+
+        '<div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(t.tripName)+'</div>'+
         '<div style="font-size:10px;color:var(--text2)">'+t.code+'</div>'+
       '</div>'+
       (isDone
@@ -5403,7 +5444,7 @@ function renderTripsPreview(inputName, _skipFbSearch){
     window.FB.get('tripgo/groups/'+t.code).then(function(snap){
       loadEnd('enter');
       if(snap.exists()) startApp(t.code,t.uid,t.name,t.tripName,t.isOrg);
-      else{ saveStoredTrips(getStoredTrips().filter(function(x){return x.code!==t.code;}));renderTripsPreview(name);showToast('⚠️ 旅程已不存在',2000); }
+      else{ saveStoredTrips(getStoredTrips().filter(function(x){return x.code!==t.code;})); cloudRemoveTrip(t.code); renderTripsPreview(name);showToast('⚠️ 旅程已不存在',2000); }
     }).catch(function(){ loadEnd('enter'); });
   }
   list.querySelectorAll('.jtp-card').forEach(function(card,i){

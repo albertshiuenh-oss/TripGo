@@ -604,3 +604,81 @@ test.describe('載入效能', () => {
     expect(n).toBe(1);
   });
 });
+
+test.describe('帳號同步（手機與電腦共用旅程清單與完成狀態）', () => {
+  const withCloud = (trips) => { const sd = structuredClone(SEED); sd.tripgo.accounts.p_albert.trips = trips; return sd; };
+  const cloudOf = (page) => page.evaluate(() => (window.__fbStub.dump().tripgo.accounts.p_albert || {}).trips || null);
+
+  test.describe('新裝置從雲端取得清單', () => {
+    test.use({ seed: withCloud({
+      OZ1: { tripName: 'Oz Escape', uid: 'u9', isOrg: true, completed: false, ts: 300 },
+      TEST01: { tripName: '測試團・大阪', uid: 'u1', isOrg: true, completed: true, ts: 200 },
+    }) });
+    test('清單與「已完成」都跟雲端一致（雲端搜尋找不到的旅程也會出現）', async ({ page }) => {
+      await login(page);
+      await page.goto('/');
+      await expect(page.locator('#jtp-list')).toContainText('Oz Escape', { timeout: 6000 });
+      await expect(page.locator('#jtp-done-section')).toContainText('測試團・大阪');
+      await expect(page.locator('#jtp-list')).not.toContainText('測試團・大阪');
+    });
+  });
+
+  test.describe('雲端旅程名稱含 HTML', () => {
+    test.use({ seed: withCloud({ X1: { tripName: '<img src=x onerror="window.__x=1">', uid: 'u1', isOrg: false, completed: false, ts: 1 } }) });
+    test('旅程名稱只當文字顯示', async ({ page }) => {
+      await login(page);
+      await page.goto('/');
+      await expect(page.locator('#jtp-list')).toContainText('<img', { timeout: 6000 });
+      expect(await page.locator('#jtp-list img').count()).toBe(0);
+      expect(await page.evaluate(() => window.__x)).toBeUndefined();
+    });
+  });
+
+  test.describe('標記完成／恢復', () => {
+    test.use({ seed: withCloud({ TEST01: { tripName: '測試團・大阪', uid: 'u1', isOrg: true, completed: false, ts: 200 } }) });
+    test('標記完成與恢復都會寫進雲端帳號', async ({ page }) => {
+      await login(page);
+      await page.goto('/');
+      await expect(page.locator('#jtp-list')).toContainText('測試團・大阪', { timeout: 6000 });
+      await page.evaluate(() => markTripCompleted('TEST01', true));
+      await expect.poll(async () => (await cloudOf(page)).TEST01.completed).toBe(true);
+      await page.evaluate(() => markTripCompleted('TEST01', false));
+      await expect.poll(async () => (await cloudOf(page)).TEST01.completed).toBe(false);
+    });
+  });
+
+  test.describe('這台裝置還沒同步就進入旅程', () => {
+    test.use({ seed: withCloud({ TEST01: { tripName: '測試團・大阪', uid: 'u1', isOrg: true, completed: true, ts: 200 } }) });
+    test('進入旅程不會把別台標的「已完成」蓋掉', async ({ page }) => {
+      await login(page);
+      await page.goto('/');
+      await page.waitForFunction(() => window.FB && window._currentUser !== undefined);
+      await page.evaluate(() => { _acctKey = 'p_albert'; updateStoredTrip('TEST01', 'u1', 'Albert', '測試團・大阪', true); });
+      await page.waitForTimeout(300);
+      expect((await cloudOf(page)).TEST01.completed).toBe(true);
+    });
+  });
+
+  test('這台裝置第一次同步：把本機舊清單（含已完成）上傳到雲端帳號', async ({ page }) => {
+    await login(page);
+    await page.addInitScript(() => {
+      if (!sessionStorage.getItem('__trips')) {
+        localStorage.setItem('tg_trips', JSON.stringify([{ code: 'TEST01', uid: 'u1', name: 'Albert', tripName: '測試團・大阪', isOrg: true, completed: true }]));
+        sessionStorage.setItem('__trips', '1');
+      }
+    });
+    await page.goto('/');
+    await expect.poll(async () => ((await cloudOf(page)) || {}).TEST01 && (await cloudOf(page)).TEST01.completed, { timeout: 6000 }).toBe(true);
+  });
+
+  test.describe('刪除旅程', () => {
+    test.use({ seed: withCloud({ TEST01: { tripName: '測試團・大阪', uid: 'u1', isOrg: true, completed: false, ts: 200 } }) });
+    test('離開／刪除旅程會從雲端帳號移除', async ({ page }) => {
+      await login(page);
+      await page.goto('/');
+      await expect(page.locator('#jtp-list')).toContainText('測試團・大阪', { timeout: 6000 });
+      await page.evaluate(() => cloudRemoveTrip('TEST01'));
+      await expect.poll(async () => ((await cloudOf(page)) || {}).TEST01).toBeUndefined();
+    });
+  });
+});
