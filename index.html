@@ -11,7 +11,7 @@
 /* ── TripGo boot: version, preview isolation, early error capture ──
    Must run before any other script touches localStorage or Firebase. */
 (function(){
-  window.TG_VERSION='5.3';
+  window.TG_VERSION='5.4';
   var PV=/\/preview\//.test(location.pathname)||/[?&]preview=1(&|$)/.test(location.search);
   window.TG_PREVIEW=PV;
 
@@ -58,7 +58,7 @@
   });
 })();
 </script>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.3%3C/text%3E%3C/svg%3E"/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.4%3C/text%3E%3C/svg%3E"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="TripGo"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -1241,7 +1241,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <button class="login-submit" id="btn-pin-submit" disabled>登入 / 建立帳號</button>
       <div class="login-err-msg" id="login-err"></div>
     </div>
-    <div class="login-footer">TripGo v5.3</div>
+    <div class="login-footer">TripGo v5.4</div>
   </div>
 
 <div id="S-join" class="hide">
@@ -1258,7 +1258,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.3 &nbsp;·&nbsp; 2026-10-28</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.4 &nbsp;·&nbsp; 2026-11-10</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -1303,6 +1303,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
     <div class="adm-field"><label class="adm-label">密碼</label><input class="adm-input" id="adm-pw" type="password" placeholder="密碼"/></div>
     <div class="adm-err" id="adm-err"></div>
     <div class="adm-btns"><button class="adm-cancel" onclick="closeAdmin()">取消</button><button class="adm-ok" onclick="doAdmin()">登入</button></div>
+    <button id="adm-use-token" style="display:none;margin-top:10px;width:100%;background:none;border:none;color:var(--blue);font-size:13px;font-weight:600;cursor:pointer" onclick="closeAdmin();openTokenInput(true)">我有建立授權碼</button>
   </div>
 </div>
 
@@ -1894,7 +1895,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 <!-- Main App JS -->
 <script>
 'use strict';
-// TripGo v5.3
+// TripGo v5.4
 
 // ════════════════════════════════
 // STATE
@@ -4452,7 +4453,7 @@ async function doJoin(){
   }catch(e){err.textContent='❌ 加入失敗：'+e.message;}
 }
 async function doCreate(){
-  if(!_isAdmin){ showToast('⚠️ 僅管理員可建立群組',2200); return; }
+  if(!_isAdmin&&!_hasCreateToken){ showToast('⚠️ 僅管理員可建立群組',2200); return; }
   var name=document.getElementById('inp-create-name').value.trim();
   var tripName=document.getElementById('inp-trip-name').value.trim()||'旅遊群組';
   var err=document.getElementById('js-err');
@@ -4474,8 +4475,14 @@ function toggleGear(e){
   e.stopPropagation();
   document.getElementById('js-gear-menu').classList.toggle('show');
 }
-function openAdmin(){ document.getElementById('js-gear-menu').classList.remove('show'); document.getElementById('M-admin').classList.add('show'); }
+function openAdmin(pending){ _pendingCreate=!!pending; document.getElementById('js-gear-menu').classList.remove('show'); document.getElementById('adm-use-token').style.display=_pendingCreate?'block':'none'; document.getElementById('M-admin').classList.add('show'); }
 function closeAdmin(){ document.getElementById('M-admin').classList.remove('show'); }
+// 「建立群組」一直顯示；還沒取得權限時，點下去先要求管理員登入（或輸入授權碼），成功後直接進入建立畫面
+var _pendingCreate=false;
+function requestCreate(){
+  if(_isAdmin||_hasCreateToken){ goSub('create'); return; }
+  openAdmin(true);
+}
 var DEFAULT_ADMIN_EMAIL='hau747@hotmail.com', DEFAULT_ADMIN_PW='0937381897';
 var _isAdmin = false; // 本 session 是否已完成管理員驗證
 var _hasCreateToken = false; // 透過授權碼取得建立群組權限
@@ -4495,7 +4502,7 @@ function doAdmin(){
     if(pw===correctPw){
       err.textContent=''; closeAdmin();
       _isAdmin = true; updateCreateBtnVisibility();
-      openAdminPanel();
+      if(_pendingCreate){ _pendingCreate=false; goSub('create'); } else openAdminPanel();
     } else { err.textContent='Email 或密碼錯誤'; }
   });
 }
@@ -4507,7 +4514,7 @@ function openAdminPanel(){
 }
 function closeAdminPanel(){ document.getElementById('M-admin-panel').classList.remove('show'); }
 function updateCreateBtnVisibility(){
-  var disp = (_isAdmin || _hasCreateToken) ? '' : 'none';
+  var disp = '';   // 「建立群組」一直顯示，點下去才驗證
   var b1 = document.getElementById('btn-create');
   var b2 = document.getElementById('btn-tsw-create');
   if(b1) b1.style.display = disp;
@@ -4571,7 +4578,8 @@ function loadTokenList(){
 }
 
 // ── 使用者輸入授權碼 ──
-function openTokenInput(){
+function openTokenInput(keepPending){
+  if(!keepPending) _pendingCreate=false;
   document.getElementById('js-gear-menu').classList.remove('show');
   var m=document.getElementById('M-token-input');
   m.style.display='flex';
@@ -4601,6 +4609,7 @@ async function doTokenInput(){
     updateCreateBtnVisibility();
     closeTokenInput();
     showToast('✅ 授權碼驗證成功，已解鎖建立群組功能',2800);
+    if(_pendingCreate){ _pendingCreate=false; goSub('create'); }
   }catch(e){err.textContent='❌ 驗證失敗：'+e.message;}
 }
 function changeAdminPassword(){
@@ -5945,9 +5954,9 @@ function applyMapPickResult(lat,lng,name){
 window.addEventListener('load',function(){
 
   // Join screen
-  updateCreateBtnVisibility(); // 非管理員預設隱藏「建立群組」
+  updateCreateBtnVisibility();
   document.getElementById('btn-join').addEventListener('click',function(){goSub('join');});
-  document.getElementById('btn-create').addEventListener('click',function(){goSub('create');});
+  document.getElementById('btn-create').addEventListener('click',requestCreate);
   document.getElementById('js-back-btn').addEventListener('click',goHome);
   document.getElementById('js-go-btn').addEventListener('click',doAction);
   try{ document.getElementById('inp-invite').addEventListener('input',function(){this.value=this.value.toUpperCase();}); }catch(e){}
@@ -5967,7 +5976,7 @@ window.addEventListener('load',function(){
   document.getElementById('tb-trip').addEventListener('click',openTripSwitcher);
   document.getElementById('btn-tsw-close').addEventListener('click',closeTripSwitcher);
   document.getElementById('btn-tsw-join').addEventListener('click',function(){closeTripSwitcher();goToHome();setTimeout(function(){goSub('join');},100);});
-  document.getElementById('btn-tsw-create').addEventListener('click',function(){closeTripSwitcher();goToHome();setTimeout(function(){goSub('create');},100);});
+  document.getElementById('btn-tsw-create').addEventListener('click',function(){closeTripSwitcher();goToHome();setTimeout(requestCreate,100);});
 
   // Map controls
   document.getElementById('btn-locate').addEventListener('click',goToMe);
@@ -6140,7 +6149,7 @@ window.addEventListener('load',function(){
       // 版本號
       ctx.fillStyle='rgba(255,255,255,0.65)';
       ctx.font='bold 28px system-ui,-apple-system,sans-serif';
-      ctx.fillText('v5.3',90,152);
+      ctx.fillText('v5.4',90,152);
       // 插入 apple-touch-icon
       var lnk=document.querySelector('link[rel="apple-touch-icon"]')||document.createElement('link');
       lnk.rel='apple-touch-icon'; lnk.href=c.toDataURL('image/png');
