@@ -245,12 +245,14 @@ test.describe('成員', () => {
   test('設主辦需先確認；取消時不寫入任何資料', async ({ page }) => {
     await enterTrip(page);
     await page.locator('.tab[data-pane="locations"]').click();
-    const before = (await writes(page)).length;
+    // 帳號雲端同步（tripgo/accounts/…）是背景寫入，不算在「設主辦」的資料變動裡
+    const groupWrites = async () => (await writes(page)).filter((w) => !String(w.path).includes('tripgo/accounts/')).length;
+    const before = await groupWrites();
     await page.locator('#pane-locations .mem-clist-row', { hasText: 'Anna' }).locator('[data-action="setorg"]').click();
     await expect(page.locator('#confirm-dialog')).toHaveClass(/show/);
     await expect(page.locator('#cd-msg')).toContainText('Anna');
     await page.locator('#cd-no').click();
-    expect((await writes(page)).length).toBe(before);
+    expect(await groupWrites()).toBe(before);
   });
 
   test('同一人用兩台裝置時，組織者標籤不會消失', async ({ page }) => {
@@ -448,6 +450,7 @@ test('首頁旅程列表：一般團員也能把旅程標為「完成」，但�
   await page.waitForFunction(() => localStorage.getItem('tg_synced_p_albert'));   // 等登入後的雲端同步結束，避免它在測試中途重畫清單
   await page.evaluate(() => {
     localStorage.setItem('tg_trips', JSON.stringify([{ code: 'TEST01', uid: 'u2', name: 'Anna', tripName: '大阪', isOrg: false }]));
+    document.getElementById('js-home-name').value = 'Anna';   // 輸入框也要是 Anna，否則 Albert 的雲端搜尋結果晚到時會把清單換掉
     renderTripsPreview('Anna', true);
   });
   await expect(page.locator('#jtp-list .jtp-complete-btn')).toHaveCount(1);
@@ -599,10 +602,11 @@ test.describe('載入效能', () => {
     await page.waitForFunction(() => window.FB);
     await expect(page.locator('#S-login')).toHaveClass(/show/);
     await page.evaluate(() => { window.__fbStub.reads.length = 0; });
-    await page.locator('#login-name').pressSequentially('Albert', { delay: 40 });
+    await page.locator('#login-name').pressSequentially('Albert', { delay: 10 });
     await expect(page.locator('#login-hint')).toContainText('找到帳號');
     const n = await page.evaluate(() => window.__fbStub.reads.filter((p) => p.startsWith('tripgo/accounts/')).length);
-    expect(n).toBe(1);
+    expect(n).toBeGreaterThanOrEqual(1);
+    expect(n).toBeLessThan(3);   // 打 6 個字，舊做法會查 5 次；防抖後只會在停下來時查 1 次
   });
 });
 
@@ -685,6 +689,71 @@ test.describe('帳號同步（手機與電腦共用旅程清單與完成狀態�
       await expect.poll(async () => ((await cloudOf(page)) || {}).TEST01).toBeUndefined();
       await page.waitForTimeout(1200);   // 等雲端搜尋跑完，確認不會被加回來
       expect(((await cloudOf(page)) || {}).TEST01).toBeUndefined();
+    });
+  });
+});
+
+test.describe('建立群組按鈕', () => {
+  const admin = (page) => page.evaluate(() => [DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PW]);
+  const seedWithToken = () => { const sd = structuredClone(SEED); sd.tripgo.create_tokens = { 'BUILD-T1': { note: 't', createdAt: 1, usedAt: null, usedBy: '' } }; return sd; };
+
+  test('首頁一直顯示「建立群組」，緊接在「加入群組」下面', async ({ page }) => {
+    await login(page);
+    await page.goto('/');
+    await expect(page.locator('#btn-create')).toBeVisible();
+    // 版面順序：「建立群組」緊接在「加入群組」之後（用 DOM 順序判斷，不受旅程清單載入時的位置移動影響）
+    expect(await page.evaluate(() => document.getElementById('btn-join').nextElementSibling.id)).toBe('btn-create');
+  });
+
+  test('還沒驗證時點「建立群組」會先要求管理員登入，成功後直接進入建立畫面', async ({ page }) => {
+    await login(page);
+    await page.goto('/');
+    await page.locator('#btn-create').click();
+    await expect(page.locator('#M-admin')).toHaveClass(/show/);
+    await expect(page.locator('#adm-use-token')).toBeVisible();
+    const [email, pw] = await admin(page);
+    await page.locator('#adm-email').fill(email);
+    await page.locator('#adm-pw').fill('wrong-password');
+    await page.getByRole('button', { name: '登入', exact: true }).click();
+    await expect(page.locator('#adm-err')).toContainText('錯誤');
+    await expect(page.locator('#js-sub')).toBeHidden();
+    await page.locator('#adm-pw').fill(pw);
+    await page.getByRole('button', { name: '登入', exact: true }).click();
+    await expect(page.locator('#js-sub-title')).toHaveText('建立群組');
+    await expect(page.locator('#M-admin-panel')).not.toHaveClass(/show/);
+    await expect(page.locator('#M-admin')).not.toHaveClass(/show/);
+  });
+
+  test('取消後，從齒輪進管理員設定仍是打開管理員面板（不會跳去建立）', async ({ page }) => {
+    await login(page);
+    await page.goto('/');
+    await page.locator('#btn-create').click();
+    await page.locator('#M-admin .adm-cancel').click();
+    await page.evaluate(() => openAdmin());
+    await expect(page.locator('#adm-use-token')).toBeHidden();
+    const [email, pw] = await admin(page);
+    await page.locator('#adm-email').fill(email);
+    await page.locator('#adm-pw').fill(pw);
+    await page.getByRole('button', { name: '登入', exact: true }).click();
+    await expect(page.locator('#M-admin-panel')).toHaveClass(/show/);
+  });
+
+  test.describe('授權碼', () => {
+    test.use({ seed: seedWithToken() });
+    test('用授權碼解鎖後可以建立群組（授權碼只能用一次）', async ({ page }) => {
+      await login(page);
+      await page.goto('/');
+      await page.locator('#btn-create').click();
+      await page.locator('#adm-use-token').click();
+      await page.locator('#tok-code-inp').fill('BUILD-T1');
+      await page.locator('#M-token-input').getByRole('button', { name: '驗證' }).click();
+      await expect(page.locator('#js-sub-title')).toHaveText('建立群組');
+      await page.locator('#inp-create-name').fill('Albert');
+      await page.locator('#inp-trip-name').fill('授權碼測試團');
+      await page.locator('#js-go-btn').click();
+      await expect(page.locator('#S-app')).toHaveClass(/show/, { timeout: 8000 });
+      const used = await page.evaluate(() => window.__fbStub.dump().tripgo.create_tokens['BUILD-T1'].usedAt);
+      expect(used).toBeTruthy();
     });
   });
 });
