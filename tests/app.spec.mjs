@@ -827,3 +827,13 @@ test.describe('前段交通：計程車', () => {
     await expect(page.locator('#ief-transit-mode option[value="taxi"]')).toHaveText(/計程車/);
   });
 });
+
+test('分類選單的「餐廳」圖示用表情符號版（帶 U+FE0F），與其他分類對齊', async ({ page }) => {
+  await enterTrip(page);
+  const idx = await page.evaluate(() => S.stops.findIndex((s) => s.name === '道頓堀'));
+  await page.evaluate((i) => { tapStop(i); setTimeout(() => openInlineEdit(i), 50); }, idx);
+  const label = await page.locator('#ief-category option[value="餐廳"]').textContent();
+  expect(label).toContain('\u{1F37D}\uFE0F');
+  await page.evaluate(() => openNewStopForm());
+  expect(await page.locator('#ief-category option[value="餐廳"]').last().textContent()).toContain('\u{1F37D}\uFE0F');
+});
