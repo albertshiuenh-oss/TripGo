@@ -11,7 +11,7 @@
 /* ── TripGo boot: version, preview isolation, early error capture ──
    Must run before any other script touches localStorage or Firebase. */
 (function(){
-  window.TG_VERSION='5.4';
+  window.TG_VERSION='5.5';
   var PV=/\/preview\//.test(location.pathname)||/[?&]preview=1(&|$)/.test(location.search);
   window.TG_PREVIEW=PV;
 
@@ -58,7 +58,7 @@
   });
 })();
 </script>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.4%3C/text%3E%3C/svg%3E"/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.5%3C/text%3E%3C/svg%3E"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="TripGo"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -1241,7 +1241,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <button class="login-submit" id="btn-pin-submit" disabled>登入 / 建立帳號</button>
       <div class="login-err-msg" id="login-err"></div>
     </div>
-    <div class="login-footer">TripGo v5.4</div>
+    <div class="login-footer">TripGo v5.5</div>
   </div>
 
 <div id="S-join" class="hide">
@@ -1258,7 +1258,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.4 &nbsp;·&nbsp; 2026-11-10</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.5 &nbsp;·&nbsp; 2026-11-20</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -1895,7 +1895,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 <!-- Main App JS -->
 <script>
 'use strict';
-// TripGo v5.4
+// TripGo v5.5
 
 // ════════════════════════════════
 // STATE
@@ -4240,7 +4240,9 @@ function renderWxCardsByDay(dayStarts,dateToWx){
 var FOOD_KW=['早餐','午餐','中餐','晚餐','宵夜','餐廳','咖啡','Breakfast','Lunch','Dinner','Brunch','Cafe','Food','Restaurant'];
 function isFood(s){
   if(s.category==='餐廳') return true;
-  var t=(s.note||'')+' '+(s.activities||[]).map(function(a){return a.text||a||'';}).join(' ');
+  if(s.category==='景點'||s.category==='住宿') return false;   // 明確分類為景點／住宿的，不再用關鍵字猜
+  var t=(s.name||'')+' '+(s.note||'')+' '+(s.activities||[]).map(function(a){return a.text||a||'';}).join(' ');
+  t=t.replace(/[早午中晚宵]餐[後后前]|餐[後后前]/g,' ');   // 「午餐後開往…」不是在吃飯
   return FOOD_KW.some(function(k){return t.toLowerCase().includes(k.toLowerCase());});
 }
 function renderRestaurant(center){
@@ -5683,6 +5685,13 @@ function renderInlineEditForm(i){
         '<div class="exp-ef-field"><div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><label class="exp-ef-label" style="margin-bottom:0">離開時間</label><div id="sug-stay" style="display:none;font-size:14px;font-weight:700;color:var(--green);white-space:nowrap"></div></div><input class="exp-ef-inp" id="ief-depart" value="'+escHtml(s.depart||'')+'" placeholder="12:00"/><div class="time-sug" id="sug-depart">建議：<span class="sug-v"></span><button class="sug-ok">套用</button></div></div>'+
       '</div>'+
       '<div class="exp-ef-row">'+
+        '<div class="exp-ef-field"><label class="exp-ef-label">分類</label>'+
+          '<select class="exp-ef-inp" id="ief-category" style="cursor:pointer">'+
+            [['','（未分類）'],['住宿','🏨 住宿'],['景點','📍 景點'],['餐廳','🍽 餐廳'],['其他','📌 其他']].map(function(o){ return '<option value="'+o[0]+'"'+((s.category||'')===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+
+          '</select>'+
+        '</div>'+
+      '</div>'+
+      '<div class="exp-ef-row">'+
         '<div class="exp-ef-field"><label class="exp-ef-label">前段交通</label>'+
           '<select class="exp-ef-inp" id="ief-transit-mode" style="cursor:pointer">'+
             '<option value=""'+((!s.transit||!s.transit.mode)?' selected':'')+'>（無）</option>'+
@@ -5855,7 +5864,8 @@ function saveInlineEdit(i){
   var budgetRaw=(document.getElementById('ief-budget')||{}).value||'0';
   var budgetNum=parseInt(budgetRaw.replace(/[^0-9]/g,''))||0;
   var budget='NT$ '+budgetNum.toLocaleString();
-  var category=(document.getElementById('ief-category')||{}).value||'';
+  var catEl=document.getElementById('ief-category');
+  var category=catEl?catEl.value:(s.category||'');
   var newLat=parseFloat((document.getElementById('ief-lat')||{}).value)||0;
   var newLng=parseFloat((document.getElementById('ief-lng')||{}).value)||0;
   var activities=s.activities||[];
@@ -6149,7 +6159,7 @@ window.addEventListener('load',function(){
       // 版本號
       ctx.fillStyle='rgba(255,255,255,0.65)';
       ctx.font='bold 28px system-ui,-apple-system,sans-serif';
-      ctx.fillText('v5.4',90,152);
+      ctx.fillText('v5.5',90,152);
       // 插入 apple-touch-icon
       var lnk=document.querySelector('link[rel="apple-touch-icon"]')||document.createElement('link');
       lnk.rel='apple-touch-icon'; lnk.href=c.toDataURL('image/png');

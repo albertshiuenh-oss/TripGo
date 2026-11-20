@@ -757,3 +757,55 @@ test.describe('建立群組按鈕', () => {
     });
   });
 });
+
+test.describe('飲食行程的判斷與分類', () => {
+  const foodSeed = () => {
+    const sd = structuredClone(SEED);
+    const st = sd.tripgo.groups.TEST01.stops;
+    const base = { day: 'Oct 2', arrive: '09:00', depart: '10:00', lat: 34.7, lng: 135.5 };
+    st['-f1'] = { ...base, name: '宵夜 해성막창집', note: '烤牛腸', category: '' };               // 名稱含「宵夜」
+    st['-f2'] = { ...base, name: '佛國寺', note: '11:30 午餐後開往通度寺', category: '景點' };    // 午餐後、景點
+    st['-f3'] = { ...base, name: '白淺灘文化村', note: '海岸步道、海景咖啡', category: '景點' };  // 明確是景點
+    st['-f4'] = { ...base, name: '某間小店', note: '', category: '餐廳' };                        // 明確是餐廳
+    st['-f5'] = { ...base, name: '朝聖店', note: '晚餐 烤豬皮', category: '' };                    // 備註含「晚餐」
+    st['-f6'] = { ...base, name: '飯店', note: '含早餐', category: '住宿' };                        // 住宿不算
+    st['-f7'] = { ...base, name: '某公園', note: '午餐後散步', category: '' };                     // 沒分類，只有「午餐後」
+    return sd;
+  };
+  test.describe('判斷規則', () => {
+    test.use({ seed: foodSeed() });
+    test('名稱、備註與分類一起判斷；景點／住宿不被關鍵字誤判；「午餐後」不算', async ({ page }) => {
+      await enterTrip(page);
+      const names = await page.evaluate(() => S.stops.filter(isFood).map((s) => s.name).sort());
+      expect(names).toEqual(['宵夜 해성막창집', '某間小店', '朝聖店'].sort());
+    });
+  });
+
+  test('既有景點的「編輯」表單有「分類」，且帶入目前的分類', async ({ page }) => {
+    await enterTrip(page);
+    await page.evaluate(() => { const i = S.stops.findIndex((s) => s.name === '道頓堀'); window.FB.set('tripgo/groups/TEST01/stops/-a02/category', '景點'); });
+    await page.waitForFunction(() => S.stops.find((s) => s.name === '道頓堀').category === '景點');
+    await page.evaluate(() => { const i = S.stops.findIndex((s) => s.name === '道頓堀'); tapStop(i); setTimeout(() => openInlineEdit(i), 50); });
+    await expect(page.locator('#ief-category')).toHaveValue('景點');
+  });
+
+  test('編輯景點後儲存，原本的分類不會被清掉；改成「餐廳」後會出現在飲食行程', async ({ page }) => {
+    await enterTrip(page);
+    await page.evaluate(() => window.FB.set('tripgo/groups/TEST01/stops/-a02/category', '景點'));
+    await page.waitForFunction(() => S.stops.find((s) => s.name === '道頓堀').category === '景點');
+    const idx = () => page.evaluate(() => S.stops.findIndex((s) => s.name === '道頓堀'));
+    // 只改備註、不動分類 → 分類保留
+    await page.evaluate((i) => { tapStop(i); setTimeout(() => openInlineEdit(i), 50); }, await idx());
+    await page.locator('#ief-note').fill('試吃章魚燒');
+    await page.locator('.exp-ef-save').click();
+    await page.waitForFunction(() => S.stops.find((s) => s.name === '道頓堀').note === '試吃章魚燒');
+    expect(await page.evaluate(() => S.stops.find((s) => s.name === '道頓堀').category)).toBe('景點');
+    // 改成餐廳 → 出現在飲食行程
+    await page.evaluate((i) => { tapStop(i); setTimeout(() => openInlineEdit(i), 50); }, await idx());
+    await page.locator('#ief-category').selectOption('餐廳');
+    await page.locator('.exp-ef-save').click();
+    await page.waitForFunction(() => S.stops.find((s) => s.name === '道頓堀').category === '餐廳');
+    await page.locator('.tab[data-pane="restaurant"]').click();
+    await expect(page.locator('#restaurant-list')).toContainText('道頓堀');
+  });
+});
