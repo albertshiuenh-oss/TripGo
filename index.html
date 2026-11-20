@@ -3341,6 +3341,7 @@ function renderNewStopForm(prefill){
             '<option value="walk">🚶 步行</option>'+
             '<option value="bus">🚌 公車</option>'+
             '<option value="train">🚆 火車</option>'+
+            '<option value="taxi">🚕 計程車</option>'+
           '</select>'+
         '</div>'+
         '<div class="exp-ef-field"><label class="exp-ef-label">所需時間（分）</label><input class="exp-ef-inp" id="ief-transit-mins" type="number" inputmode="numeric" min="0" placeholder="0"/></div>'+
@@ -4237,7 +4238,7 @@ function renderWxCardsByDay(dayStarts,dateToWx){
   wxScrollToToday(scroll);
 }
 
-var FOOD_KW=['早餐','午餐','中餐','晚餐','宵夜','餐廳','咖啡','Breakfast','Lunch','Dinner','Brunch','Cafe','Food','Restaurant'];
+var FOOD_KW=['早餐','午餐','中餐','晚餐','點心','消夜','宵夜','餐廳','咖啡','Breakfast','Lunch','Dinner','Brunch','Cafe','Food','Restaurant'];
 function isFood(s){
   if(s.category==='餐廳') return true;
   if(s.category==='景點'||s.category==='住宿') return false;   // 明確分類為景點／住宿的，不再用關鍵字猜
@@ -5093,7 +5094,7 @@ function exportTripKML(code, tripName){
           desc+='<br>';
         }
         if(s.transit&&s.transit.mode&&s.transit.minutes){
-          var modeMap={car:'開車',walk:'步行',bus:'公車',train:'火車'};
+          var modeMap={car:'開車',walk:'步行',bus:'公車',train:'火車',taxi:'計程車'};
           desc+='🚌 前段交通：'+s.transit.minutes+'分（'+(modeMap[s.transit.mode]||s.transit.mode)+'）<br>';
         }
         if(s.note) desc+='📝 '+escHtml(s.note)+'<br>';
@@ -5699,6 +5700,7 @@ function renderInlineEditForm(i){
             '<option value="walk"'+((s.transit&&s.transit.mode==='walk')?' selected':'')+'>🚶 步行</option>'+
             '<option value="bus"'+((s.transit&&s.transit.mode==='bus')?' selected':'')+'>🚌 公車</option>'+
             '<option value="train"'+((s.transit&&s.transit.mode==='train')?' selected':'')+'>🚆 火車</option>'+
+            '<option value="taxi"'+((s.transit&&s.transit.mode==='taxi')?' selected':'')+'>🚕 計程車</option>'+
           '</select>'+
         '</div>'+
         '<div class="exp-ef-field"><label class="exp-ef-label">所需時間（分）</label><input class="exp-ef-inp" id="ief-transit-mins" type="number" inputmode="numeric" min="0" value="'+(s.transit&&s.transit.minutes?s.transit.minutes:'')+'" placeholder="0"/></div>'+
