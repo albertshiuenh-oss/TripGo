@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # ubuntu-latest 換版後 playwright install --with-deps 會失敗，先固定版本
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
