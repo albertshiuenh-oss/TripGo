@@ -11,7 +11,7 @@
 /* ── TripGo boot: version, preview isolation, early error capture ──
    Must run before any other script touches localStorage or Firebase. */
 (function(){
-  window.TG_VERSION='5.6';
+  window.TG_VERSION='5.7';
   var PV=/\/preview\//.test(location.pathname)||/[?&]preview=1(&|$)/.test(location.search);
   window.TG_PREVIEW=PV;
 
@@ -58,7 +58,7 @@
   });
 })();
 </script>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.6%3C/text%3E%3C/svg%3E"/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.7%3C/text%3E%3C/svg%3E"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="TripGo"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -171,7 +171,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .jtp-card-done{background:rgba(255,255,255,.3);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:8px;cursor:pointer;opacity:.65;transition:opacity .2s;filter:saturate(.5)}
 .jtp-card-done:hover,.jtp-card-done:active{opacity:.85}
 .jtp-done-badge{font-size:10px;padding:2px 8px;border-radius:99px;background:rgba(46,125,50,.2);color:#7cba7e;font-weight:700;white-space:nowrap;flex-shrink:0}
-.jtp-complete-btn{background:none;border:1.5px solid #7cba7e;color:#7cba7e;font-size:10px;padding:2px 9px;border-radius:6px;cursor:pointer;flex-shrink:0;white-space:nowrap;font-weight:700}
+.jtp-complete-btn{background:none;border:1.5px solid #bcdcbd;color:#8dc38f;font-size:10px;padding:2px 9px;border-radius:6px;cursor:pointer;flex-shrink:0;white-space:nowrap;font-weight:700}
 .jtp-export-btn{background:none;border:1.5px solid #185FA5;color:#185FA5;font-size:10px;padding:2px 9px;border-radius:6px;cursor:pointer;flex-shrink:0;white-space:nowrap;font-weight:700;display:inline-flex;align-items:center;gap:3px}
 .jtp-undo-btn{background:none;border:1px solid rgba(255,255,255,.3);color:rgba(255,255,255,.55);font-size:10px;padding:2px 9px;border-radius:6px;cursor:pointer;flex-shrink:0;white-space:nowrap}
 .jtp-del{
@@ -1241,7 +1241,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <button class="login-submit" id="btn-pin-submit" disabled>登入 / 建立帳號</button>
       <div class="login-err-msg" id="login-err"></div>
     </div>
-    <div class="login-footer">TripGo v5.6</div>
+    <div class="login-footer">TripGo v5.7</div>
   </div>
 
 <div id="S-join" class="hide">
@@ -1258,7 +1258,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.6 &nbsp;·&nbsp; 2026-11-20</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.7 &nbsp;·&nbsp; 2026-11-23</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -1895,7 +1895,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 <!-- Main App JS -->
 <script>
 'use strict';
-// TripGo v5.6
+// TripGo v5.7
 
 // ════════════════════════════════
 // STATE
@@ -5435,7 +5435,7 @@ function renderTripsPreview(inputName, _skipFbSearch){
       (isDone
         ? '<span class="jtp-done-badge">✓ 已完成</span><button class="jtp-undo-btn" data-code="'+t.code+'">恢復</button>'
         : (t.isOrg?'<button class="jtp-export-btn" data-code="'+t.code+'" data-trip="'+escHtml(t.tripName)+'"><i class="ti ti-file-export"></i> 匯出</button>':'')+
-          '<button class="jtp-complete-btn" data-code="'+t.code+'">✓ 完成</button>'+
+          '<button class="jtp-complete-btn" data-code="'+t.code+'">未完成</button>'+
           (t.isOrg?'<button class="jtp-del" data-code="'+t.code+'">🗑</button>':'')+
           '<i class="ti ti-chevron-right" style="font-size:14px;color:var(--blue);opacity:.5;flex-shrink:0"></i>'
       )+'</div>';
@@ -6161,7 +6161,7 @@ window.addEventListener('load',function(){
       // 版本號
       ctx.fillStyle='rgba(255,255,255,0.65)';
       ctx.font='bold 28px system-ui,-apple-system,sans-serif';
-      ctx.fillText('v5.6',90,152);
+      ctx.fillText('v5.7',90,152);
       // 插入 apple-touch-icon
       var lnk=document.querySelector('link[rel="apple-touch-icon"]')||document.createElement('link');
       lnk.rel='apple-touch-icon'; lnk.href=c.toDataURL('image/png');

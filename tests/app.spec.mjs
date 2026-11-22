@@ -837,3 +837,14 @@ test('分類選單的「餐廳」圖示用表情符號版（帶 U+FE0F），與�
   await page.evaluate(() => openNewStopForm());
   expect(await page.locator('#ief-category option[value="餐廳"]').last().textContent()).toContain('\u{1F37D}\uFE0F');
 });
+
+test('首頁旅程卡片的按鈕顯示「未完成」，顏色比原本（#7cba7e）淡', async ({ page }) => {
+  await login(page);
+  await page.goto('/');
+  const btn = page.locator('#jtp-list .jtp-complete-btn').first();
+  await expect(btn).toHaveText('未完成', { timeout: 6000 });
+  const c = await btn.evaluate((el) => getComputedStyle(el).color);   // rgb(r, g, b)
+  const [r, g, b] = c.match(/\d+/g).map(Number);
+  expect(r).toBeGreaterThan(0x7c);   // 比 #7cba7e 的紅色分量高 → 更淡
+  expect(b).toBeGreaterThan(0x7e);
+});
