@@ -11,7 +11,7 @@
 /* ── TripGo boot: version, preview isolation, early error capture ──
    Must run before any other script touches localStorage or Firebase. */
 (function(){
-  window.TG_VERSION='5.6';
+  window.TG_VERSION='5.7';
   var PV=/\/preview\//.test(location.pathname)||/[?&]preview=1(&|$)/.test(location.search);
   window.TG_PREVIEW=PV;
 
@@ -58,7 +58,7 @@
   });
 })();
 </script>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.6%3C/text%3E%3C/svg%3E"/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.7%3C/text%3E%3C/svg%3E"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="TripGo"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -171,7 +171,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .jtp-card-done{background:rgba(255,255,255,.3);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:8px;cursor:pointer;opacity:.65;transition:opacity .2s;filter:saturate(.5)}
 .jtp-card-done:hover,.jtp-card-done:active{opacity:.85}
 .jtp-done-badge{font-size:10px;padding:2px 8px;border-radius:99px;background:rgba(46,125,50,.2);color:#7cba7e;font-weight:700;white-space:nowrap;flex-shrink:0}
-.jtp-complete-btn{background:none;border:1.5px solid #7cba7e;color:#7cba7e;font-size:10px;padding:2px 9px;border-radius:6px;cursor:pointer;flex-shrink:0;white-space:nowrap;font-weight:700}
+.jtp-complete-btn{background:none;border:1.5px solid #bcdcbd;color:#8dc38f;font-size:10px;padding:2px 9px;border-radius:6px;cursor:pointer;flex-shrink:0;white-space:nowrap;font-weight:700}
 .jtp-export-btn{background:none;border:1.5px solid #185FA5;color:#185FA5;font-size:10px;padding:2px 9px;border-radius:6px;cursor:pointer;flex-shrink:0;white-space:nowrap;font-weight:700;display:inline-flex;align-items:center;gap:3px}
 .jtp-undo-btn{background:none;border:1px solid rgba(255,255,255,.3);color:rgba(255,255,255,.55);font-size:10px;padding:2px 9px;border-radius:6px;cursor:pointer;flex-shrink:0;white-space:nowrap}
 .jtp-del{
@@ -926,6 +926,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 /* location row spans all 3 grid columns */
 .wx-day-card.wx-today{border:2px solid var(--blue);padding:9px 13px;box-shadow:0 2px 10px rgba(43,95,142,.18)}
 .wx-day-card.wx-past{opacity:.5}
+.wx-refnote{font-size:11px;font-weight:600;color:var(--text2)}
+.wx-day-card.wx-ref .wx-icon{opacity:.8}
 .wx-today-badge{display:block;width:fit-content;margin-top:3px;font-size:10px;font-weight:700;color:#fff;background:var(--blue);border-radius:8px;padding:1px 7px;line-height:1.5}
 .wx-loc-bar{grid-column:1/-1;font-size:11px;color:var(--text2);border-top:1px solid rgba(0,0,0,.07);margin-top:7px;padding-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* trip summary strip */
@@ -1241,7 +1243,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <button class="login-submit" id="btn-pin-submit" disabled>登入 / 建立帳號</button>
       <div class="login-err-msg" id="login-err"></div>
     </div>
-    <div class="login-footer">TripGo v5.6</div>
+    <div class="login-footer">TripGo v5.7</div>
   </div>
 
 <div id="S-join" class="hide">
@@ -1258,7 +1260,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.6 &nbsp;·&nbsp; 2026-11-20</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.7 &nbsp;·&nbsp; 2026-11-23</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -1895,7 +1897,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 <!-- Main App JS -->
 <script>
 'use strict';
-// TripGo v5.6
+// TripGo v5.7
 
 // ════════════════════════════════
 // STATE
@@ -4087,16 +4089,34 @@ function renderWeather(){
     locGroups[key].dates.push(ds.date);
   });
 
+  var maxStr=yyyymmdd(maxD);
+  var plusYear=function(iso){ return (parseInt(iso.slice(0,4),10)+1)+iso.slice(4); };
+  var minusYear=function(iso){ return (parseInt(iso.slice(0,4),10)-1)+iso.slice(4); };
   var fetchTasks=Object.keys(locGroups).map(function(key){
     var grp=locGroups[key];
     grp.dates.sort();
-    var startDate=grp.dates[0];
-    var endDObj=new Date(grp.dates[grp.dates.length-1]+'T12:00:00');
-    if(endDObj>maxD) endDObj=maxD;
-    var endDate=yyyymmdd(endDObj);
+    var inRange=grp.dates.filter(function(d){return d<=maxStr;});
+    var outRange=grp.dates.filter(function(d){return d>maxStr;});
+    // 預報最多 16 天；更遠的日期顯示「去年同日」的實際天氣當參考（標示清楚，不是預報）
+    var refTask=!outRange.length?Promise.resolve(null):(function(){
+      var rs=minusYear(outRange[0]), re=minusYear(outRange[outRange.length-1]);
+      var rk='ref_'+key+'_'+rs+'_'+re;
+      if(_wxCache[rk]) return Promise.resolve({key:key,daily:_wxCache[rk],ref:true});
+      return fetch('https://archive-api.open-meteo.com/v1/archive?latitude='+grp.lat+'&longitude='+grp.lng+
+        '&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_sum'+
+        '&timezone=auto&start_date='+rs+'&end_date='+re)
+        .then(function(r){return r.json();}).then(function(d){
+          if(!d||!d.daily) throw new Error('no data');
+          _wxCache[rk]=d.daily; return {key:key,daily:d.daily,ref:true};
+        }).catch(function(){return null;});
+    })();
+    if(!inRange.length) return refTask.then(function(r){return r?[r]:[];});
+    var startDate=inRange[0];
+    var endDate=inRange[inRange.length-1];
     var cacheKey=key+'_'+startDate+'_'+endDate;
-    if(_wxCache[cacheKey]) return Promise.resolve({key:key,daily:_wxCache[cacheKey]});
-    return fetch('https://api.open-meteo.com/v1/forecast?latitude='+grp.lat+'&longitude='+grp.lng+
+    var fcTask;
+    if(_wxCache[cacheKey]) fcTask=Promise.resolve({key:key,daily:_wxCache[cacheKey]});
+    else fcTask=fetch('https://api.open-meteo.com/v1/forecast?latitude='+grp.lat+'&longitude='+grp.lng+
       '&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_sum'+
       '&timezone=auto&start_date='+startDate+'&end_date='+endDate)
       .then(function(r){return r.json();}).then(function(d){
@@ -4104,20 +4124,23 @@ function renderWeather(){
         _wxCache[cacheKey]=d.daily;
         return {key:key,daily:d.daily};
       }).catch(function(){return null;});
+    return Promise.all([fcTask,refTask]).then(function(a){return a.filter(Boolean);});
   });
 
-  Promise.all(fetchTasks).then(function(results){
+  Promise.all(fetchTasks).then(function(groups){
     var dateToWx={};
-    results.forEach(function(r){
+    [].concat.apply([],groups).forEach(function(r){
       if(!r) return;
-      var grp=locGroups[r.key];
       var daily=r.daily;
       for(var i=0;i<daily.time.length;i++){
-        dateToWx[daily.time[i]]={
+        var dk=r.ref?plusYear(daily.time[i]):daily.time[i];   // 去年同日 → 對應到今年的日期
+        if(r.ref&&dateToWx[dk]) continue;
+        dateToWx[dk]={
           weathercode:daily.weathercode[i],
           temperature_2m_max:daily.temperature_2m_max[i],
           temperature_2m_min:daily.temperature_2m_min[i],
-          precipitation_sum:daily.precipitation_sum[i]
+          precipitation_sum:daily.precipitation_sum[i],
+          ref:!!r.ref
         };
       }
     });
@@ -4195,6 +4218,7 @@ function renderWxCardsByDay(dayStarts,dateToWx){
     '<span>🌡 最高 <b>'+tripMax+'°C</b></span>'+
     '<span>❄️ 最低 <b>'+tripMin+'°C</b></span>'+
     (rainDays?'<span>🌧 <b>'+rainDays+'天</b>有雨</span>':'<span>☀️ 全程無雨</span>')+
+    (dayStarts.some(function(ds){var w=dateToWx[ds.date];return w&&w.ref;})?'<span class="wx-refnote">📅 含去年同日參考</span>':'')+
   '</div>':'';
   var html=summary;
   dayStarts.forEach(function(ds){
@@ -4208,7 +4232,7 @@ function renderWxCardsByDay(dayStarts,dateToWx){
         '<div class="wx-grid">'+
           '<div class="wx-date">'+dateStr+wxDayBadge(ds.date)+'</div>'+
           '<div class="wx-icon">❓</div>'+
-          '<div class="wx-temps"><span style="color:var(--text2);font-weight:500">超出預報範圍</span></div>'+
+          '<div class="wx-temps"><span style="color:var(--text2);font-weight:500">預報尚未開放（出發前約 16 天可看）</span></div>'+
           (loc?'<div class="wx-loc-bar">📍 '+loc+'</div>':'')+
         '</div>'+
       '</div>';
@@ -4220,11 +4244,12 @@ function renderWxCardsByDay(dayStarts,dateToWx){
     var rain=wx.precipitation_sum;
     var bL=((minT-tripMin)/span*100).toFixed(1);
     var bW=Math.max((maxT-minT)/span*100,6).toFixed(1);
-    html+='<div class="wx-day-card'+wxDayClass(ds.date)+'" style="background:'+wxTint(code)+'">'+
+    html+='<div class="wx-day-card'+wxDayClass(ds.date)+(wx.ref?' wx-ref':'')+'" style="background:'+wxTint(code)+'">'+
       '<div class="wx-grid">'+
         '<div class="wx-date">'+dateStr+wxDayBadge(ds.date)+'</div>'+
         '<div class="wx-icon">'+wmoEmoji(code)+'</div>'+
         '<div class="wx-temps">'+
+          (wx.ref?'<span class="wx-refnote">📅 去年同日（參考，非預報）</span>':'')+
           '<span>'+maxT+'° / '+minT+'°C</span>'+
           '<span class="wx-desc">'+wmoDesc(code)+'</span>'+
           (rain>0?'<span class="wx-rain">🌧 '+rain.toFixed(1)+'mm</span>':'<span class="wx-rain" style="color:var(--text2)">無降雨</span>')+
@@ -5435,7 +5460,7 @@ function renderTripsPreview(inputName, _skipFbSearch){
       (isDone
         ? '<span class="jtp-done-badge">✓ 已完成</span><button class="jtp-undo-btn" data-code="'+t.code+'">恢復</button>'
         : (t.isOrg?'<button class="jtp-export-btn" data-code="'+t.code+'" data-trip="'+escHtml(t.tripName)+'"><i class="ti ti-file-export"></i> 匯出</button>':'')+
-          '<button class="jtp-complete-btn" data-code="'+t.code+'">✓ 完成</button>'+
+          '<button class="jtp-complete-btn" data-code="'+t.code+'">未完成</button>'+
           (t.isOrg?'<button class="jtp-del" data-code="'+t.code+'">🗑</button>':'')+
           '<i class="ti ti-chevron-right" style="font-size:14px;color:var(--blue);opacity:.5;flex-shrink:0"></i>'
       )+'</div>';
@@ -5474,7 +5499,7 @@ function renderTripsPreview(inputName, _skipFbSearch){
     if(compBtn){ compBtn.addEventListener('touchstart',function(e){e.stopPropagation();},{passive:false});
       compBtn.addEventListener('click',(function(code){ return function(e){
         e.stopPropagation();e.stopImmediatePropagation();_b=true;setTimeout(function(){_b=false;},500);
-        showCustomConfirm('✅','標記為已完成？','行程移至封存區，仍可點擊進入查看。','確定完成',function(){ markTripCompleted(code,true); });
+        showCustomConfirm('✅','要把這個旅程標為已完成嗎？','行程會移到下方「已完成的旅程」，仍可點擊進入查看，也可以隨時改回來。','標為已完成',function(){ markTripCompleted(code,true); });
       };})(t.code)); }
     card.addEventListener('click',function(){ if(_b) return; enterTrip(t); });
   });
@@ -6161,7 +6186,7 @@ window.addEventListener('load',function(){
       // 版本號
       ctx.fillStyle='rgba(255,255,255,0.65)';
       ctx.font='bold 28px system-ui,-apple-system,sans-serif';
-      ctx.fillText('v5.6',90,152);
+      ctx.fillText('v5.7',90,152);
       // 插入 apple-touch-icon
       var lnk=document.querySelector('link[rel="apple-touch-icon"]')||document.createElement('link');
       lnk.rel='apple-touch-icon'; lnk.href=c.toDataURL('image/png');

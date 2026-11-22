@@ -456,7 +456,7 @@ test('首頁旅程列表：一般團員也能把旅程標為「完成」，但�
   await expect(page.locator('#jtp-list .jtp-complete-btn')).toHaveCount(1);
   expect(await page.locator('#jtp-list .jtp-del').count()).toBe(0);
   await page.locator('#jtp-list .jtp-complete-btn').click();
-  await page.locator('#confirm-dialog button', { hasText: '確定完成' }).click();
+  await page.locator('#confirm-dialog button', { hasText: '標為已完成' }).click();
   await expect(page.locator('#jtp-done-section')).toContainText('大阪');
 });
 
@@ -836,4 +836,68 @@ test('分類選單的「餐廳」圖示用表情符號版（帶 U+FE0F），與�
   expect(label).toContain('\u{1F37D}\uFE0F');
   await page.evaluate(() => openNewStopForm());
   expect(await page.locator('#ief-category option[value="餐廳"]').last().textContent()).toContain('\u{1F37D}\uFE0F');
+});
+
+test('首頁旅程卡片的按鈕顯示「未完成」，顏色比原本（#7cba7e）淡', async ({ page }) => {
+  await login(page);
+  await page.goto('/');
+  const btn = page.locator('#jtp-list .jtp-complete-btn').first();
+  await expect(btn).toHaveText('未完成', { timeout: 6000 });
+  const c = await btn.evaluate((el) => getComputedStyle(el).color);   // rgb(r, g, b)
+  const [r, g, b] = c.match(/\d+/g).map(Number);
+  expect(r).toBeGreaterThan(0x7c);   // 比 #7cba7e 的紅色分量高 → 更淡
+  expect(b).toBeGreaterThan(0x7e);
+});
+
+test.describe('天氣：超過 16 天的行程', () => {
+  const openWx = async (page, iso) => {
+    await page.clock.setFixedTime(new Date(iso));
+    await enterTrip(page);
+    await page.locator('.tab[data-pane="weather"]').click();
+  };
+
+  test('整趟都在預報範圍外：改顯示「去年同日」參考，並清楚標示不是預報', async ({ page }) => {
+    const reqs = [];
+    page.on('request', (r) => { if (r.url().includes('open-meteo.com')) reqs.push(r.url()); });
+    await openWx(page, '2026-09-01T12:00:00+08:00');   // 行程 10/2–10/4，距今超過 16 天
+    await expect(page.locator('.wx-day-card')).toHaveCount(3, { timeout: 8000 });
+    await expect(page.locator('.wx-day-card .wx-refnote')).toHaveCount(3);
+    await expect(page.locator('.wx-day-card').first()).toContainText('去年同日（參考，非預報）');
+    await expect(page.locator('.wx-day-card').first()).toContainText('°C');
+    await expect(page.locator('.wx-icon', { hasText: '❓' })).toHaveCount(0);
+    await expect(page.locator('.wx-summary')).toContainText('含去年同日參考');
+    const arch = reqs.filter((u) => u.includes('archive-api'));
+    expect(arch.length).toBeGreaterThan(0);   // 每個出發地各一次
+    for (const u of arch) expect(u).toMatch(/start_date=2025-10-0[2-4]&end_date=2025-10-0[2-4]|end_date=2025-10-0[2-4]&start_date=2025-10-0[2-4]/);
+    expect(reqs.filter((u) => u.includes('/v1/forecast')).length).toBe(0);   // 不再送必定失敗的預報請求
+  });
+
+  test('一部分在預報範圍內：範圍內用預報，範圍外用去年同日', async ({ page }) => {
+    await openWx(page, '2026-09-17T12:00:00+08:00');   // 預報到 10/2
+    await expect(page.locator('.wx-day-card')).toHaveCount(3, { timeout: 8000 });
+    await expect(page.locator('.wx-day-card .wx-refnote')).toHaveCount(2);
+    await expect(page.locator('.wx-day-card').first().locator('.wx-refnote')).toHaveCount(0);
+  });
+
+  test('去年的資料也取不到時，顯示「預報尚未開放」而不是卡住', async ({ page }) => {
+    await page.route(/archive-api\.open-meteo\.com/, (r) => r.abort());
+    await openWx(page, '2026-09-01T12:00:00+08:00');
+    await expect(page.locator('.wx-day-card')).toHaveCount(3, { timeout: 8000 });
+    await expect(page.locator('.wx-day-card').first()).toContainText('預報尚未開放');
+  });
+});
+
+test('首頁「未完成」按鈕：先跳確認「要把這個旅程標為已完成嗎？」，取消不會標記', async ({ page }) => {
+  await login(page);
+  await page.goto('/');
+  const btn = page.locator('#jtp-list .jtp-complete-btn').first();
+  await expect(btn).toHaveText('未完成', { timeout: 6000 });
+  await btn.click();
+  await expect(page.locator('#confirm-dialog')).toContainText('要把這個旅程標為已完成嗎？');
+  await page.locator('#confirm-dialog #cd-no').click();
+  await expect(page.locator('#jtp-done-section .jtp-card-done')).toHaveCount(0);
+  await expect(btn).toBeVisible();
+  await btn.click();
+  await page.locator('#confirm-dialog #cd-yes').click();
+  await expect(page.locator('#jtp-done-section')).toContainText('大阪');
 });
