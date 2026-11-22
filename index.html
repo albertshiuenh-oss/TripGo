@@ -926,6 +926,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 /* location row spans all 3 grid columns */
 .wx-day-card.wx-today{border:2px solid var(--blue);padding:9px 13px;box-shadow:0 2px 10px rgba(43,95,142,.18)}
 .wx-day-card.wx-past{opacity:.5}
+.wx-refnote{font-size:11px;font-weight:600;color:var(--text2)}
+.wx-day-card.wx-ref .wx-icon{opacity:.8}
 .wx-today-badge{display:block;width:fit-content;margin-top:3px;font-size:10px;font-weight:700;color:#fff;background:var(--blue);border-radius:8px;padding:1px 7px;line-height:1.5}
 .wx-loc-bar{grid-column:1/-1;font-size:11px;color:var(--text2);border-top:1px solid rgba(0,0,0,.07);margin-top:7px;padding-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* trip summary strip */
@@ -4087,16 +4089,34 @@ function renderWeather(){
     locGroups[key].dates.push(ds.date);
   });
 
+  var maxStr=yyyymmdd(maxD);
+  var plusYear=function(iso){ return (parseInt(iso.slice(0,4),10)+1)+iso.slice(4); };
+  var minusYear=function(iso){ return (parseInt(iso.slice(0,4),10)-1)+iso.slice(4); };
   var fetchTasks=Object.keys(locGroups).map(function(key){
     var grp=locGroups[key];
     grp.dates.sort();
-    var startDate=grp.dates[0];
-    var endDObj=new Date(grp.dates[grp.dates.length-1]+'T12:00:00');
-    if(endDObj>maxD) endDObj=maxD;
-    var endDate=yyyymmdd(endDObj);
+    var inRange=grp.dates.filter(function(d){return d<=maxStr;});
+    var outRange=grp.dates.filter(function(d){return d>maxStr;});
+    // 預報最多 16 天；更遠的日期顯示「去年同日」的實際天氣當參考（標示清楚，不是預報）
+    var refTask=!outRange.length?Promise.resolve(null):(function(){
+      var rs=minusYear(outRange[0]), re=minusYear(outRange[outRange.length-1]);
+      var rk='ref_'+key+'_'+rs+'_'+re;
+      if(_wxCache[rk]) return Promise.resolve({key:key,daily:_wxCache[rk],ref:true});
+      return fetch('https://archive-api.open-meteo.com/v1/archive?latitude='+grp.lat+'&longitude='+grp.lng+
+        '&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_sum'+
+        '&timezone=auto&start_date='+rs+'&end_date='+re)
+        .then(function(r){return r.json();}).then(function(d){
+          if(!d||!d.daily) throw new Error('no data');
+          _wxCache[rk]=d.daily; return {key:key,daily:d.daily,ref:true};
+        }).catch(function(){return null;});
+    })();
+    if(!inRange.length) return refTask.then(function(r){return r?[r]:[];});
+    var startDate=inRange[0];
+    var endDate=inRange[inRange.length-1];
     var cacheKey=key+'_'+startDate+'_'+endDate;
-    if(_wxCache[cacheKey]) return Promise.resolve({key:key,daily:_wxCache[cacheKey]});
-    return fetch('https://api.open-meteo.com/v1/forecast?latitude='+grp.lat+'&longitude='+grp.lng+
+    var fcTask;
+    if(_wxCache[cacheKey]) fcTask=Promise.resolve({key:key,daily:_wxCache[cacheKey]});
+    else fcTask=fetch('https://api.open-meteo.com/v1/forecast?latitude='+grp.lat+'&longitude='+grp.lng+
       '&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_sum'+
       '&timezone=auto&start_date='+startDate+'&end_date='+endDate)
       .then(function(r){return r.json();}).then(function(d){
@@ -4104,20 +4124,23 @@ function renderWeather(){
         _wxCache[cacheKey]=d.daily;
         return {key:key,daily:d.daily};
       }).catch(function(){return null;});
+    return Promise.all([fcTask,refTask]).then(function(a){return a.filter(Boolean);});
   });
 
-  Promise.all(fetchTasks).then(function(results){
+  Promise.all(fetchTasks).then(function(groups){
     var dateToWx={};
-    results.forEach(function(r){
+    [].concat.apply([],groups).forEach(function(r){
       if(!r) return;
-      var grp=locGroups[r.key];
       var daily=r.daily;
       for(var i=0;i<daily.time.length;i++){
-        dateToWx[daily.time[i]]={
+        var dk=r.ref?plusYear(daily.time[i]):daily.time[i];   // 去年同日 → 對應到今年的日期
+        if(r.ref&&dateToWx[dk]) continue;
+        dateToWx[dk]={
           weathercode:daily.weathercode[i],
           temperature_2m_max:daily.temperature_2m_max[i],
           temperature_2m_min:daily.temperature_2m_min[i],
-          precipitation_sum:daily.precipitation_sum[i]
+          precipitation_sum:daily.precipitation_sum[i],
+          ref:!!r.ref
         };
       }
     });
@@ -4195,6 +4218,7 @@ function renderWxCardsByDay(dayStarts,dateToWx){
     '<span>🌡 最高 <b>'+tripMax+'°C</b></span>'+
     '<span>❄️ 最低 <b>'+tripMin+'°C</b></span>'+
     (rainDays?'<span>🌧 <b>'+rainDays+'天</b>有雨</span>':'<span>☀️ 全程無雨</span>')+
+    (dayStarts.some(function(ds){var w=dateToWx[ds.date];return w&&w.ref;})?'<span class="wx-refnote">📅 含去年同日參考</span>':'')+
   '</div>':'';
   var html=summary;
   dayStarts.forEach(function(ds){
@@ -4208,7 +4232,7 @@ function renderWxCardsByDay(dayStarts,dateToWx){
         '<div class="wx-grid">'+
           '<div class="wx-date">'+dateStr+wxDayBadge(ds.date)+'</div>'+
           '<div class="wx-icon">❓</div>'+
-          '<div class="wx-temps"><span style="color:var(--text2);font-weight:500">超出預報範圍</span></div>'+
+          '<div class="wx-temps"><span style="color:var(--text2);font-weight:500">預報尚未開放（出發前約 16 天可看）</span></div>'+
           (loc?'<div class="wx-loc-bar">📍 '+loc+'</div>':'')+
         '</div>'+
       '</div>';
@@ -4220,11 +4244,12 @@ function renderWxCardsByDay(dayStarts,dateToWx){
     var rain=wx.precipitation_sum;
     var bL=((minT-tripMin)/span*100).toFixed(1);
     var bW=Math.max((maxT-minT)/span*100,6).toFixed(1);
-    html+='<div class="wx-day-card'+wxDayClass(ds.date)+'" style="background:'+wxTint(code)+'">'+
+    html+='<div class="wx-day-card'+wxDayClass(ds.date)+(wx.ref?' wx-ref':'')+'" style="background:'+wxTint(code)+'">'+
       '<div class="wx-grid">'+
         '<div class="wx-date">'+dateStr+wxDayBadge(ds.date)+'</div>'+
         '<div class="wx-icon">'+wmoEmoji(code)+'</div>'+
         '<div class="wx-temps">'+
+          (wx.ref?'<span class="wx-refnote">📅 去年同日（參考，非預報）</span>':'')+
           '<span>'+maxT+'° / '+minT+'°C</span>'+
           '<span class="wx-desc">'+wmoDesc(code)+'</span>'+
           (rain>0?'<span class="wx-rain">🌧 '+rain.toFixed(1)+'mm</span>':'<span class="wx-rain" style="color:var(--text2)">無降雨</span>')+
@@ -5474,7 +5499,7 @@ function renderTripsPreview(inputName, _skipFbSearch){
     if(compBtn){ compBtn.addEventListener('touchstart',function(e){e.stopPropagation();},{passive:false});
       compBtn.addEventListener('click',(function(code){ return function(e){
         e.stopPropagation();e.stopImmediatePropagation();_b=true;setTimeout(function(){_b=false;},500);
-        showCustomConfirm('✅','標記為已完成？','行程移至封存區，仍可點擊進入查看。','確定完成',function(){ markTripCompleted(code,true); });
+        showCustomConfirm('✅','要把這個旅程標為已完成嗎？','行程會移到下方「已完成的旅程」，仍可點擊進入查看，也可以隨時改回來。','標為已完成',function(){ markTripCompleted(code,true); });
       };})(t.code)); }
     card.addEventListener('click',function(){ if(_b) return; enterTrip(t); });
   });
