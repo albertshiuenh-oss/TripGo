@@ -11,7 +11,7 @@ jobs:
   report:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: node scripts/error-report.mjs > report.md
         env:
           DB_URL: https://tripgo-6b6ed-default-rtdb.firebaseio.com
