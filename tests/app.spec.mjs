@@ -946,3 +946,27 @@ test.describe('跨年行程（12 月 → 隔年 1 月）', () => {
     expect(await page.evaluate(() => labelToDate('Oct 3'))).toBe('2026-10-03');
   });
 });
+
+test.describe('跨年行程：第一次載入的畫面順序', () => {
+  const seed = (() => {
+    const sd = structuredClone(SEED);
+    const st = {};
+    const mk = (day, name, arrive, n) => ({ name, day, arrive, depart: arrive, lat: 35.1, lng: 129, category: '景點', createdAt: n });
+    st['-k1'] = mk('Jan 1', '退房', '10:00', 1);
+    st['-k2'] = mk('Jan 1', '機場回程', '12:10', 2);
+    st['-k3'] = mk('Dec 24', '桃園機場', '12:40', 3);
+    st['-k4'] = mk('Dec 24', '金海機場', '18:50', 4);
+    sd.tripgo.groups.TEST01.stops = st;
+    return sd;
+  })();
+  test.use({ seed });
+  test('重新開啟時（S.stops 還是空的），Dec 24 的日期標題在 Jan 1 前面', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-11-23T08:00:00+08:00'));
+    await enterTrip(page);
+    await expect(page.locator('#stop-list .day-hdr')).toHaveCount(2, { timeout: 8000 });
+    const hdrs = await page.locator('#stop-list .day-hdr').evaluateAll((els) => els.map((e) => e.dataset.date));
+    expect(hdrs).toEqual(['2026-12-24', '2027-01-01']);
+    const names = await page.evaluate(() => S.stops.map((s) => s.name));
+    expect(names).toEqual(['桃園機場', '金海機場', '退房', '機場回程']);
+  });
+});
