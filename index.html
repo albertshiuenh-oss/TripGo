@@ -2886,12 +2886,66 @@ function makePinUrl(prev){   // prev=true（或 1）：上一個景點（淡色�
 }
 
 // ── 點景點 B 時：若剛才選的是 A（地圖上還有 A 的標記），A 改成淡色並保留，地圖縮放到同時看得到 A 和 B ──
-var prevMarker=null, _pin=null, _pairLine=null, _pairAnim=0, _pairAnimating=false;   // _pin = 目前標記的景點 {key,pos,title}
+var prevMarker=null, _pin=null, _pairLine=null, _pairLabel=null, _pairAnim=0, _pairAnimating=false;   // _pin = 目前標記的景點 {key,pos,title}
 function clearPrevPin(){
   _pairAnim++; _pairAnimating=false;   // 中止進行中的動畫
   if(prevMarker){ prevMarker.setMap(null); prevMarker=null; }
   if(_pairLine){ _pairLine.setMap(null); _pairLine=null; }
+  if(_pairLabel){ _pairLabel.setMap(null); _pairLabel=null; }
   _pairBounds=null;
+}
+// A→B 路線：依 B 的「前段交通」（開車／計程車→駕車、公車／火車→大眾運輸、步行→步行，沒設定→駕車）向 Google 查路線。
+// 查不到時（例如韓國沒有 Google 駕車路線）改查大眾運輸，再不行就畫直線並標示距離。結果會快取。
+var _pairRouteCache={};
+function pairModeOf(key){
+  var st=S.stops.find(function(x){return x._key===key;}), m=st&&st.transit&&st.transit.mode||'car';
+  var T=google.maps.TravelMode;
+  return {mode:m, travel:m==='walk'?T.WALKING:(m==='bus'||m==='train')?T.TRANSIT:T.DRIVING};
+}
+function getPairRoute(a,b,key){
+  var pm=pairModeOf(key), T=google.maps.TravelMode;
+  var ck=[a.lat,a.lng,b.lat,b.lng,pm.mode].map(function(v){return typeof v==='function'?v():v;}).join(',');
+  if(_pairRouteCache[ck]) return Promise.resolve(_pairRouteCache[ck]);
+  var tries=[pm.travel]; if(pm.travel!==T.TRANSIT) tries.push(T.TRANSIT);
+  var ask=function(i){
+    if(!dsvc||i>=tries.length) return Promise.resolve(null);
+    return new Promise(function(res){
+      var req={origin:a,destination:b,travelMode:tries[i]};
+      if(tries[i]===T.DRIVING) req.drivingOptions={departureTime:new Date(),trafficModel:'bestguess'};
+      var done=false, to=setTimeout(function(){ if(!done){done=true;res(null);} },4000);
+      try{ dsvc.route(req,function(r,st){
+        if(done) return; done=true; clearTimeout(to);
+        if(st!==google.maps.DirectionsStatus.OK||!r||!r.routes||!r.routes[0]) return res(null);
+        var leg=r.routes[0].legs[0];
+        res({path:r.routes[0].overview_path, secs:(leg.duration_in_traffic||leg.duration).value, travel:tries[i], mode:pm.mode, fallback:i>0});
+      }); }catch(e){ done=true; clearTimeout(to); res(null); }
+    }).then(function(x){ return x||ask(i+1); });
+  };
+  return ask(0).then(function(x){ if(x) _pairRouteCache[ck]=x; return x; });
+}
+function fmtMins(secs){ var m=Math.max(1,Math.round(secs/60)); return m<60?m+' 分':Math.floor(m/60)+' 小時'+(m%60?' '+m%60+' 分':''); }
+function pairLabelText(rt,a,b){
+  if(!rt){
+    var km=google.maps.geometry&&google.maps.geometry.spherical?google.maps.geometry.spherical.computeDistanceBetween(a,b)/1000:haversineKm(a,b);
+    return '📏 直線 '+(km<10?km.toFixed(1):Math.round(km))+' km（查不到路線）';
+  }
+  var T=google.maps.TravelMode;
+  var ic=rt.travel===T.WALKING?'🚶':rt.travel===T.TRANSIT?(rt.mode==='train'?'🚆':'🚌'):(rt.mode==='taxi'?'🚕':'🚗');
+  return ic+' 約 '+fmtMins(rt.secs)+(rt.fallback?'（大眾運輸）':'');
+}
+function haversineKm(a,b){
+  var g=function(p,k){var v=p[k];return typeof v==='function'?v.call(p):+v;}, R=6371, r=Math.PI/180;
+  var dLa=(g(b,'lat')-g(a,'lat'))*r, dLn=(g(b,'lng')-g(a,'lng'))*r;
+  var h=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(g(a,'lat')*r)*Math.cos(g(b,'lat')*r)*Math.sin(dLn/2)*Math.sin(dLn/2);
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+function pairLabelIcon(text){
+  var w=20;   // 估寬度：中文 13px、英數空白 7.5px、表情符號 17px
+  Array.from(text).forEach(function(ch){ var c=ch.codePointAt(0); w+=c>0x1F000?17:c>0x2E80?13.5:7.5; });
+  w=Math.round(w);
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="28" viewBox="0 0 '+w+' 28"><rect x="1" y="1" width="'+(w-2)+'" height="26" rx="13" fill="#fff" stroke="#E8710A" stroke-width="2"/>'+
+    '<text x="'+(w/2)+'" y="19" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" font-weight="700" fill="#B3530A">'+text.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</text></svg>';
+  return {url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg), scaledSize:new google.maps.Size(w,28), anchor:new google.maps.Point(w/2,14)};
 }
 function pinIcon(k){ return {url:makePinUrl(k), scaledSize:new google.maps.Size(22,40), anchor:new google.maps.Point(11,40)}; }
 function reducedMotion(){ return !!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
@@ -2901,20 +2955,29 @@ function focusStopOnMap(pos, title, key){
   clearPrevPin();
   if(!A){ dropStopPin(pos, title); _pin={key:key,pos:pos,title:title}; map.panTo(pos); map.setZoom(15); return; }
   var b=new google.maps.LatLngBounds(); b.extend(A.pos); b.extend(pos);
+  var la=function(p){return typeof p.lat==='function'?p.lat():+p.lat;}, ln=function(p){return typeof p.lng==='function'?p.lng():+p.lng;};
+  var tok=++_pairAnim; _pairAnimating=true;
+  var alive=function(){ return tok===_pairAnim; };   // 中途點了別的景點 → clearPrevPin 讓 _pairAnim 變了 → 這次動畫停止
   prevMarker=oldA; prevMarker.setOptions({zIndex:1, clickable:false, title:A.title+'（上一個）'});
-  _pairLine=new google.maps.Polyline({path:[A.pos,A.pos], map:map, strokeColor:'#2B5F8E', strokeOpacity:0.75, strokeWeight:3, zIndex:2, clickable:false});
-  var finish=function(){   // 最後狀態：A 淡色＋外框、A→B 的線、B 標記、框住兩點
+  // 橘色（和每天路線的藍色區分），沿 Google 路線畫
+  _pairLine=new google.maps.Polyline({path:[A.pos,A.pos], map:map, strokeColor:'#E8710A', strokeOpacity:0.95, strokeWeight:5, zIndex:3, clickable:false});
+  var route=null, routeP=getPairRoute(A.pos,pos,key).then(function(r){ route=r; return r; });
+  var fullPath=function(){ return route&&route.path&&route.path.length>1?route.path:[A.pos,pos]; };
+  var finish=function(){   // 最後狀態：A 淡色＋外框、A→B 的路線與時間、B 標記、框住兩點
     prevMarker.setIcon(pinIcon(1));
-    _pairLine.setPath([A.pos,pos]); _pairLine._tg={a:A.pos,b:pos};
+    var fp=fullPath(); _pairLine.setPath(fp); _pairLine._tg={a:A.pos,b:pos,route:route};
+    fp.forEach(function(p){ b.extend(p); });
+    var mid=fp[Math.floor(fp.length/2)];
+    if(fp.length===2) mid={lat:(la(A.pos)+la(pos))/2, lng:(ln(A.pos)+ln(pos))/2};
+    var txt=pairLabelText(route,A.pos,pos);
+    _pairLabel=new google.maps.Marker({position:mid, map:map, zIndex:20, clickable:false, icon:pairLabelIcon(txt), title:txt});
+    _pairLabel._txt=txt;
     dropStopPin(pos, title); if(stopMarker.setZIndex) stopMarker.setZIndex(10);
     _pin={key:key,pos:pos,title:title}; _pairBounds=b; _pairAnimating=false;
     fitPair();
   };
-  if(reducedMotion()){ finish(); return; }
-  // ── 微動畫：① A 淡出 → ② 地圖漸縮到兩點 → ③ 從 A 往 B 畫線 → ④ B 標記落下 ──
-  var tok=++_pairAnim; _pairAnimating=true;
-  var alive=function(){ return tok===_pairAnim; };
-  var la=function(p){return typeof p.lat==='function'?p.lat():+p.lat;}, ln=function(p){return typeof p.lng==='function'?p.lng():+p.lng;};
+  if(reducedMotion()){ routeP.then(function(){ if(alive()) finish(); }); return; }   // 不播動畫：查到路線就直接顯示最後畫面
+  // ── 微動畫：① A 淡出 → ② 地圖漸縮到兩點 → ③ 沿路線從 A 往 B 畫線 → ④ B 標記落下 ──
   var t0=performance.now();
   (function fade(now){
     if(!alive()) return;
@@ -2932,14 +2995,22 @@ function focusStopOnMap(pos, title, key){
     })();
   }
   function draw(){
-    fitPair(b);
-    var t1=performance.now();
-    (function grow(now){
+    routeP.then(function(){
       if(!alive()) return;
-      var t=Math.min(1,(now-t1)/600), e=1-Math.pow(1-t,3);   // ease-out
-      _pairLine.setPath([A.pos,{lat:la(A.pos)+(la(pos)-la(A.pos))*e, lng:ln(A.pos)+(ln(pos)-ln(A.pos))*e}]);
-      if(t<1) requestAnimationFrame(grow); else finish();
-    })(t1);
+      var fp=fullPath(), cum=[0];   // 沿路線依距離比例一段一段畫出來
+      for(var i=1;i<fp.length;i++) cum.push(cum[i-1]+Math.hypot(la(fp[i])-la(fp[i-1]),ln(fp[i])-ln(fp[i-1])));
+      var total=cum[cum.length-1]||1, bb=new google.maps.LatLngBounds(); fp.forEach(function(p){bb.extend(p);});
+      fitPair(bb);
+      var t1=performance.now(), D=Math.min(1400,700+fp.length*4);
+      (function grow(now){
+        if(!alive()) return;
+        var t=Math.min(1,(now-t1)/D), d=(1-Math.pow(1-t,3))*total, j=1;   // ease-out
+        while(j<fp.length-1&&cum[j]<d) j++;
+        var seg=(cum[j]-cum[j-1])||1, f=Math.max(0,Math.min(1,(d-cum[j-1])/seg));
+        _pairLine.setPath(fp.slice(0,j).concat([{lat:la(fp[j-1])+(la(fp[j])-la(fp[j-1]))*f, lng:ln(fp[j-1])+(ln(fp[j])-ln(fp[j-1]))*f}]));
+        if(t<1) requestAnimationFrame(grow); else finish();
+      })(t1);
+    });
   }
 }
 // 地圖框住 A、B 兩點：下方要扣掉景點資訊卡蓋住的高度（資訊卡是查完資料才跳出來，所以出現後會再框一次）
