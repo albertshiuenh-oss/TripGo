@@ -1041,3 +1041,29 @@ test.describe('餐廳預訂', () => {
     expect([s.resv, s.resvNo]).toEqual(['待訂', 'X9']);
   });
 });
+
+test.describe('住宿預訂', () => {
+  const openEdit = (page, name) => page.evaluate((n) => { const i = S.stops.findIndex((s) => s.name === n); tapStop(i); setTimeout(() => openInlineEdit(i), 50); }, name);
+  test('分類「住宿」也有預訂欄位；存檔後行程頁的分類旁顯示「已訂 #編號」', async ({ page }) => {
+    await enterTrip(page);
+    await openEdit(page, '道頓堀');
+    await page.locator('#ief-category').selectOption('住宿');
+    await expect(page.locator('#ief-resv')).toBeVisible();
+    await page.locator('#ief-resv').selectOption('已訂');
+    await page.locator('#ief-resv-no').fill('HTL-88');
+    await page.locator('.exp-ef-save').click();
+    await page.waitForFunction(() => S.stops.find((s) => s.name === '道頓堀').resvNo === 'HTL-88');
+    await expect(page.locator('#stop-list .resv-tag.r-yes')).toHaveText('✅ 已訂 #HTL-88');
+    await openEdit(page, '道頓堀');
+    await expect(page.locator('#ief-resv')).toHaveValue('已訂');
+  });
+  test('景點、其他分類沒有預訂欄位；沒設定預訂的不顯示標籤', async ({ page }) => {
+    await enterTrip(page);
+    await expect(page.locator('#stop-list .resv-tag')).toHaveCount(0);
+    await openEdit(page, '道頓堀');
+    for (const c of ['景點', '其他', '']) {
+      await page.locator('#ief-category').selectOption(c);
+      await expect(page.locator('#ief-resv')).toBeHidden();
+    }
+  });
+});

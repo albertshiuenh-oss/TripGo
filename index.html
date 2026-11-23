@@ -896,6 +896,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .rest-time{font-size:12px;color:var(--text2);margin-top:2px}
 .rest-resv{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:1px 7px;margin-top:3px}
 .rest-resv.r-yes{background:#E8F5E9;color:#2E7D32}.rest-resv.r-todo{background:#FFF3E0;color:#E65100}.rest-resv.r-none{background:var(--bg2);color:var(--text2)}.rest-resv.r-unset{background:transparent;color:var(--text2);font-weight:500;padding-left:0}
+.cat-tag.resv-tag.r-yes{background:#E8F5E9;color:#2E7D32}.cat-tag.resv-tag.r-todo{background:#FFF3E0;color:#E65100}.cat-tag.resv-tag.r-none{background:var(--bg2);color:var(--text2)}
 .rest-resv-sum{display:flex;gap:6px;flex-wrap:wrap;padding:6px 14px 8px;font-size:12px;border-bottom:1px solid var(--bg2)}
 .offline-banner{display:none;align-items:center;gap:8px;padding:7px 14px;background:#E65100;color:#fff;font-size:12px;font-weight:600;flex-shrink:0}
 .share-banner{display:flex;align-items:center;gap:8px;padding:7px 14px;background:#185FA5;color:#fff;font-size:12px;font-weight:600;flex-shrink:0}
@@ -2721,7 +2722,7 @@ function renderStops(){
           '<div class="stop-name"'+(tbadge?' style="padding-right:95px"':'')+'>'+
             '<i class="ti ti-chevron-right stop-arr" id="sa-'+i+'" style="font-size:12px;font-weight:700;vertical-align:middle;margin-right:4px;transition:transform .2s;color:inherit;opacity:1"></i>'+escHtml(s.name||'')+nextTag+(s.category?'<span class="cat-tag cat-'+s.category+'">'+(s.category==='住宿'?'🏨':s.category==='景點'?'📍':s.category==='餐廳'?'🍽️':'📌')+' '+s.category+'</span>':'')+
           '</div>' +
-          '<div class="stop-time">'+escHtml((s.day?s.day+' ':'')+(s.arrive||'')+(s.depart?' ~ '+s.depart:''))+stayStr+(s.note?' · '+escHtml(s.note.substring(0,25)):'')+'</div>' +
+          '<div class="stop-time">'+escHtml((s.day?s.day+' ':'')+(s.arrive||'')+(s.depart?' ~ '+s.depart:''))+stayStr+resvTag(s)+(s.note?' · '+escHtml(s.note.substring(0,25)):'')+'</div>' +
         '</div>' +
         (MS_MODE?'':(tbadge?'<div style="position:absolute;top:11px;right:14px;display:flex;align-items:center;gap:4px;">'+tbadge+'</div>':'')) +
       '</div>' +
@@ -3469,7 +3470,7 @@ function saveNewStop(newActs, newNotes){
       createdAt:Date.now()
     };
     if(transitMode&&transitMins>0) obj.transit={mode:transitMode,minutes:transitMins};
-    if(category==='餐廳'){ if(resvV) obj.resv=resvV; if(resvNoV) obj.resvNo=resvNoV; }
+    if(hasResv(category)){ if(resvV) obj.resv=resvV; if(resvNoV) obj.resvNo=resvNoV; }
     var pushRef=window.FB.push('tripgo/groups/'+S.groupCode+'/stops',obj);
     if(pushRef&&pushRef.key) _scrollToStopKey=pushRef.key;
     cancelMapPick();
@@ -4296,6 +4297,7 @@ function isFood(s){
   return FOOD_KW.some(function(k){return t.toLowerCase().includes(k.toLowerCase());});
 }
 // ── 餐廳預訂（只在分類為「餐廳」時使用）：resv = '已訂' | '待訂' | '免訂' | ''，resvNo = 預訂編號 ──
+function hasResv(cat){ return cat==='餐廳'||cat==='住宿'; }   // 可以填預訂的分類
 var RESV_OPTS=[['','—'],['待訂','⏳ 待訂'],['已訂','✅ 已訂'],['免訂','🚶 免訂']];   // 選單文字要短，手機上三欄並排才放得下
 function resvFieldsHtml(s,show){
   var st=show?'':'display:none;';
@@ -4308,11 +4310,16 @@ function resvFieldsHtml(s,show){
 }
 document.addEventListener('change',function(e){
   if(!e.target||e.target.id!=='ief-category') return;
-  var on=e.target.value==='餐廳';
+  var on=hasResv(e.target.value);
   document.querySelectorAll('.ief-resv-f').forEach(function(el){el.style.display=on?'':'none';});
 });
+function resvTag(s){
+  if(!hasResv(s.category)||!s.resv) return '';
+  var m={'已訂':['r-yes','✅ 已訂'],'待訂':['r-todo','⏳ 待訂'],'免訂':['r-none','🚶 免訂']}[s.resv]; if(!m) return '';
+  return '<span class="cat-tag resv-tag '+m[0]+'">'+m[1]+(s.resv!=='免訂'&&s.resvNo?' #'+escHtml(s.resvNo):'')+'</span>';
+}
 function resvBadge(s){
-  if(s.category!=='餐廳') return '';
+  if(!hasResv(s.category)) return '';
   var no=s.resvNo?' #'+escHtml(s.resvNo):'';
   if(s.resv==='已訂') return '<span class="rest-resv r-yes">✅ 已預訂'+no+'</span>';
   if(s.resv==='待訂') return '<span class="rest-resv r-todo">⏳ 待預訂'+no+'</span>';
@@ -5774,7 +5781,7 @@ function renderInlineEditForm(i){
             [['','（未分類）'],['住宿','🏨 住宿'],['景點','📍 景點'],['餐廳','🍽️ 餐廳'],['其他','📌 其他']].map(function(o){ return '<option value="'+o[0]+'"'+((s.category||'')===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+
           '</select>'+
         '</div>'+
-        resvFieldsHtml(s,s.category==='餐廳')+
+        resvFieldsHtml(s,hasResv(s.category))+
       '</div>'+
       '<div class="exp-ef-row">'+
         '<div class="exp-ef-field"><label class="exp-ef-label">前段交通</label>'+
@@ -5973,7 +5980,7 @@ function saveInlineEdit(i){
   window.FB.set(path+'/note',note.trim());
   window.FB.set(path+'/budget',budget);
   window.FB.set(path+'/category',category);
-  if(category==='餐廳'&&resvEl){   // 只有餐廳寫入；改成別的分類時保留原資料
+  if(hasResv(category)&&resvEl){   // 只有餐廳／住宿寫入；改成別的分類時保留原資料
     window.FB.set(path+'/resv',resvVal);
     window.FB.set(path+'/resvNo',resvNoVal);
   }
