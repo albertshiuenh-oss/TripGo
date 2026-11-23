@@ -11,7 +11,7 @@
 /* ── TripGo boot: version, preview isolation, early error capture ──
    Must run before any other script touches localStorage or Firebase. */
 (function(){
-  window.TG_VERSION='5.9';
+  window.TG_VERSION='5.10';
   var PV=/\/preview\//.test(location.pathname)||/[?&]preview=1(&|$)/.test(location.search);
   window.TG_PREVIEW=PV;
 
@@ -58,7 +58,7 @@
   });
 })();
 </script>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.9%3C/text%3E%3C/svg%3E"/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.10%3C/text%3E%3C/svg%3E"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="TripGo"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -894,6 +894,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .rest-info{flex:1;min-width:0}
 .rest-name{font-size:15px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rest-time{font-size:12px;color:var(--text2);margin-top:2px}
+.rest-resv{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:1px 7px;margin-top:3px}
+.rest-resv.r-yes{background:#E8F5E9;color:#2E7D32}.rest-resv.r-todo{background:#FFF3E0;color:#E65100}.rest-resv.r-none{background:var(--bg2);color:var(--text2)}.rest-resv.r-unset{background:transparent;color:var(--text2);font-weight:500;padding-left:0}
+.rest-resv-sum{display:flex;gap:6px;flex-wrap:wrap;padding:6px 14px 8px;font-size:12px;border-bottom:1px solid var(--bg2)}
 .offline-banner{display:none;align-items:center;gap:8px;padding:7px 14px;background:#E65100;color:#fff;font-size:12px;font-weight:600;flex-shrink:0}
 .share-banner{display:flex;align-items:center;gap:8px;padding:7px 14px;background:#185FA5;color:#fff;font-size:12px;font-weight:600;flex-shrink:0}
 .share-btn{background:none;border:1px solid var(--blue);color:var(--blue);font-size:11px;padding:2px 9px;border-radius:6px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:3px}
@@ -1243,7 +1246,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <button class="login-submit" id="btn-pin-submit" disabled>登入 / 建立帳號</button>
       <div class="login-err-msg" id="login-err"></div>
     </div>
-    <div class="login-footer">TripGo v5.9</div>
+    <div class="login-footer">TripGo v5.10</div>
   </div>
 
 <div id="S-join" class="hide">
@@ -1260,7 +1263,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.9 &nbsp;·&nbsp; 2026-11-23</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.10 &nbsp;·&nbsp; 2026-11-23</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -1897,7 +1900,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 <!-- Main App JS -->
 <script>
 'use strict';
-// TripGo v5.9
+// TripGo v5.10
 
 // ════════════════════════════════
 // STATE
@@ -3366,6 +3369,7 @@ function renderNewStopForm(prefill){
         '</div>'+
         '<div class="exp-ef-field"><label class="exp-ef-label">所需時間（分）</label><input class="exp-ef-inp" id="ief-transit-mins" type="number" inputmode="numeric" min="0" placeholder="0"/></div>'+
       '</div>'+
+      '<div class="exp-ef-row">'+resvFieldsHtml({},false)+'</div>'+
       '<label class="exp-ef-label">日期</label>'+
       '<input class="exp-ef-inp" id="ief-day" type="date" style="cursor:pointer" value="'+(prefill.day||'')+'"/>'+
       '<label class="exp-ef-label">備註</label>'+
@@ -3449,6 +3453,7 @@ function saveNewStop(newActs, newNotes){
   var note=(document.getElementById('ief-note')||{}).value||'';
   var budget=(document.getElementById('ief-budget')||{}).value||'NT$ 0';
   var category=(document.getElementById('ief-category')||{}).value||'';
+  var resvV=(document.getElementById('ief-resv')||{}).value||'', resvNoV=((document.getElementById('ief-resv-no')||{}).value||'').trim();
   var transitMode=(document.getElementById('ief-transit-mode')||{}).value||'';
   var transitMins=parseInt((document.getElementById('ief-transit-mins')||{}).value)||0;
   var lat=parseFloat((document.getElementById('ief-lat')||{}).value)||0;
@@ -3464,6 +3469,7 @@ function saveNewStop(newActs, newNotes){
       createdAt:Date.now()
     };
     if(transitMode&&transitMins>0) obj.transit={mode:transitMode,minutes:transitMins};
+    if(category==='餐廳'){ if(resvV) obj.resv=resvV; if(resvNoV) obj.resvNo=resvNoV; }
     var pushRef=window.FB.push('tripgo/groups/'+S.groupCode+'/stops',obj);
     if(pushRef&&pushRef.key) _scrollToStopKey=pushRef.key;
     cancelMapPick();
@@ -4289,6 +4295,30 @@ function isFood(s){
   t=t.replace(/[早午中晚宵]餐[後后前]|餐[後后前]/g,' ');   // 「午餐後開往…」不是在吃飯
   return FOOD_KW.some(function(k){return t.toLowerCase().includes(k.toLowerCase());});
 }
+// ── 餐廳預訂（只在分類為「餐廳」時使用）：resv = '已訂' | '待訂' | '免訂' | ''，resvNo = 預訂編號 ──
+var RESV_OPTS=[['','—'],['待訂','⏳ 待訂'],['已訂','✅ 已訂'],['免訂','🚶 免訂']];   // 選單文字要短，手機上三欄並排才放得下
+function resvFieldsHtml(s,show){
+  var st=show?'':'display:none;';
+  return '<div class="exp-ef-field ief-resv-f" style="'+st+'flex:0.9"><label class="exp-ef-label">預訂</label>'+
+      '<select class="exp-ef-inp" id="ief-resv" style="cursor:pointer">'+
+      RESV_OPTS.map(function(o){return '<option value="'+o[0]+'"'+((s.resv||'')===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+
+      '</select></div>'+
+    '<div class="exp-ef-field ief-resv-f" style="'+st+'flex:1.1"><label class="exp-ef-label">預訂編號</label>'+
+      '<input class="exp-ef-inp" id="ief-resv-no" value="'+escHtml(s.resvNo||'')+'" placeholder="（選填）"/></div>';
+}
+document.addEventListener('change',function(e){
+  if(!e.target||e.target.id!=='ief-category') return;
+  var on=e.target.value==='餐廳';
+  document.querySelectorAll('.ief-resv-f').forEach(function(el){el.style.display=on?'':'none';});
+});
+function resvBadge(s){
+  if(s.category!=='餐廳') return '';
+  var no=s.resvNo?' #'+escHtml(s.resvNo):'';
+  if(s.resv==='已訂') return '<span class="rest-resv r-yes">✅ 已預訂'+no+'</span>';
+  if(s.resv==='待訂') return '<span class="rest-resv r-todo">⏳ 待預訂'+no+'</span>';
+  if(s.resv==='免訂') return '<span class="rest-resv r-none">🚶 不需預訂</span>';
+  return '<span class="rest-resv r-unset">預訂：未設定'+no+'</span>';
+}
 function renderRestaurant(center){
   var list=document.getElementById('restaurant-list'); if(!list) return;
   var stops=S.stops.filter(function(s){return isFood(s);});
@@ -4311,9 +4341,19 @@ function renderRestaurant(center){
       html+='<div class="rest-card" data-key="'+escHtml(s._key||'')+'">'+
         '<div class="rest-icon">'+icon+'</div><div class="rest-info">'+
         '<div class="rest-name">'+escHtml(s.name||'')+'</div>'+
-        '<div class="rest-time">'+(t?t+' · ':'')+escHtml(s.note||'')+'</div></div></div>';
+        '<div class="rest-time">'+(t?t+' · ':'')+escHtml(s.note||'')+'</div>'+resvBadge(s)+'</div></div>';
     });
   });
+  var rs=stops.filter(function(s){return s.category==='餐廳';});
+  if(rs.length){
+    var c=function(v){return rs.filter(function(s){return (s.resv||'')===v;}).length;};
+    var parts=[];
+    if(c('已訂')) parts.push('<span class="rest-resv r-yes">✅ 已預訂 '+c('已訂')+'</span>');
+    if(c('待訂')) parts.push('<span class="rest-resv r-todo">⏳ 待預訂 '+c('待訂')+'</span>');
+    if(c('免訂')) parts.push('<span class="rest-resv r-none">🚶 不需預訂 '+c('免訂')+'</span>');
+    if(c('')) parts.push('<span class="rest-resv r-unset">未設定 '+c('')+'</span>');
+    html='<div class="rest-resv-sum" id="rest-resv-sum">'+parts.join('')+'</div>'+html;
+  }
   list.innerHTML=html;
   if(center){
     setTimeout(function(){
@@ -5734,6 +5774,7 @@ function renderInlineEditForm(i){
             [['','（未分類）'],['住宿','🏨 住宿'],['景點','📍 景點'],['餐廳','🍽️ 餐廳'],['其他','📌 其他']].map(function(o){ return '<option value="'+o[0]+'"'+((s.category||'')===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+
           '</select>'+
         '</div>'+
+        resvFieldsHtml(s,s.category==='餐廳')+
       '</div>'+
       '<div class="exp-ef-row">'+
         '<div class="exp-ef-field"><label class="exp-ef-label">前段交通</label>'+
@@ -5911,6 +5952,8 @@ function saveInlineEdit(i){
   var budget='NT$ '+budgetNum.toLocaleString();
   var catEl=document.getElementById('ief-category');
   var category=catEl?catEl.value:(s.category||'');
+  var resvEl=document.getElementById('ief-resv');
+  var resvVal=resvEl?resvEl.value||'':'', resvNoVal=((document.getElementById('ief-resv-no')||{}).value||'').trim();
   var newLat=parseFloat((document.getElementById('ief-lat')||{}).value)||0;
   var newLng=parseFloat((document.getElementById('ief-lng')||{}).value)||0;
   var activities=s.activities||[];
@@ -5930,6 +5973,10 @@ function saveInlineEdit(i){
   window.FB.set(path+'/note',note.trim());
   window.FB.set(path+'/budget',budget);
   window.FB.set(path+'/category',category);
+  if(category==='餐廳'&&resvEl){   // 只有餐廳寫入；改成別的分類時保留原資料
+    window.FB.set(path+'/resv',resvVal);
+    window.FB.set(path+'/resvNo',resvNoVal);
+  }
   window.FB.set(path+'/activities',activities);
   window.FB.set(path+'/notes',notes);
   if(transitMode&&transitMins>0)
@@ -6204,7 +6251,7 @@ window.addEventListener('load',function(){
       // 版本號
       ctx.fillStyle='rgba(255,255,255,0.65)';
       ctx.font='bold 28px system-ui,-apple-system,sans-serif';
-      ctx.fillText('v5.9',90,152);
+      ctx.fillText('v5.10',90,152);
       // 插入 apple-touch-icon
       var lnk=document.querySelector('link[rel="apple-touch-icon"]')||document.createElement('link');
       lnk.rel='apple-touch-icon'; lnk.href=c.toDataURL('image/png');

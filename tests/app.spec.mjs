@@ -970,3 +970,74 @@ test.describe('跨年行程：第一次載入的畫面順序', () => {
     expect(names).toEqual(['桃園機場', '金海機場', '退房', '機場回程']);
   });
 });
+
+test.describe('餐廳預訂', () => {
+  const openEdit = (page, name) => page.evaluate((n) => { const i = S.stops.findIndex((s) => s.name === n); tapStop(i); setTimeout(() => openInlineEdit(i), 50); }, name);
+
+  test('分類是「餐廳」才出現預訂欄位，且和分類在同一列；切換分類會即時顯示／隱藏', async ({ page }) => {
+    await enterTrip(page);
+    await openEdit(page, '道頓堀');
+    await expect(page.locator('#ief-category')).toBeVisible();
+    await expect(page.locator('#ief-resv')).toBeHidden();
+    await page.locator('#ief-category').selectOption('餐廳');
+    await expect(page.locator('#ief-resv')).toBeVisible();
+    await expect(page.locator('#ief-resv-no')).toBeVisible();
+    const [c, r, n] = await Promise.all(['#ief-category', '#ief-resv', '#ief-resv-no'].map((sel) => page.locator(sel).boundingBox()));
+    expect(Math.abs(c.y - r.y)).toBeLessThan(4);   // 同一列
+    expect(Math.abs(c.y - n.y)).toBeLessThan(4);
+    expect(c.width).toBeLessThan(r.width * 2);     // 分類不再佔滿整列
+    await page.locator('#ief-category').selectOption('景點');
+    await expect(page.locator('#ief-resv')).toBeHidden();
+  });
+
+  test('存檔寫入 resv / resvNo，再開編輯會帶入；預訂編號含 HTML 只當文字', async ({ page }) => {
+    await enterTrip(page);
+    await openEdit(page, '道頓堀');
+    await page.locator('#ief-category').selectOption('餐廳');
+    await page.locator('#ief-resv').selectOption('已訂');
+    await page.locator('#ief-resv-no').fill('<b>A123</b>');
+    await page.locator('.exp-ef-save').click();
+    await page.waitForFunction(() => S.stops.find((s) => s.name === '道頓堀').resvNo === '<b>A123</b>');
+    expect(await page.evaluate(() => S.stops.find((s) => s.name === '道頓堀').resv)).toBe('已訂');
+    await openEdit(page, '道頓堀');
+    await expect(page.locator('#ief-resv')).toHaveValue('已訂');
+    await expect(page.locator('#ief-resv-no')).toHaveValue('<b>A123</b>');
+    await page.locator('.tab[data-pane="restaurant"]').click();
+    const card = page.locator('.rest-card', { hasText: '道頓堀' });
+    await expect(card.locator('.rest-resv')).toHaveText('✅ 已預訂 #<b>A123</b>');
+    await expect(page.locator('#restaurant-list b')).toHaveCount(0);
+  });
+
+  test('飲食行程上方統計所有餐廳的預訂狀況', async ({ page }) => {
+    await enterTrip(page);
+    await page.evaluate(() => {
+      const b = 'tripgo/groups/TEST01/stops/';
+      const mk = (name, resv, n) => ({ name, day: 'Oct 2', arrive: '1' + n + ':00', lat: 34.7, lng: 135.5, category: '餐廳', resv, createdAt: 800 + n });
+      window.FB.set(b + '-r1', mk('甲店', '已訂', 1));
+      window.FB.set(b + '-r2', mk('乙店', '已訂', 2));
+      window.FB.set(b + '-r3', mk('丙店', '待訂', 3));
+      window.FB.set(b + '-r4', mk('丁店', '', 4));
+    });
+    await page.waitForFunction(() => S.stops.some((s) => s.name === '丁店'));
+    await page.locator('.tab[data-pane="restaurant"]').click();
+    const sum = page.locator('#rest-resv-sum');
+    await expect(sum).toContainText('已預訂 2');
+    await expect(sum).toContainText('待預訂 1');
+    await expect(sum).toContainText('未設定');
+    await expect(page.locator('.rest-card', { hasText: '丙店' }).locator('.rest-resv')).toHaveText('⏳ 待預訂');
+  });
+
+  test('新增景點時選「餐廳」也可以填預訂', async ({ page }) => {
+    await enterTrip(page);
+    await page.evaluate(() => openNewStopForm({ day: '2026-10-02' }));
+    await expect(page.locator('#ief-resv')).toBeHidden();
+    await page.locator('#ief-name').fill('新餐廳');
+    await page.locator('#ief-category').selectOption('餐廳');
+    await page.locator('#ief-resv').selectOption('待訂');
+    await page.locator('#ief-resv-no').fill('X9');
+    await page.locator('#ief-save').click();
+    await page.waitForFunction(() => S.stops.some((s) => s.name === '新餐廳'));
+    const s = await page.evaluate(() => S.stops.find((x) => x.name === '新餐廳'));
+    expect([s.resv, s.resvNo]).toEqual(['待訂', 'X9']);
+  });
+});
