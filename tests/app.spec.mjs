@@ -1434,3 +1434,52 @@ test.describe('景點資訊卡：三行（名稱／分類＋評分＋功能按�
     });
   }
 });
+
+test.describe('開啟時的自動定位不會把畫面拉走', () => {
+  // GPS 回應延遲：先記下 callback，由測試決定什麼時候回來（模擬 iPhone 高精度定位要幾秒）
+  const slowGps = (page) => page.addInitScript(() => {
+    window.__geoCbs = [];
+    const g = { getCurrentPosition: (ok) => window.__geoCbs.push(ok), watchPosition: () => 1, clearWatch: () => {} };
+    Object.defineProperty(navigator, 'geolocation', { value: g, configurable: true });
+    window.__gpsReply = (lat, lng) => { const cbs = window.__geoCbs.splice(0); cbs.forEach((cb) => cb({ coords: { latitude: lat, longitude: lng, accuracy: 20 } })); return cbs.length; };
+  });
+  const spyPan = (page) => page.evaluate(() => { window.__pans = []; map.panTo = (p) => window.__pans.push([+(p.lat.call ? p.lat() : p.lat), +(p.lng.call ? p.lng() : p.lng)]); });
+  const ZHUNAN = [24.69, 120.88];
+  const tap = async (page, name) => {
+    await page.evaluate((n) => tapStop(S.stops.findIndex((s) => s.name === n)), name);
+    await page.waitForFunction(() => !_pairAnimating);
+  };
+
+  test('點了 A、B 景點之後 GPS 才回來：只更新自己的位置，地圖不跳回自己所在地', async ({ page }) => {
+    await slowGps(page);
+    await enterTrip(page);
+    await spyPan(page);
+    await tap(page, '大阪城');
+    await tap(page, '道頓堀');
+    const before = await page.evaluate(() => window.__pans.length);
+    expect(await page.evaluate(([a, b]) => window.__gpsReply(a, b), ZHUNAN)).toBeGreaterThan(0);
+    const after = await page.evaluate((n) => window.__pans.slice(n), before);
+    expect(after).toEqual([]);
+    expect(await page.evaluate(() => [S.myLat, S.myLng])).toEqual(ZHUNAN);   // 自己的藍點仍更新
+  });
+
+  test('還沒操作地圖時 GPS 回來：照舊移到自己的位置', async ({ page }) => {
+    await slowGps(page);
+    await enterTrip(page);
+    await spyPan(page);
+    await page.evaluate(([a, b]) => window.__gpsReply(a, b), ZHUNAN);
+    expect(await page.evaluate(() => window.__pans)).toEqual([ZHUNAN]);
+  });
+
+  test('操作過地圖後按「定位」按鈕：一定移到自己的位置', async ({ page }) => {
+    await slowGps(page);
+    await enterTrip(page);
+    await spyPan(page);
+    await tap(page, '大阪城');
+    await page.evaluate(([a, b]) => window.__gpsReply(a, b), ZHUNAN);   // 開啟時的那次：不移動
+    await page.evaluate(() => { window.__pans = []; });
+    await page.evaluate(() => document.getElementById('btn-locate').click());
+    await page.evaluate(([a, b]) => window.__gpsReply(a, b), ZHUNAN);
+    expect(await page.evaluate(() => window.__pans)).toEqual([ZHUNAN]);
+  });
+});
