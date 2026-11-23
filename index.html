@@ -11,7 +11,7 @@
 /* ── TripGo boot: version, preview isolation, early error capture ──
    Must run before any other script touches localStorage or Firebase. */
 (function(){
-  window.TG_VERSION='5.15';
+  window.TG_VERSION='5.16';
   var PV=/\/preview\//.test(location.pathname)||/[?&]preview=1(&|$)/.test(location.search);
   window.TG_PREVIEW=PV;
 
@@ -58,7 +58,7 @@
   });
 })();
 </script>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.15%3C/text%3E%3C/svg%3E"/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.16%3C/text%3E%3C/svg%3E"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="TripGo"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -1262,7 +1262,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <button class="login-submit" id="btn-pin-submit" disabled>登入 / 建立帳號</button>
       <div class="login-err-msg" id="login-err"></div>
     </div>
-    <div class="login-footer">TripGo v5.15</div>
+    <div class="login-footer">TripGo v5.16</div>
   </div>
 
 <div id="S-join" class="hide">
@@ -1279,7 +1279,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.15 &nbsp;·&nbsp; 2026-11-24</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.16 &nbsp;·&nbsp; 2026-11-24</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -1915,7 +1915,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 <!-- Main App JS -->
 <script>
 'use strict';
-// TripGo v5.15
+// TripGo v5.16
 
 // ════════════════════════════════
 // STATE
@@ -2516,6 +2516,7 @@ function fetchLiveTransit(stopIdx){
   if(!origin) return; // can't compute without origin
   if(!dsvc) return;
   var mode=s.transit.mode||'car';
+  if(mode==='other') return;   // 「其他」（船、纜車…）沒有對應的 Google 路線，只用自己填的分鐘數
   var travelMode=mode==='walk'?google.maps.TravelMode.WALKING:
                  mode==='bus'||mode==='train'?google.maps.TravelMode.TRANSIT:
                  google.maps.TravelMode.DRIVING;
@@ -2549,7 +2550,7 @@ function applyLiveTransit(stopIdx, liveMins){
     var badgeEl=document.getElementById('stn-'+stopIdx);
     if(badgeEl){
       var diff=liveMins-(s.transit.minutes||0);
-      var ticon=s.transit.mode==='walk'?'ti-walk':s.transit.mode==='bus'?'ti-bus':s.transit.mode==='train'?'ti-train':'ti-car';
+      var ticon=transitIcon(s.transit.mode);
       var cls=diff<=-5?'stop-transit-green':diff>=5?'stop-transit-red':'stop-transit-black';
       var diffStr=diff<=-5?' <span class="transit-diff transit-diff-green">-'+Math.abs(diff)+'min</span>':
                   diff>=5?' <span class="transit-diff transit-diff-red">+'+diff+'min</span>':'';
@@ -2712,7 +2713,7 @@ function renderStops(){
     var tbadge='';
     if(s.transit&&s.transit.minutes){
       var tmode=s.transit.mode||'car';
-      var ticon=tmode==='walk'?'ti-walk':tmode==='bus'?'ti-bus':tmode==='train'?'ti-train':'ti-car';
+      var ticon=transitIcon(tmode);
       var liveMins=s.transit.liveMins; // set externally when live data available
       var planned=s.transit.minutes;
       var bdgCls='stop-transit'; var diffStr='';
@@ -3521,12 +3522,7 @@ function renderNewStopForm(prefill){
         '</div>'+
         '<div class="exp-ef-field"><label class="exp-ef-label">前段交通</label>'+
           '<select class="exp-ef-inp" id="ief-transit-mode" style="cursor:pointer">'+
-            '<option value="">（無）</option>'+
-            '<option value="car">🚗 開車</option>'+
-            '<option value="walk">🚶 步行</option>'+
-            '<option value="bus">🚌 公車</option>'+
-            '<option value="train">🚆 火車</option>'+
-            '<option value="taxi">🚕 計程車</option>'+
+            '<option value="">（無）</option>'+transitOptsHtml('')+
           '</select>'+
         '</div>'+
         '<div class="exp-ef-field"><label class="exp-ef-label">所需時間（分）</label><input class="exp-ef-inp" id="ief-transit-mins" type="number" inputmode="numeric" min="0" placeholder="0"/></div>'+
@@ -4458,6 +4454,14 @@ function isFood(s){
   return FOOD_KW.some(function(k){return t.toLowerCase().includes(k.toLowerCase());});
 }
 // ── 餐廳預訂（只在分類為「餐廳」時使用）：resv = '已訂' | '待訂' | '免訂' | ''，resvNo = 預訂編號 ──
+// ── 前段交通：步行、汽車、公車、電車、其他（舊資料的「計程車」taxi 顯示為汽車，資料不改）──
+var TRANSIT_OPTS=[['walk','🚶 步行'],['car','🚗 汽車'],['bus','🚌 公車'],['train','🚆 電車'],['other','🧭 其他']];
+var TRANSIT_NAME={walk:'步行',car:'汽車',bus:'公車',train:'電車',other:'其他',taxi:'汽車'};
+function transitOptsHtml(cur){
+  if(cur==='taxi') cur='car';
+  return TRANSIT_OPTS.map(function(o){return '<option value="'+o[0]+'"'+(cur===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('');
+}
+function transitIcon(m){ return m==='walk'?'ti-walk':m==='bus'?'ti-bus':m==='train'?'ti-train':m==='other'?'ti-route':'ti-car'; }
 function hasResv(cat){ return cat==='餐廳'||cat==='住宿'; }   // 可以填預訂的分類
 var RESV_OPTS=[['','—'],['待訂','⏳ 待訂'],['已訂','✅ 已訂'],['免訂','🚶 免訂']];   // 選單文字要短，手機上三欄並排才放得下
 function resvFieldsHtml(s,show){
@@ -5397,8 +5401,7 @@ function exportTripKML(code, tripName){
           desc+='<br>';
         }
         if(s.transit&&s.transit.mode&&s.transit.minutes){
-          var modeMap={car:'開車',walk:'步行',bus:'公車',train:'火車',taxi:'計程車'};
-          desc+='🚌 前段交通：'+s.transit.minutes+'分（'+(modeMap[s.transit.mode]||s.transit.mode)+'）<br>';
+          desc+='🚌 前段交通：'+s.transit.minutes+'分（'+(TRANSIT_NAME[s.transit.mode]||s.transit.mode)+'）<br>';
         }
         if(s.note) desc+='📝 '+escHtml(s.note)+'<br>';
         if(s.activities&&s.activities.length) desc+='✅ '+s.activities.map(function(a){return escHtml(a.text||a);}).join('、')+'<br>';
@@ -6010,12 +6013,7 @@ function renderInlineEditForm(i){
       '<div class="exp-ef-row">'+
         '<div class="exp-ef-field"><label class="exp-ef-label">前段交通</label>'+
           '<select class="exp-ef-inp" id="ief-transit-mode" style="cursor:pointer">'+
-            '<option value=""'+((!s.transit||!s.transit.mode)?' selected':'')+'>（無）</option>'+
-            '<option value="car"'+((s.transit&&s.transit.mode==='car')?' selected':'')+'>🚗 開車</option>'+
-            '<option value="walk"'+((s.transit&&s.transit.mode==='walk')?' selected':'')+'>🚶 步行</option>'+
-            '<option value="bus"'+((s.transit&&s.transit.mode==='bus')?' selected':'')+'>🚌 公車</option>'+
-            '<option value="train"'+((s.transit&&s.transit.mode==='train')?' selected':'')+'>🚆 火車</option>'+
-            '<option value="taxi"'+((s.transit&&s.transit.mode==='taxi')?' selected':'')+'>🚕 計程車</option>'+
+            '<option value=""'+((!s.transit||!s.transit.mode)?' selected':'')+'>（無）</option>'+transitOptsHtml(s.transit&&s.transit.mode)+
           '</select>'+
         '</div>'+
         '<div class="exp-ef-field"><label class="exp-ef-label">所需時間（分）</label><input class="exp-ef-inp" id="ief-transit-mins" type="number" inputmode="numeric" min="0" value="'+(s.transit&&s.transit.minutes?s.transit.minutes:'')+'" placeholder="0"/></div>'+
@@ -6482,7 +6480,7 @@ window.addEventListener('load',function(){
       // 版本號
       ctx.fillStyle='rgba(255,255,255,0.65)';
       ctx.font='bold 28px system-ui,-apple-system,sans-serif';
-      ctx.fillText('v5.15',90,152);
+      ctx.fillText('v5.16',90,152);
       // 插入 apple-touch-icon
       var lnk=document.querySelector('link[rel="apple-touch-icon"]')||document.createElement('link');
       lnk.rel='apple-touch-icon'; lnk.href=c.toDataURL('image/png');

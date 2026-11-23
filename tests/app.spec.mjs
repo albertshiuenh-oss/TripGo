@@ -814,18 +814,47 @@ test.describe('飲食行程的判斷與分類', () => {
   });
 });
 
-test.describe('前段交通：計程車', () => {
-  test('編輯表單有「計程車」，選了會存進去並顯示在行程；新增景點表單也有', async ({ page }) => {
+test.describe('前段交通：步行、汽車、公車、電車、其他', () => {
+  const openEdit = (page, name) => page.evaluate((n) => { const i = S.stops.findIndex((s) => s.name === n); tapStop(i); setTimeout(() => openInlineEdit(i), 50); }, name);
+  const opts = async (page) => (await page.locator('#ief-transit-mode').waitFor(), page.locator('#ief-transit-mode option').evaluateAll((els) => els.map((e) => e.textContent.replace(/^\S+\s/, ''))));
+  const WANT = ['（無）', '步行', '汽車', '公車', '電車', '其他'];
+
+  test('編輯與新增表單的選項順序正確；沒有計程車', async ({ page }) => {
     await enterTrip(page);
-    const idx = await page.evaluate(() => S.stops.findIndex((s) => s.name === '道頓堀'));
-    await page.evaluate((i) => { tapStop(i); setTimeout(() => openInlineEdit(i), 50); }, idx);
-    await expect(page.locator('#ief-transit-mode option[value="taxi"]')).toHaveText(/計程車/);
-    await page.locator('#ief-transit-mode').selectOption('taxi');
-    await page.locator('#ief-transit-mins').fill('15');
-    await page.locator('.exp-ef-save').click();
-    await page.waitForFunction(() => { const s = S.stops.find((x) => x.name === '道頓堀'); return s.transit && s.transit.mode === 'taxi' && s.transit.minutes === 15; });
+    await openEdit(page, '道頓堀');
+    expect(await opts(page)).toEqual(WANT);
+    await expect(page.locator('#ief-transit-mode option[value="taxi"]')).toHaveCount(0);
+  });
+
+  test('新增景點表單的選項順序也一樣', async ({ page }) => {
+    await enterTrip(page);
     await page.evaluate(() => openNewStopForm());
-    await expect(page.locator('#ief-transit-mode option[value="taxi"]')).toHaveText(/計程車/);
+    expect(await opts(page)).toEqual(WANT);
+    await expect(page.locator('#ief-transit-mode option[value="taxi"]')).toHaveCount(0);
+  });
+
+  test('選「其他」會存成 other，行程顯示自己填的分鐘數，不向 Google 查即時時間', async ({ page }) => {
+    await enterTrip(page);
+    await page.evaluate(() => { window.__dir = 0; const o = dsvc.route; dsvc.route = (r, cb) => { window.__dir++; return o(r, cb); }; });
+    await openEdit(page, '道頓堀');
+    await page.locator('#ief-transit-mode').selectOption('other');
+    await page.locator('#ief-transit-mins').fill('35');
+    await page.locator('.exp-ef-save').click();
+    await page.waitForFunction(() => { const s = S.stops.find((x) => x.name === '道頓堀'); return s.transit && s.transit.mode === 'other' && s.transit.minutes === 35; });
+    const n0 = await page.evaluate(() => window.__dir);
+    await page.evaluate(() => { const i = S.stops.findIndex((s) => s.name === '道頓堀'); fetchLiveTransit && fetchLiveTransit(i); }).catch(() => {});
+    expect(await page.evaluate(() => window.__dir)).toBe(n0);
+    await expect(page.locator('#stop-list .ti-route')).toHaveCount(1);   // 「其他」的路線圖示（測試環境沒有圖示字型，只檢查元素）
+    await expect(page.locator('#stop-list')).toContainText('35min');
+  });
+
+  test('舊資料的「計程車」：選單顯示為汽車，資料不會被改', async ({ page }) => {
+    await enterTrip(page);
+    await page.evaluate(() => window.FB.set('tripgo/groups/TEST01/stops/-a02/transit', { mode: 'taxi', minutes: 12 }));
+    await page.waitForFunction(() => { const s = S.stops.find((x) => x.name === '道頓堀'); return s.transit && s.transit.mode === 'taxi'; });
+    await openEdit(page, '道頓堀');
+    await expect(page.locator('#ief-transit-mode')).toHaveValue('car');
+    expect(await page.evaluate(() => S.stops.find((x) => x.name === '道頓堀').transit.mode)).toBe('taxi');
   });
 });
 
