@@ -1,4 +1,5 @@
 import { test, expect, enterTrip, login, writes, SEED } from './harness.mjs';
+import { readFileSync } from 'node:fs';
 
 
 // Distance (px) between the vertical centre of `sel` and the centre of the scroll box `box`
@@ -1068,6 +1069,24 @@ test.describe('住宿預訂', () => {
   });
 });
 
+// 讀取 App 產生的 .xlsx（未壓縮 zip），不依賴外部套件：檢查 zip 結構、取出 sheet1 的儲存格文字
+function readXlsx(file) {
+  const buf = readFileSync(file);
+  const files = {};
+  let p = 0;
+  while (buf.readUInt32LE(p) === 0x04034b50) {
+    expect(buf.readUInt16LE(p + 8)).toBe(0);   // stored
+    const size = buf.readUInt32LE(p + 18), nlen = buf.readUInt16LE(p + 26), xlen = buf.readUInt16LE(p + 28);
+    const name = buf.toString('utf8', p + 30, p + 30 + nlen);
+    files[name] = buf.toString('utf8', p + 30 + nlen + xlen, p + 30 + nlen + xlen + size);
+    p += 30 + nlen + xlen + size;
+  }
+  expect(buf.readUInt32LE(buf.length - 22)).toBe(0x06054b50);   // end of central directory
+  for (const k of ['[Content_Types].xml', '_rels/.rels', 'xl/workbook.xml', 'xl/_rels/workbook.xml.rels', 'xl/styles.xml', 'xl/worksheets/sheet1.xml']) expect(files[k]).toBeTruthy();
+  const un = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+  return [...files['xl/worksheets/sheet1.xml'].matchAll(/<row [^>]*>(.*?)<\/row>/g)].map((r) => [...r[1].matchAll(/<t[^>]*>(.*?)<\/t>/g)].map((c) => un(c[1])));
+}
+
 test.describe('食住規畫', () => {
   const addStays = (page) => page.evaluate(() => {
     const b = 'tripgo/groups/TEST01/stops/';
@@ -1108,9 +1127,8 @@ test.describe('食住規畫', () => {
       const want = await page.evaluate((s) => restItems(s).map((x) => x.name), sub);
       const [dl] = await Promise.all([page.waitForEvent('download'), btn.click()]);
       expect(dl.suggestedFilename()).toMatch(new RegExp(label + '\\.xlsx$'));
-      const fs = await import('node:fs'); const cp = await import('node:child_process');
       const f = test.info().outputPath('out.xlsx'); await dl.saveAs(f);
-      const rows = JSON.parse(cp.execFileSync('python3', ['-c', 'import openpyxl,json,sys;ws=openpyxl.load_workbook(sys.argv[1]).active;print(json.dumps([[c if c is not None else "" for c in r] for r in ws.iter_rows(values_only=True)],ensure_ascii=False))', f]).toString());
+      const rows = readXlsx(f);
       expect(rows[0]).toEqual(['日期', '時間', '名稱', '預訂狀態', '預訂編號', '備註']);
       expect(rows.slice(1).map((r) => r[2])).toEqual(want);
       if (first) {
