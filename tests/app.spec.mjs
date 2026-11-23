@@ -1210,9 +1210,14 @@ test.describe('地圖：從 A 點點到 B 景點', () => {
     google.maps.Marker = function (o) { const m = new M(o); window.__mk.push(m); return m; };
   });
   const tap = (page, name) => page.evaluate((n) => tapStop(S.stops.findIndex((s) => s.name === n)), name);
-  const live = (page) => page.evaluate(() => window.__mk.filter((m) => m.getMap()).map((m) => ({ t: m.opts.title, op: m.opts.opacity == null ? 1 : m.opts.opacity })));
+  // op：1 = 一般標記，'prev' = 上一個景點（淡色填色＋深藍實線外框，外框不透明）
+  const live = (page) => page.evaluate(() => window.__mk.filter((m) => m.getMap()).map((m) => {
+    const svg = decodeURIComponent((m.opts.icon && m.opts.icon.url || '').split(',')[1] || '');
+    const prev = /fill="rgba\(43,95,142,0\.3\)" stroke="#1a3a5c" stroke-width="2"/.test(svg);
+    return { t: m.opts.title, op: (m.opts.opacity == null || m.opts.opacity === 1) ? (prev ? 'prev' : 1) : m.opts.opacity };
+  }));
 
-  test('先點 A 再點 B：地圖同時框住 A 和 B，A 變淡色、B 正常', async ({ page }) => {
+  test('先點 A 再點 B：地圖同時框住 A 和 B，A 是淡色＋深藍外框、B 正常', async ({ page }) => {
     await enterTrip(page);
     await spy(page);
     await tap(page, '大阪城');
@@ -1223,7 +1228,7 @@ test.describe('地圖：從 A 點點到 B 景點', () => {
     expect(fit.length).toBeGreaterThanOrEqual(1);
     expect(fit.every((f) => JSON.stringify(f) === JSON.stringify([A, B]))).toBe(true);
     const m = await live(page);
-    expect(m).toEqual(expect.arrayContaining([{ t: '道頓堀', op: 1 }, { t: '大阪城（上一個）', op: 0.4 }]));
+    expect(m).toEqual(expect.arrayContaining([{ t: '道頓堀', op: 1 }, { t: '大阪城（上一個）', op: 'prev' }]));
     expect(m.length).toBe(2);
   });
 
@@ -1250,7 +1255,7 @@ test.describe('地圖：從 A 點點到 B 景點', () => {
     const names = await page.evaluate(() => S.stops.filter((s) => +s.lat).map((s) => s.name).slice(0, 3));
     for (const n of names) await tap(page, n);
     const m = await live(page);
-    expect(m).toEqual(expect.arrayContaining([{ t: names[2], op: 1 }, { t: names[1] + '（上一個）', op: 0.4 }]));
+    expect(m).toEqual(expect.arrayContaining([{ t: names[2], op: 1 }, { t: names[1] + '（上一個）', op: 'prev' }]));
     expect(m.length).toBe(2);
     await tap(page, names[2]);   // 再點一次 = 收起
     expect(await live(page)).toEqual([]);

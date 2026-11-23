@@ -2872,11 +2872,11 @@ function onStopListClick(e){
 
 var _tapToken=0; // increments each tap; callbacks check before acting
 
-function makePinUrl(){
+function makePinUrl(prev){   // prev=true：上一個景點（淡色填色＋深藍實線外框）
   var svg='<svg xmlns="http://www.w3.org/2000/svg" width="22.4" height="40" viewBox="0 0 22.4 40">'+
-    '<path d="M11.2 0 C5.02 0 0 5.02 0 11.2 C0 19.6 11.2 40 11.2 40 C11.2 40 22.4 19.6 22.4 11.2 C22.4 5.02 17.38 0 11.2 0 Z"'+
-    ' fill="rgba(43,95,142,0.82)" stroke="rgba(255,255,255,0.9)" stroke-width="1.5"/>'+
-    '<circle cx="11.2" cy="11.5" r="4" fill="rgba(255,255,255,0.9)"/>'+
+    '<path d="M11.2 1 C5.5 1 1 5.5 1 11.2 C1 19.3 11.2 38.6 11.2 38.6 C11.2 38.6 21.4 19.3 21.4 11.2 C21.4 5.5 16.9 1 11.2 1 Z"'+
+    (prev?' fill="rgba(43,95,142,0.3)" stroke="#1a3a5c" stroke-width="2"/>':' fill="rgba(43,95,142,0.82)" stroke="rgba(255,255,255,0.9)" stroke-width="1.5"/>')+
+    '<circle cx="11.2" cy="11.5" r="4" fill="'+(prev?'#1a3a5c':'rgba(255,255,255,0.9)')+'"/>'+
     '</svg>';
   return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg);
 }
@@ -2891,8 +2891,8 @@ function focusStopOnMap(pos, title, key){
   _pin={key:key,pos:pos,title:title};
   if(!A){ map.panTo(pos); map.setZoom(15); return; }
   prevMarker=new google.maps.Marker({
-    position:A.pos, map:map, opacity:0.4, zIndex:1, clickable:false,
-    icon:{url:makePinUrl(), scaledSize:new google.maps.Size(22,40), anchor:new google.maps.Point(11,40)},
+    position:A.pos, map:map, zIndex:1, clickable:false,
+    icon:{url:makePinUrl(true), scaledSize:new google.maps.Size(22,40), anchor:new google.maps.Point(11,40)},
     title:A.title+'（上一個）'
   });
   if(stopMarker.setZIndex) stopMarker.setZIndex(10);
