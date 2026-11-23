@@ -1409,3 +1409,28 @@ test.describe('地圖：從 A 點點到 B 景點', () => {
     expect(await live(page)).toEqual([{ t: names[0], op: 1 }]);
   });
 });
+
+test.describe('景點資訊卡：三行（名稱／分類＋評分＋功能按鈕／地址）', () => {
+  for (const w of [390, 360]) {
+    test('手機寬度 ' + w + 'px：分類、評分、功能按鈕在同一行，卡片變矮', async ({ page }) => {
+      await page.setViewportSize({ width: w, height: 844 });
+      await enterTrip(page);
+      await page.evaluate(() => _applyPlaceCard({ name: '札嘎其市場', types: ['restaurant'], rating: 4, user_ratings_total: 27619,
+        formatted_address: '52 Jagalchihaean-ro, Jung-gu, Busan, 南韓', geometry: null }));
+      const r = await page.evaluate(() => {
+        const y = (id) => { const b = document.getElementById(id).getBoundingClientRect(); return Math.round(b.top + b.height / 2); };
+        const card = document.getElementById('place-card').getBoundingClientRect();
+        const btns = [...document.querySelectorAll('#place-card .pcac')].map((b) => b.getBoundingClientRect());
+        return { type: y('pc-type'), rating: y('pc-rating'), btn: Math.round(btns[0].top + btns[0].height / 2), name: y('pc-name'), info: y('pc-info'),
+          h: card.height, right: Math.max(...btns.map((b) => b.right)), typeTxt: document.getElementById('pc-type').textContent };
+      });
+      expect(r.typeTxt).toBeTruthy();
+      expect(Math.abs(r.type - r.btn)).toBeLessThan(4);
+      expect(Math.abs(r.rating - r.btn)).toBeLessThan(4);
+      expect(r.name).toBeLessThan(r.type);
+      expect(r.info).toBeGreaterThan(r.type);
+      expect(r.h).toBeLessThanOrEqual(104);   // 原本 124px
+      expect(r.right).toBeLessThanOrEqual(w);
+    });
+  }
+});
