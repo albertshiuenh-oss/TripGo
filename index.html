@@ -1004,12 +1004,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 }
 .mem-clist-row.is-self{
   border-left-color:var(--blue);
-  background:#EEF4FF;position:relative;
-  margin:8px 10px 10px;border-radius:12px;border:1px solid #C9DBF5;border-left:4px solid var(--blue);
+  background:#F7FAFF;
 }
-.mem-clist-row.is-self .mem-nm{font-size:15px}
-.mem-clist-row.is-self .mem-tag-me{font-size:11px;padding:2px 7px;background:var(--blue);color:#fff}
-.mem-logout-btn{color:var(--text2)!important;background:#fff!important;border:1px solid var(--border)!important}
 .mem-av{width:38px;height:38px;border-radius:50%;
   font-size:12px;font-weight:700;color:#fff;
   display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -1390,6 +1386,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="topbar">
     <span class="tb-logo" id="tb-logo"><i class="ti ti-map-2"></i> TripGo</span>
     <span class="tb-trip" id="tb-trip">旅遊群組</span>
+    <button id="btn-logout" title="登出" style="display:none;background:none;border:1px solid rgba(255,255,255,.3);color:rgba(255,255,255,.7);font-size:10px;padding:2px 8px;border-radius:6px;cursor:pointer;margin-right:4px" onclick="doLogout()">登出</button>
     <span id="tb-myname" role="button" tabindex="0" title="" aria-label=""></span>
     <span id="net-status" class="online" title="線上" aria-label="線上"><i class="ti ti-wifi" style="font-size:15px"></i><span id="net-label">線上</span></span>
 
@@ -2368,6 +2365,7 @@ function startApp(code, uid, name, tripName, isOrg){
   loadMapsScript();
   S.groupCode=code; S.myUid=uid; S.myName=name; S.isOrg=isOrg;
   var _nmEl=document.getElementById('tb-myname'); if(_nmEl){ _nmEl.textContent=String(name||'').trim().substring(0,2).toUpperCase(); _nmEl.title=(name||'')+'（點此看團員）'; _nmEl.setAttribute('aria-label','我是 '+(name||'')+'，查看團員'); }   // 名字前兩個字母，和團員頭像一樣
+  var _lb=document.getElementById('btn-logout'); if(_lb) _lb.style.display='inline-block';
   if(_currentUser&&_currentUser.uid) uid=_currentUser.uid;
   // 讀取主幣別
   S.primaryCurrency='NTD';
@@ -2391,7 +2389,7 @@ function startApp(code, uid, name, tripName, isOrg){
   // Reset UI state for new trip
   _centeredToday=false;
   document.getElementById('detail').classList.remove('show');
-  if(stopMarker){stopMarker.setMap(null);stopMarker=null;}
+  if(stopMarker){stopMarker.setMap(null);stopMarker=null;} clearPrevPin();
   document.querySelectorAll('.stop-expand.open').forEach(function(p){p.classList.remove('open');});
   document.querySelectorAll('.stop-txt.active').forEach(function(e){e.classList.remove('active');});
   // Clear old listeners before subscribing new ones
@@ -2882,8 +2880,28 @@ function makePinUrl(){
   return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg);
 }
 
+// ── 點景點 B 時：若剛才選的是 A（地圖上還有 A 的標記），A 改成淡色並保留，地圖縮放到同時看得到 A 和 B ──
+var prevMarker=null, _pin=null;   // _pin = 目前標記的景點 {key,pos,title}
+function clearPrevPin(){ if(prevMarker){ prevMarker.setMap(null); prevMarker=null; } }
+function focusStopOnMap(pos, title, key){
+  var A=(stopMarker&&_pin&&_pin.key!==key)?_pin:null;
+  clearPrevPin();
+  dropStopPin(pos, title);
+  _pin={key:key,pos:pos,title:title};
+  if(!A){ map.panTo(pos); map.setZoom(15); return; }
+  prevMarker=new google.maps.Marker({
+    position:A.pos, map:map, opacity:0.4, zIndex:1, clickable:false,
+    icon:{url:makePinUrl(), scaledSize:new google.maps.Size(22,40), anchor:new google.maps.Point(11,40)},
+    title:A.title+'（上一個）'
+  });
+  if(stopMarker.setZIndex) stopMarker.setZIndex(10);
+  var b=new google.maps.LatLngBounds(); b.extend(A.pos); b.extend(pos);
+  map.fitBounds(b,{top:80,bottom:40,left:40,right:70});   // 上方留給搜尋列、右邊留給按鈕
+  google.maps.event.addListenerOnce(map,'idle',function(){ if(map.getZoom()>16) map.setZoom(16); });   // 兩點很近時不要放太大
+}
 function dropStopPin(pos, title){
   if(stopMarker){ stopMarker.setMap(null); stopMarker=null; }
+  _pin=null;   // 由其他地方（搜尋結果等）放的標記不算「上一個景點」；focusStopOnMap 會再設定
   stopMarker=new google.maps.Marker({
     position:pos, map:map,
     animation:google.maps.Animation.DROP,
@@ -2915,7 +2933,7 @@ function tapStop(i){
 
   if(isOpen){
     _expandedStopIdx=-1; _inlineEditIdx=-1;
-    if(stopMarker){stopMarker.setMap(null);stopMarker=null;}
+    if(stopMarker){stopMarker.setMap(null);stopMarker=null;} clearPrevPin();
     closePc();
     return;
   }
@@ -2936,8 +2954,7 @@ function tapStop(i){
 
   if(map && hasCoords){
     var lat=parseFloat(s.lat), lng=parseFloat(s.lng);
-    map.panTo({lat:lat,lng:lng}); map.setZoom(15);
-    dropStopPin({lat:lat,lng:lng}, s.name);
+    focusStopOnMap({lat:lat,lng:lng}, s.name, s._key);
     if(plSvc){
       plSvc.textSearch({query:s.name,location:{lat:lat,lng:lng},radius:500},function(results,status){
         if(_tapToken!==token) return; // stale callback - a newer tap happened, ignore
@@ -2953,8 +2970,7 @@ function tapStop(i){
       if(_tapToken!==token) return; // stale - ignore
       if(status===google.maps.places.PlacesServiceStatus.OK&&results&&results.length>0){
         var loc=results[0].geometry.location;
-        map.panTo(loc); map.setZoom(15);
-        dropStopPin(loc, s.name);
+        focusStopOnMap(loc, s.name, s._key);
         showPlaceCardFixed(results[0].place_id);
       } else showSimplePc(s);
     });
@@ -2985,7 +3001,7 @@ function navStop(i){
 function deleteStop(key){
   showCustomConfirm('🗑️','刪除景點？','此景點將從行程中移除。','確定刪除',function(){
     window.FB.remove('tripgo/groups/'+S.groupCode+'/stops/'+key);
-    if(stopMarker){ stopMarker.setMap(null); stopMarker=null; }
+    if(stopMarker){ stopMarker.setMap(null); stopMarker=null; } clearPrevPin();
   });
 }
 
@@ -3211,7 +3227,7 @@ function msExpense(){
 
 // ── Detail Panel ──
 var _editMode=false;
-function closeDetail(){ document.getElementById('detail').classList.remove('show'); if(stopMarker){stopMarker.setMap(null);stopMarker=null;} }
+function closeDetail(){ document.getElementById('detail').classList.remove('show'); if(stopMarker){stopMarker.setMap(null);stopMarker=null;} clearPrevPin(); }
 function exitEditMode(){
   _editMode=false;
   document.getElementById('det-edit-fields').style.display='none';
@@ -3879,9 +3895,6 @@ function renderAvatars(){
 }
 function renderMembers(){
   var uMembers=uniqueMembers(); var devCounts=memberDeviceCounts();
-  var _si=uMembers.findIndex(function(m){return m.id===S.myUid;});
-  var _colorOf={}; uMembers.forEach(function(m,i){_colorOf[m.id]=i%7;});   // 自己移到最上面，頭像顏色不變
-  if(_si>0) uMembers=[uMembers[_si]].concat(uMembers.slice(0,_si),uMembers.slice(_si+1));
   var cntEl=document.getElementById('mem-count'); if(cntEl) cntEl.textContent=uMembers.length+'位';
   var rows='<div class="mem-list-wrap">';
   uMembers.forEach(function(m,i){
@@ -3892,10 +3905,9 @@ function renderMembers(){
     // second line: role text + optional multi-device note
     var subParts=[];
     subParts.push(isOrg?'👑 組織者':'團員');
-    if(isSelf) subParts.push('這台裝置');
-    if(multi) subParts.push((isSelf?'共 ':'')+devCounts[m.name]+'台裝置');
+    if(multi) subParts.push(devCounts[m.name]+'台裝置');
     rows+='<div class="mem-clist-row'+(isSelf?' is-self':'')+'">'+
-      '<div class="mem-av av'+_colorOf[m.id]+'">'+escHtml(m.name.substring(0,2).toUpperCase())+'</div>'+
+      '<div class="mem-av av'+(i%7)+'">'+escHtml(m.name.substring(0,2).toUpperCase())+'</div>'+
       '<div style="flex:1;min-width:0">'+
         '<div class="mem-nm">'+
           escHtml(m.name)+
@@ -3907,7 +3919,6 @@ function renderMembers(){
       '</div>'+
       '<div class="mem-acts">'+
         (S.isOrg&&!isSelf?'<button class="mem-org-btn'+(isOrg?' on':'')+'" data-action="setorg" data-mid="'+m.id+'">'+(isOrg?'✓ 主辦':'設主辦')+'</button>':'')+
-        (isSelf?'<button class="mem-del-btn mem-logout-btn" onclick="doLogout()">登出</button>':'')+
         (canDelete?'<button class="mem-del-btn" data-action="delmember" data-mid="'+m.id+'">'+(isSelf?'退出':'移除')+'</button>':'')+
       '</div>'+
     '</div>';
@@ -5437,6 +5448,7 @@ function doLogout(){
   showLoginScreen();
   var ne=document.getElementById('js-home-name'); if(ne) ne.value='';
   document.getElementById('S-join').classList.add('hide');
+  var lb=document.getElementById('btn-logout'); if(lb) lb.style.display='none';
 
 }
 
@@ -6254,7 +6266,7 @@ window.addEventListener('load',function(){
     showCustomConfirm('🗑️','刪除景點？','「'+escHtml(s.name)+'」將從行程中移除。','確定刪除',function(){
       window.FB.remove('tripgo/groups/'+S.groupCode+'/stops/'+s._key);
       closeDetail();
-      if(stopMarker){stopMarker.setMap(null);stopMarker=null;}
+      if(stopMarker){stopMarker.setMap(null);stopMarker=null;} clearPrevPin();
     });
   });
   document.getElementById('btn-det-save').addEventListener('click',saveEditStop);

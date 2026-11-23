@@ -1179,39 +1179,6 @@ test.describe('上方標題列', () => {
   });
 });
 
-test.describe('團員列表：「我」的卡片', () => {
-  test('一般團員（Anna）：自己排在最上面，有「我」標示、這台裝置、登出與退出', async ({ page }) => {
-    await enterTrip(page, { uid: 'u2', name: 'Anna', isOrg: false });
-    const me = await page.evaluate(() => S.members.find((m) => m.id === S.myUid).name);
-    await page.locator('.tab[data-pane="locations"]').click();
-    const first = page.locator('#mem-list .mem-clist-row').first();
-    await expect(first).toHaveClass(/is-self/);
-    await expect(first.locator('.mem-nm')).toContainText(me);
-    await expect(first.locator('.mem-tag-me')).toHaveText('我');
-    await expect(first.locator('.mem-sub')).toContainText('這台裝置');
-    await expect(first.locator('.mem-logout-btn')).toHaveText('登出');
-    await expect(page.locator('#mem-list .mem-clist-row.is-self')).toHaveCount(1);
-  });
-  test('自己不是第一位時也會被移到最上面，頭像顏色不變', async ({ page }) => {
-    await enterTrip(page);
-    const r = await page.evaluate(() => {
-      const before = uniqueMembers().map((m) => m.id);
-      S.myUid = before[before.length - 1]; renderMembers();
-      const rows = [...document.querySelectorAll('#mem-list .mem-clist-row')];
-      const idx = before.length - 1;
-      return { firstSelf: rows[0].classList.contains('is-self'), av: rows[0].querySelector('.mem-av').className, want: 'mem-av av' + (idx % 7), n: rows.length, total: before.length };
-    });
-    expect(r.firstSelf).toBe(true);
-    expect(r.av).toBe(r.want);
-    expect(r.n).toBe(r.total);
-  });
-  test('按「登出」回到登入畫面', async ({ page }) => {
-    await enterTrip(page);
-    await page.locator('.tab[data-pane="locations"]').click();
-    await page.locator('#mem-list .mem-logout-btn').click();
-    await expect(page.locator('#S-app.show')).toHaveCount(0);
-  });
-});
 
 test('首頁旅程卡片：「匯出」換成「分享」，點了複製分享連結，不會進入旅程', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
@@ -1224,4 +1191,53 @@ test('首頁旅程卡片：「匯出」換成「分享」，點了複製分享�
   await expect(page.locator('#toast, .toast').first()).toContainText('分享連結已複製');
   expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('?view=TEST01');
   await expect(page.locator('#S-app.show')).toHaveCount(0);   // 點分享不會進入旅程
+});
+
+test('團員列表維持原樣：順序不變、沒有「這台裝置」與登出按鈕', async ({ page }) => {
+  await enterTrip(page);
+  await page.locator('.tab[data-pane="locations"]').click();
+  const names = await page.locator('#mem-list .mem-clist-row .mem-nm').evaluateAll((els) => els.map((e) => e.firstChild.textContent));
+  expect(names).toEqual(await page.evaluate(() => uniqueMembers().map((m) => m.name)));
+  await expect(page.locator('#mem-list')).not.toContainText('這台裝置');
+  await expect(page.locator('#mem-list .mem-logout-btn')).toHaveCount(0);
+});
+
+test.describe('地圖：從 A 點點到 B 景點', () => {
+  const spy = (page) => page.evaluate(() => {
+    window.__fit = []; window.__mk = [];
+    map.fitBounds = (b) => window.__fit.push(b.pts.map((p) => [p.lat(), p.lng()]));
+    const M = google.maps.Marker;
+    google.maps.Marker = function (o) { const m = new M(o); window.__mk.push(m); return m; };
+  });
+  const tap = (page, name) => page.evaluate((n) => tapStop(S.stops.findIndex((s) => s.name === n)), name);
+  const live = (page) => page.evaluate(() => window.__mk.filter((m) => m.getMap()).map((m) => ({ t: m.opts.title, op: m.opts.opacity == null ? 1 : m.opts.opacity })));
+
+  test('先點 A 再點 B：地圖同時框住 A 和 B，A 變淡色、B 正常', async ({ page }) => {
+    await enterTrip(page);
+    await spy(page);
+    await tap(page, '大阪城');
+    expect(await page.evaluate(() => window.__fit.length)).toBe(0);   // 第一個點：照舊置中
+    await tap(page, '道頓堀');
+    const [A, B] = await page.evaluate(() => ['大阪城', '道頓堀'].map((n) => { const s = S.stops.find((x) => x.name === n); return [+s.lat, +s.lng]; }));
+    const fit = await page.evaluate(() => window.__fit);
+    expect(fit.length).toBe(1);
+    expect(fit[0]).toEqual([A, B]);
+    const m = await live(page);
+    expect(m).toEqual(expect.arrayContaining([{ t: '道頓堀', op: 1 }, { t: '大阪城（上一個）', op: 0.4 }]));
+    expect(m.length).toBe(2);
+  });
+
+  test('再點 C：只保留 B 當淡色的上一個點；收起景點時兩個標記都清掉', async ({ page }) => {
+    await enterTrip(page);
+    await spy(page);
+    const names = await page.evaluate(() => S.stops.filter((s) => +s.lat).map((s) => s.name).slice(0, 3));
+    for (const n of names) await tap(page, n);
+    const m = await live(page);
+    expect(m).toEqual(expect.arrayContaining([{ t: names[2], op: 1 }, { t: names[1] + '（上一個）', op: 0.4 }]));
+    expect(m.length).toBe(2);
+    await tap(page, names[2]);   // 再點一次 = 收起
+    expect(await live(page)).toEqual([]);
+    await tap(page, names[0]);   // 收起後再點：沒有上一個點
+    expect(await live(page)).toEqual([{ t: names[0], op: 1 }]);
+  });
 });
