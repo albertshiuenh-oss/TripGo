@@ -2872,33 +2872,75 @@ function onStopListClick(e){
 
 var _tapToken=0; // increments each tap; callbacks check before acting
 
-function makePinUrl(prev){   // prev=true：上一個景點（淡色填色＋深藍實線外框）
+function makePinUrl(prev){   // prev=true（或 1）：上一個景點（淡色填色＋深藍實線外框）；0～1 之間是淡出動畫的中間格
+  var k=prev===true?1:(+prev||0);
+  var mix=function(a,b){return Math.round(a+(b-a)*k);};
+  var line=k?'rgb('+mix(255,26)+','+mix(255,58)+','+mix(255,92)+')':'rgba(255,255,255,0.9)';
+  var fill=k===1?'0.3':(0.82-0.52*k).toFixed(2);
   var svg='<svg xmlns="http://www.w3.org/2000/svg" width="22.4" height="40" viewBox="0 0 22.4 40">'+
     '<path d="M11.2 1 C5.5 1 1 5.5 1 11.2 C1 19.3 11.2 38.6 11.2 38.6 C11.2 38.6 21.4 19.3 21.4 11.2 C21.4 5.5 16.9 1 11.2 1 Z"'+
-    (prev?' fill="rgba(43,95,142,0.3)" stroke="#1a3a5c" stroke-width="2"/>':' fill="rgba(43,95,142,0.82)" stroke="rgba(255,255,255,0.9)" stroke-width="1.5"/>')+
-    '<circle cx="11.2" cy="11.5" r="4" fill="'+(prev?'#1a3a5c':'rgba(255,255,255,0.9)')+'"/>'+
+    (k===1?' fill="rgba(43,95,142,0.3)" stroke="#1a3a5c" stroke-width="2"/>':' fill="rgba(43,95,142,'+fill+')" stroke="'+line+'" stroke-width="'+(1.5+0.5*k).toFixed(2)+'"/>')+
+    '<circle cx="11.2" cy="11.5" r="4" fill="'+(k===1?'#1a3a5c':k?line:'rgba(255,255,255,0.9)')+'"/>'+
     '</svg>';
   return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg);
 }
 
 // ── 點景點 B 時：若剛才選的是 A（地圖上還有 A 的標記），A 改成淡色並保留，地圖縮放到同時看得到 A 和 B ──
-var prevMarker=null, _pin=null;   // _pin = 目前標記的景點 {key,pos,title}
-function clearPrevPin(){ if(prevMarker){ prevMarker.setMap(null); prevMarker=null; } _pairBounds=null; }
+var prevMarker=null, _pin=null, _pairLine=null, _pairAnim=0, _pairAnimating=false;   // _pin = 目前標記的景點 {key,pos,title}
+function clearPrevPin(){
+  _pairAnim++; _pairAnimating=false;   // 中止進行中的動畫
+  if(prevMarker){ prevMarker.setMap(null); prevMarker=null; }
+  if(_pairLine){ _pairLine.setMap(null); _pairLine=null; }
+  _pairBounds=null;
+}
+function pinIcon(k){ return {url:makePinUrl(k), scaledSize:new google.maps.Size(22,40), anchor:new google.maps.Point(11,40)}; }
+function reducedMotion(){ return !!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
 function focusStopOnMap(pos, title, key){
   var A=(stopMarker&&_pin&&_pin.key!==key)?_pin:null;
+  var oldA=A?stopMarker:null; if(oldA) stopMarker=null;   // 保留 A 的標記，等一下讓它淡出
   clearPrevPin();
-  dropStopPin(pos, title);
-  _pin={key:key,pos:pos,title:title};
-  if(!A){ map.panTo(pos); map.setZoom(15); return; }
-  prevMarker=new google.maps.Marker({
-    position:A.pos, map:map, zIndex:1, clickable:false,
-    icon:{url:makePinUrl(true), scaledSize:new google.maps.Size(22,40), anchor:new google.maps.Point(11,40)},
-    title:A.title+'（上一個）'
-  });
-  if(stopMarker.setZIndex) stopMarker.setZIndex(10);
+  if(!A){ dropStopPin(pos, title); _pin={key:key,pos:pos,title:title}; map.panTo(pos); map.setZoom(15); return; }
   var b=new google.maps.LatLngBounds(); b.extend(A.pos); b.extend(pos);
-  _pairBounds=b;
-  fitPair();
+  prevMarker=oldA; prevMarker.setOptions({zIndex:1, clickable:false, title:A.title+'（上一個）'});
+  _pairLine=new google.maps.Polyline({path:[A.pos,A.pos], map:map, strokeColor:'#2B5F8E', strokeOpacity:0.75, strokeWeight:3, zIndex:2, clickable:false});
+  var finish=function(){   // 最後狀態：A 淡色＋外框、A→B 的線、B 標記、框住兩點
+    prevMarker.setIcon(pinIcon(1));
+    _pairLine.setPath([A.pos,pos]); _pairLine._tg={a:A.pos,b:pos};
+    dropStopPin(pos, title); if(stopMarker.setZIndex) stopMarker.setZIndex(10);
+    _pin={key:key,pos:pos,title:title}; _pairBounds=b; _pairAnimating=false;
+    fitPair();
+  };
+  if(reducedMotion()){ finish(); return; }
+  // ── 微動畫：① A 淡出 → ② 地圖漸縮到兩點 → ③ 從 A 往 B 畫線 → ④ B 標記落下 ──
+  var tok=++_pairAnim; _pairAnimating=true;
+  var alive=function(){ return tok===_pairAnim; };
+  var la=function(p){return typeof p.lat==='function'?p.lat():+p.lat;}, ln=function(p){return typeof p.lng==='function'?p.lng():+p.lng;};
+  var t0=performance.now();
+  (function fade(now){
+    if(!alive()) return;
+    var k=Math.min(1,(now-t0)/300); prevMarker.setIcon(pinIcon(k));
+    if(k<1) requestAnimationFrame(fade); else zoomOut();
+  })(t0);
+  function zoomOut(){
+    map.panTo({lat:(la(A.pos)+la(pos))/2, lng:(ln(A.pos)+ln(pos))/2});
+    var steps=0;
+    (function step(){
+      if(!alive()) return;
+      var vb=map.getBounds&&map.getBounds();
+      if(vb&&vb.contains(A.pos)&&vb.contains(pos)||steps>=8||map.getZoom()<=3){ setTimeout(function(){ if(alive()) draw(); },150); return; }
+      map.setZoom(map.getZoom()-1); steps++; setTimeout(step,220);
+    })();
+  }
+  function draw(){
+    fitPair(b);
+    var t1=performance.now();
+    (function grow(now){
+      if(!alive()) return;
+      var t=Math.min(1,(now-t1)/600), e=1-Math.pow(1-t,3);   // ease-out
+      _pairLine.setPath([A.pos,{lat:la(A.pos)+(la(pos)-la(A.pos))*e, lng:ln(A.pos)+(ln(pos)-ln(A.pos))*e}]);
+      if(t<1) requestAnimationFrame(grow); else finish();
+    })(t1);
+  }
 }
 // 地圖框住 A、B 兩點：下方要扣掉景點資訊卡蓋住的高度（資訊卡是查完資料才跳出來，所以出現後會再框一次）
 var _pairBounds=null;
@@ -2909,15 +2951,16 @@ function pcCoverHeight(){
   if(!c.height) return 0;
   return Math.max(0,Math.min(a.bottom,c.bottom)-Math.max(a.top,c.top));
 }
-function fitPair(){
-  if(!_pairBounds||!map||!prevMarker) return;
+function fitPair(bounds){
+  bounds=bounds||_pairBounds;
+  if(!bounds||!map||!prevMarker) return;
   var mw=map.getDiv&&map.getDiv(), H=mw?mw.getBoundingClientRect().height:0;
   var bottom=pcCoverHeight()+40, top=80;
   if(H&&top+bottom>H-60) bottom=Math.max(40,H-60-top);   // 地圖太矮時至少留 60px 給兩個點
-  map.fitBounds(_pairBounds,{top:top,bottom:bottom,left:40,right:70});   // 上方留給搜尋列、右邊留給按鈕
+  map.fitBounds(bounds,{top:top,bottom:bottom,left:40,right:70});   // 上方留給搜尋列、右邊留給按鈕
   google.maps.event.addListenerOnce(map,'idle',function(){ if(map.getZoom()>16) map.setZoom(16); });   // 兩點很近時不要放太大
 }
-function refitPairAfterCard(){ if(_pairBounds) requestAnimationFrame(fitPair); }
+function refitPairAfterCard(){ if(_pairBounds&&!_pairAnimating) requestAnimationFrame(function(){fitPair();}); }   // 動畫中不打斷；動畫結束時會量資訊卡再框一次
 function dropStopPin(pos, title){
   if(stopMarker){ stopMarker.setMap(null); stopMarker=null; }
   _pin=null; _pairBounds=null;   // 由其他地方（搜尋結果等）放的標記不算「上一個景點」；focusStopOnMap 會再設定

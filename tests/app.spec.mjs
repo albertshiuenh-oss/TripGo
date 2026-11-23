@@ -1209,7 +1209,10 @@ test.describe('地圖：從 A 點點到 B 景點', () => {
     const M = google.maps.Marker;
     google.maps.Marker = function (o) { const m = new M(o); window.__mk.push(m); return m; };
   });
-  const tap = (page, name) => page.evaluate((n) => tapStop(S.stops.findIndex((s) => s.name === n)), name);
+  const tap = async (page, name) => {
+    await page.evaluate((n) => tapStop(S.stops.findIndex((s) => s.name === n)), name);
+    await page.waitForFunction(() => !_pairAnimating);   // 等微動畫跑完
+  };
   // op：1 = 一般標記，'prev' = 上一個景點（淡色填色＋深藍實線外框，外框不透明）
   const live = (page) => page.evaluate(() => window.__mk.filter((m) => m.getMap()).map((m) => {
     const svg = decodeURIComponent((m.opts.icon && m.opts.icon.url || '').split(',')[1] || '');
@@ -1247,6 +1250,59 @@ test.describe('地圖：從 A 點點到 B 景點', () => {
     expect(r.cover).toBeGreaterThan(40);
     expect(r.pad.bottom).toBeGreaterThanOrEqual(Math.min(r.cover + 40, r.H - 140));
     expect(r.H - r.pad.top - r.pad.bottom).toBeGreaterThanOrEqual(60);   // 兩點仍有空間
+  });
+
+  test('微動畫：A 先淡出 → 從 A 往 B 畫線 → 最後 B 標記落下；結束後線停在 A→B', async ({ page }) => {
+    await enterTrip(page);
+    await spy(page);
+    await tap(page, '大阪城');
+    await page.evaluate(() => {
+      window.__frames = [];
+      const loop = () => {
+        const a = prevMarker, svg = a ? decodeURIComponent((a.opts.icon.url || '').split(',')[1]) : '';
+        window.__frames.push({ anim: _pairAnimating, aFill: (svg.match(/fill="rgba\(43,95,142,([\d.]+)\)"/) || [])[1], line: _pairLine ? _pairLine.opts.path.length : 0,
+          lineLen: _pairLine ? Math.hypot(_pairLine.opts.path[1].lat - _pairLine.opts.path[0].lat, _pairLine.opts.path[1].lng - _pairLine.opts.path[0].lng) : 0,
+          bDropped: !!(stopMarker && stopMarker.getMap()) });
+        if (window.__frames.length < 400) requestAnimationFrame(loop);
+      };
+      tapStop(S.stops.findIndex((s) => s.name === '道頓堀')); loop();
+    });
+    await page.waitForFunction(() => !_pairAnimating);
+    const f = await page.evaluate(() => window.__frames.filter((x) => x.anim));
+    expect(f.length).toBeGreaterThan(10);
+    const fills = f.map((x) => +x.aFill).filter((x) => x);
+    expect(fills[0]).toBeGreaterThan(0.6);                    // 一開始還是實心
+    expect(Math.min(...fills)).toBeLessThan(0.4);            // 漸漸變淡
+    const lens = f.map((x) => x.lineLen);
+    expect(lens.some((l) => l > 0 && l < Math.max(...lens) * 0.9)).toBe(true);   // 線是一段一段長出來
+    expect(f.every((x) => !x.bDropped)).toBe(true);         // 動畫中 B 還沒落下
+    expect(await page.evaluate(() => !!stopMarker.getMap() && stopMarker.opts.animation === google.maps.Animation.DROP)).toBe(true);
+    const line = await page.evaluate(() => _pairLine.opts.path.map((p) => [+(p.lat.call ? p.lat() : p.lat), +(p.lng.call ? p.lng() : p.lng)]));
+    const [A, B] = await page.evaluate(() => ['大阪城', '道頓堀'].map((n) => { const s = S.stops.find((x) => x.name === n); return [+s.lat, +s.lng]; }));
+    expect(line).toEqual([A, B]);
+  });
+
+  test('動畫中又點別的景點：立刻中止，不留下畫一半的線或多的標記', async ({ page }) => {
+    await enterTrip(page);
+    await spy(page);
+    const names = await page.evaluate(() => S.stops.filter((s) => +s.lat).map((s) => s.name).slice(0, 3));
+    await tap(page, names[0]);
+    await page.evaluate((n) => tapStop(S.stops.findIndex((s) => s.name === n)), names[1]);
+    await page.waitForTimeout(120);   // 動畫進行中
+    await tap(page, names[2]);
+    await page.waitForTimeout(1500);   // 舊動畫若沒中止，這時會跑完並多出標記
+    expect(await live(page)).toEqual([{ t: names[2], op: 1 }]);
+    expect(await page.evaluate(() => _pairLine)).toBe(null);
+  });
+
+  test('系統開啟「減少動態效果」時不播動畫，直接顯示最後畫面', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await enterTrip(page);
+    await spy(page);
+    await tap(page, '大阪城');
+    await page.evaluate(() => tapStop(S.stops.findIndex((s) => s.name === '道頓堀')));
+    expect(await page.evaluate(() => _pairAnimating)).toBe(false);
+    expect(await live(page)).toEqual(expect.arrayContaining([{ t: '道頓堀', op: 1 }, { t: '大阪城（上一個）', op: 'prev' }]));
   });
 
   test('再點 C：只保留 B 當淡色的上一個點；收起景點時兩個標記都清掉', async ({ page }) => {

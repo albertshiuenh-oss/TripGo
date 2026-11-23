@@ -37,6 +37,9 @@
     C.prototype.setOptions = function (o) { Object.assign(this.opts, o || {}); };
     C.prototype.setPosition = function (p) { this.pos = p ? new LatLng(p) : null; };
     C.prototype.getPosition = function () { return this.pos || null; };
+    C.prototype.setIcon = function (i) { this.opts.icon = i; };
+    C.prototype.setPath = function (p) { this.opts.path = p; };
+    C.prototype.setZIndex = function (z) { this.opts.zIndex = z; };
     Object.assign(C.prototype, extra || {});
     return C;
   }
