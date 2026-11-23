@@ -1,5 +1,8 @@
 # 更新紀錄
 
+## v5.14 — 2026-11-23
+- 維護：部署流程改成「打包」和「發佈」兩個步驟（GitHub 官方範本寫法），發佈等打包完全結束才開始，減少「No artifacts named github-pages」的部署失敗；GitHub Actions 工具升級到 Node.js 24 版本（checkout v5、configure-pages v6、upload-pages-artifact v5、deploy-pages v5、setup-node v5、upload-artifact v6）。App 功能沒有改變
+
 ## v5.13 — 2026-11-23
 - 變更：景點資訊卡從四行改成三行（名稱／分類＋評分＋功能按鈕／地址），底部留白縮小；卡片高度從約 124px 降到約 100px，地圖被遮住的部分變少（含測試）
 

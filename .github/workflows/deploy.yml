@@ -16,15 +16,14 @@ concurrency:
   group: pages
   cancel-in-progress: false
 jobs:
-  deploy:
+  # 打包和發佈分成兩個 job（GitHub 官方範本的寫法）：
+  # 發佈要等打包 job 整個結束、打包檔確定存好之後才開始，避免「No artifacts named github-pages」。
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with: { ref: main, path: live }
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with: { ref: dev, path: preview }
         continue-on-error: true   # fine before the dev branch exists
       - name: Assemble site
@@ -39,8 +38,15 @@ jobs:
             rsync -a "${EXCL[@]}" --exclude=CNAME preview/ _site/preview/
           fi
           ls -la _site _site/preview 2>/dev/null || true
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
         with: { path: _site }
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
       - id: deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
