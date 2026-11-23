@@ -37,6 +37,9 @@
     C.prototype.setOptions = function (o) { Object.assign(this.opts, o || {}); };
     C.prototype.setPosition = function (p) { this.pos = p ? new LatLng(p) : null; };
     C.prototype.getPosition = function () { return this.pos || null; };
+    C.prototype.setIcon = function (i) { this.opts.icon = i; };
+    C.prototype.setPath = function (p) { this.opts.path = p; };
+    C.prototype.setZIndex = function (z) { this.opts.zIndex = z; };
     Object.assign(C.prototype, extra || {});
     return C;
   }
@@ -82,7 +85,7 @@
       DirectionsService: function () { return lenient({ route: function (req, cb) { var p = Promise.resolve({ routes: [] }); cb && cb({ routes: [] }, ZERO); return p; } }); },
       DirectionsStatus: { OK: 'OK', ZERO_RESULTS: ZERO },
       TravelMode: { DRIVING: 'DRIVING', WALKING: 'WALKING', TRANSIT: 'TRANSIT', BICYCLING: 'BICYCLING' },
-      Animation: { DROP: 1, BOUNCE: 2 }, SymbolPath: { CIRCLE: 0 },
+      Animation: { DROP: 1, BOUNCE: 2 }, SymbolPath: { CIRCLE: 0, FORWARD_CLOSED_ARROW: 1, FORWARD_OPEN_ARROW: 2, BACKWARD_CLOSED_ARROW: 3, BACKWARD_OPEN_ARROW: 4 },
       LatLng: LatLng, LatLngBounds: LatLngBounds,
       Point: function (x, y) { this.x = x; this.y = y; }, Size: function (w, h) { this.width = w; this.height = h; },
       OverlayView: OverlayView, places: places,

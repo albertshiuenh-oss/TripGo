@@ -11,7 +11,7 @@
 /* ── TripGo boot: version, preview isolation, early error capture ──
    Must run before any other script touches localStorage or Firebase. */
 (function(){
-  window.TG_VERSION='5.11';
+  window.TG_VERSION='5.12';
   var PV=/\/preview\//.test(location.pathname)||/[?&]preview=1(&|$)/.test(location.search);
   window.TG_PREVIEW=PV;
 
@@ -58,7 +58,7 @@
   });
 })();
 </script>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.11%3C/text%3E%3C/svg%3E"/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.12%3C/text%3E%3C/svg%3E"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="TripGo"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -1259,7 +1259,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <button class="login-submit" id="btn-pin-submit" disabled>登入 / 建立帳號</button>
       <div class="login-err-msg" id="login-err"></div>
     </div>
-    <div class="login-footer">TripGo v5.11</div>
+    <div class="login-footer">TripGo v5.12</div>
   </div>
 
 <div id="S-join" class="hide">
@@ -1276,7 +1276,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.11 &nbsp;·&nbsp; 2026-11-23</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.12 &nbsp;·&nbsp; 2026-11-23</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -1913,7 +1913,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 <!-- Main App JS -->
 <script>
 'use strict';
-// TripGo v5.11
+// TripGo v5.12
 
 // ════════════════════════════════
 // STATE
@@ -2304,6 +2304,7 @@ function _applyPlaceCard(place){
   // 電話文字不顯示（電話 icon 按鈕保留在 actions）
   document.getElementById('pc-info').innerHTML=info;
   document.getElementById('place-card').classList.add('show');
+  refitPairAfterCard();
 }
 // Full showPlaceCard - moves map to place location (for search results)
 function showPlaceCard(pid){
@@ -2871,37 +2872,159 @@ function onStopListClick(e){
 
 var _tapToken=0; // increments each tap; callbacks check before acting
 
-function makePinUrl(){
+function makePinUrl(prev){   // prev=true（或 1）：上一個景點（淡色填色＋深藍實線外框）；0～1 之間是淡出動畫的中間格
+  var k=prev===true?1:(+prev||0);
+  var mix=function(a,b){return Math.round(a+(b-a)*k);};
+  var line=k?'rgb('+mix(255,26)+','+mix(255,58)+','+mix(255,92)+')':'rgba(255,255,255,0.9)';
+  var fill=k===1?'0.3':(0.82-0.52*k).toFixed(2);
   var svg='<svg xmlns="http://www.w3.org/2000/svg" width="22.4" height="40" viewBox="0 0 22.4 40">'+
-    '<path d="M11.2 0 C5.02 0 0 5.02 0 11.2 C0 19.6 11.2 40 11.2 40 C11.2 40 22.4 19.6 22.4 11.2 C22.4 5.02 17.38 0 11.2 0 Z"'+
-    ' fill="rgba(43,95,142,0.82)" stroke="rgba(255,255,255,0.9)" stroke-width="1.5"/>'+
-    '<circle cx="11.2" cy="11.5" r="4" fill="rgba(255,255,255,0.9)"/>'+
+    '<path d="M11.2 1 C5.5 1 1 5.5 1 11.2 C1 19.3 11.2 38.6 11.2 38.6 C11.2 38.6 21.4 19.3 21.4 11.2 C21.4 5.5 16.9 1 11.2 1 Z"'+
+    (k===1?' fill="rgba(43,95,142,0.3)" stroke="#1a3a5c" stroke-width="2"/>':' fill="rgba(43,95,142,'+fill+')" stroke="'+line+'" stroke-width="'+(1.5+0.5*k).toFixed(2)+'"/>')+
+    '<circle cx="11.2" cy="11.5" r="4" fill="'+(k===1?'#1a3a5c':k?line:'rgba(255,255,255,0.9)')+'"/>'+
     '</svg>';
   return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg);
 }
 
 // ── 點景點 B 時：若剛才選的是 A（地圖上還有 A 的標記），A 改成淡色並保留，地圖縮放到同時看得到 A 和 B ──
-var prevMarker=null, _pin=null;   // _pin = 目前標記的景點 {key,pos,title}
-function clearPrevPin(){ if(prevMarker){ prevMarker.setMap(null); prevMarker=null; } }
+var prevMarker=null, _pin=null, _pairLine=null, _pairLabel=null, _pairAnim=0, _pairAnimating=false;   // _pin = 目前標記的景點 {key,pos,title}
+function clearPrevPin(){
+  _pairAnim++; _pairAnimating=false;   // 中止進行中的動畫
+  if(prevMarker){ prevMarker.setMap(null); prevMarker=null; }
+  if(_pairLine){ _pairLine.setMap(null); _pairLine=null; }
+  if(_pairLabel){ _pairLabel.setMap(null); _pairLabel=null; }
+  _pairBounds=null;
+}
+// A→B 路線：同時向 Google 查「駕車（含即時路況）」和「大眾運輸」，線沿比較快的那條畫，標籤顯示兩者時間。
+// 查不到的方式不顯示（例如韓國沒有 Google 駕車路線）；兩者都查不到時畫直線、不顯示標籤。結果會快取。
+var _pairRouteCache={};
+function getPairRoutes(a,b){
+  var T=google.maps.TravelMode;
+  var ck=[a.lat,a.lng,b.lat,b.lng].map(function(v){return typeof v==='function'?v():v;}).join(',');
+  if(_pairRouteCache[ck]) return Promise.resolve(_pairRouteCache[ck]);
+  var ask=function(mode){
+    if(!dsvc) return Promise.resolve(null);
+    return new Promise(function(res){
+      var req={origin:a,destination:b,travelMode:mode};
+      if(mode===T.DRIVING) req.drivingOptions={departureTime:new Date(),trafficModel:'bestguess'};
+      var done=false, to=setTimeout(function(){ if(!done){done=true;res(null);} },4000);
+      try{ dsvc.route(req,function(r,st){
+        if(done) return; done=true; clearTimeout(to);
+        if(st!==google.maps.DirectionsStatus.OK||!r||!r.routes||!r.routes[0]) return res(null);
+        var leg=r.routes[0].legs[0];
+        res({path:r.routes[0].overview_path, secs:(leg.duration_in_traffic||leg.duration).value});
+      }); }catch(e){ done=true; clearTimeout(to); res(null); }
+    });
+  };
+  return Promise.all([ask(T.DRIVING),ask(T.TRANSIT)]).then(function(x){
+    var r={car:x[0],bus:x[1]};
+    r.fast=r.car&&r.bus?(r.car.secs<=r.bus.secs?r.car:r.bus):(r.car||r.bus);
+    if(r.fast) _pairRouteCache[ck]=r;
+    return r;
+  });
+}
+function fmtMins(secs){ var m=Math.max(1,Math.round(secs/60)); return m<60?m+'mins':Math.floor(m/60)+'h'+(m%60?' '+m%60+'mins':''); }
+function pairLabelText(rs){
+  if(!rs) return '';
+  return [rs.car?'🚗 '+fmtMins(rs.car.secs):'', rs.bus?'🚌 '+fmtMins(rs.bus.secs):''].filter(Boolean).join('  ');
+}
+function pairLabelIcon(text){
+  var w=20;   // 估寬度：中文 13px、英數空白 7.5px、表情符號 17px
+  Array.from(text).forEach(function(ch){ var c=ch.codePointAt(0); w+=c>0x1F000?17:c>0x2E80?13.5:7.5; });
+  w=Math.round(w);
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="28" viewBox="0 0 '+w+' 28"><rect x="1" y="1" width="'+(w-2)+'" height="26" rx="13" fill="#fff" stroke="#E8710A" stroke-width="2"/>'+
+    '<text x="'+(w/2)+'" y="19" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" font-weight="700" fill="#B3530A">'+text.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</text></svg>';
+  return {url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg), scaledSize:new google.maps.Size(w,28), anchor:new google.maps.Point(w/2,14)};
+}
+function pinIcon(k){ return {url:makePinUrl(k), scaledSize:new google.maps.Size(22,40), anchor:new google.maps.Point(11,40)}; }
+function reducedMotion(){ return !!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
 function focusStopOnMap(pos, title, key){
   var A=(stopMarker&&_pin&&_pin.key!==key)?_pin:null;
+  var oldA=A?stopMarker:null; if(oldA) stopMarker=null;   // 保留 A 的標記，等一下讓它淡出
   clearPrevPin();
-  dropStopPin(pos, title);
-  _pin={key:key,pos:pos,title:title};
-  if(!A){ map.panTo(pos); map.setZoom(15); return; }
-  prevMarker=new google.maps.Marker({
-    position:A.pos, map:map, opacity:0.4, zIndex:1, clickable:false,
-    icon:{url:makePinUrl(), scaledSize:new google.maps.Size(22,40), anchor:new google.maps.Point(11,40)},
-    title:A.title+'（上一個）'
-  });
-  if(stopMarker.setZIndex) stopMarker.setZIndex(10);
+  if(!A){ dropStopPin(pos, title); _pin={key:key,pos:pos,title:title}; map.panTo(pos); map.setZoom(15); return; }
   var b=new google.maps.LatLngBounds(); b.extend(A.pos); b.extend(pos);
-  map.fitBounds(b,{top:80,bottom:40,left:40,right:70});   // 上方留給搜尋列、右邊留給按鈕
+  var la=function(p){return typeof p.lat==='function'?p.lat():+p.lat;}, ln=function(p){return typeof p.lng==='function'?p.lng():+p.lng;};
+  var tok=++_pairAnim; _pairAnimating=true;
+  var alive=function(){ return tok===_pairAnim; };   // 中途點了別的景點 → clearPrevPin 讓 _pairAnim 變了 → 這次動畫停止
+  prevMarker=oldA; prevMarker.setOptions({zIndex:1, clickable:false, title:A.title+'（上一個）'});
+  // 橘色（和每天路線的藍色區分），沿 Google 最快路線畫；線上有白色箭頭、最前端有橘色箭頭，看得出方向
+  var SP=google.maps.SymbolPath||{}, arrows=SP.FORWARD_CLOSED_ARROW!=null?[
+    {icon:{path:SP.FORWARD_CLOSED_ARROW, scale:3.5, strokeColor:'#B3530A', strokeWeight:1.5, fillColor:'#E8710A', fillOpacity:1}, offset:'100%'},
+    {icon:{path:SP.FORWARD_OPEN_ARROW, scale:1.8, strokeColor:'#fff', strokeWeight:2}, offset:'36px', repeat:'80px'}]:[];
+  _pairLine=new google.maps.Polyline({path:[A.pos,A.pos], map:map, strokeColor:'#E8710A', strokeOpacity:0.95, strokeWeight:5, zIndex:3, clickable:false, icons:arrows});
+  var routes=null, route=null, routeP=getPairRoutes(A.pos,pos).then(function(r){ routes=r; route=r&&r.fast; return r; });
+  var fullPath=function(){ return route&&route.path&&route.path.length>1?route.path:[A.pos,pos]; };
+  var finish=function(){   // 最後狀態：A 淡色＋外框、A→B 的路線與時間、B 標記、框住兩點
+    prevMarker.setIcon(pinIcon(1));
+    var fp=fullPath(); _pairLine.setPath(fp); _pairLine._tg={a:A.pos,b:pos,route:route};
+    fp.forEach(function(p){ b.extend(p); });
+    var mid=fp[Math.floor(fp.length/2)];
+    if(fp.length===2) mid={lat:(la(A.pos)+la(pos))/2, lng:(ln(A.pos)+ln(pos))/2};
+    var txt=pairLabelText(routes);
+    if(txt){ _pairLabel=new google.maps.Marker({position:mid, map:map, zIndex:20, clickable:false, icon:pairLabelIcon(txt), title:txt}); _pairLabel._txt=txt; }
+    dropStopPin(pos, title); if(stopMarker.setZIndex) stopMarker.setZIndex(10);
+    _pin={key:key,pos:pos,title:title}; _pairBounds=b; _pairAnimating=false;
+    fitPair();
+  };
+  if(reducedMotion()){ routeP.then(function(){ if(alive()) finish(); }); return; }   // 不播動畫：查到路線就直接顯示最後畫面
+  // ── 微動畫：① A 淡出 → ② 地圖漸縮到兩點 → ③ 沿路線從 A 往 B 畫線 → ④ B 標記落下 ──
+  var t0=performance.now();
+  (function fade(now){
+    if(!alive()) return;
+    var k=Math.min(1,(now-t0)/300); prevMarker.setIcon(pinIcon(k));
+    if(k<1) requestAnimationFrame(fade); else zoomOut();
+  })(t0);
+  function zoomOut(){
+    map.panTo({lat:(la(A.pos)+la(pos))/2, lng:(ln(A.pos)+ln(pos))/2});
+    var steps=0;
+    (function step(){
+      if(!alive()) return;
+      var vb=map.getBounds&&map.getBounds();
+      if(vb&&vb.contains(A.pos)&&vb.contains(pos)||steps>=8||map.getZoom()<=3){ setTimeout(function(){ if(alive()) draw(); },150); return; }
+      map.setZoom(map.getZoom()-1); steps++; setTimeout(step,220);
+    })();
+  }
+  function draw(){
+    routeP.then(function(){
+      if(!alive()) return;
+      var fp=fullPath(), cum=[0];   // 沿路線依距離比例一段一段畫出來
+      for(var i=1;i<fp.length;i++) cum.push(cum[i-1]+Math.hypot(la(fp[i])-la(fp[i-1]),ln(fp[i])-ln(fp[i-1])));
+      var total=cum[cum.length-1]||1, bb=new google.maps.LatLngBounds(); fp.forEach(function(p){bb.extend(p);});
+      fitPair(bb);
+      var t1=performance.now(), D=2000;   // 2 秒從出發點長到目的地
+      (function grow(now){
+        if(!alive()) return;
+        var t=Math.min(1,(now-t1)/D), d=(1-Math.pow(1-t,3))*total, j=1;   // ease-out
+        while(j<fp.length-1&&cum[j]<d) j++;
+        var seg=(cum[j]-cum[j-1])||1, f=Math.max(0,Math.min(1,(d-cum[j-1])/seg));
+        _pairLine.setPath(fp.slice(0,j).concat([{lat:la(fp[j-1])+(la(fp[j])-la(fp[j-1]))*f, lng:ln(fp[j-1])+(ln(fp[j])-ln(fp[j-1]))*f}]));
+        if(t<1) requestAnimationFrame(grow); else finish();
+      })(t1);
+    });
+  }
+}
+// 地圖框住 A、B 兩點：下方要扣掉景點資訊卡蓋住的高度（資訊卡是查完資料才跳出來，所以出現後會再框一次）
+var _pairBounds=null;
+function pcCoverHeight(){
+  var pc=document.getElementById('place-card'), mw=map&&map.getDiv&&map.getDiv();
+  if(!pc||!mw||!pc.classList.contains('show')) return 0;
+  var a=mw.getBoundingClientRect(), c=pc.getBoundingClientRect();
+  if(!c.height) return 0;
+  return Math.max(0,Math.min(a.bottom,c.bottom)-Math.max(a.top,c.top));
+}
+function fitPair(bounds){
+  bounds=bounds||_pairBounds;
+  if(!bounds||!map||!prevMarker) return;
+  var mw=map.getDiv&&map.getDiv(), H=mw?mw.getBoundingClientRect().height:0;
+  var bottom=pcCoverHeight()+40, top=80;
+  if(H&&top+bottom>H-60) bottom=Math.max(40,H-60-top);   // 地圖太矮時至少留 60px 給兩個點
+  map.fitBounds(bounds,{top:top,bottom:bottom,left:40,right:70});   // 上方留給搜尋列、右邊留給按鈕
   google.maps.event.addListenerOnce(map,'idle',function(){ if(map.getZoom()>16) map.setZoom(16); });   // 兩點很近時不要放太大
 }
+function refitPairAfterCard(){ if(_pairBounds&&!_pairAnimating) requestAnimationFrame(function(){fitPair();}); }   // 動畫中不打斷；動畫結束時會量資訊卡再框一次
 function dropStopPin(pos, title){
   if(stopMarker){ stopMarker.setMap(null); stopMarker=null; }
-  _pin=null;   // 由其他地方（搜尋結果等）放的標記不算「上一個景點」；focusStopOnMap 會再設定
+  _pin=null; _pairBounds=null;   // 由其他地方（搜尋結果等）放的標記不算「上一個景點」；focusStopOnMap 會再設定
   stopMarker=new google.maps.Marker({
     position:pos, map:map,
     animation:google.maps.Animation.DROP,
@@ -2990,6 +3113,7 @@ function showSimplePc(s){
   if(s.note) info+='<div class="pc-info-row"><i class="ti ti-info-circle"></i><span>'+escHtml(s.note)+'</span></div>';
   document.getElementById('pc-info').innerHTML=info;
   document.getElementById('place-card').classList.add('show');
+  refitPairAfterCard();
 }
 
 function navStop(i){
@@ -6350,7 +6474,7 @@ window.addEventListener('load',function(){
       // 版本號
       ctx.fillStyle='rgba(255,255,255,0.65)';
       ctx.font='bold 28px system-ui,-apple-system,sans-serif';
-      ctx.fillText('v5.11',90,152);
+      ctx.fillText('v5.12',90,152);
       // 插入 apple-touch-icon
       var lnk=document.querySelector('link[rel="apple-touch-icon"]')||document.createElement('link');
       lnk.rel='apple-touch-icon'; lnk.href=c.toDataURL('image/png');

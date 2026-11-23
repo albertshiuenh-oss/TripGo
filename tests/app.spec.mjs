@@ -1205,14 +1205,22 @@ test('團員列表維持原樣：順序不變、沒有「這台裝置」與登�
 test.describe('地圖：從 A 點點到 B 景點', () => {
   const spy = (page) => page.evaluate(() => {
     window.__fit = []; window.__mk = [];
-    map.fitBounds = (b) => window.__fit.push(b.pts.map((p) => [p.lat(), p.lng()]));
+    map.fitBounds = (b, pad) => { window.__fit.push(b.pts.map((p) => [p.lat(), p.lng()])); window.__pad = pad; };
     const M = google.maps.Marker;
     google.maps.Marker = function (o) { const m = new M(o); window.__mk.push(m); return m; };
   });
-  const tap = (page, name) => page.evaluate((n) => tapStop(S.stops.findIndex((s) => s.name === n)), name);
-  const live = (page) => page.evaluate(() => window.__mk.filter((m) => m.getMap()).map((m) => ({ t: m.opts.title, op: m.opts.opacity == null ? 1 : m.opts.opacity })));
+  const tap = async (page, name) => {
+    await page.evaluate((n) => tapStop(S.stops.findIndex((s) => s.name === n)), name);
+    await page.waitForFunction(() => !_pairAnimating);   // 等微動畫跑完
+  };
+  // op：1 = 一般標記，'prev' = 上一個景點（淡色填色＋深藍實線外框，外框不透明）
+  const live = (page) => page.evaluate(() => window.__mk.filter((m) => m.getMap() && m !== _pairLabel).map((m) => {   // 不含時間標籤
+    const svg = decodeURIComponent((m.opts.icon && m.opts.icon.url || '').split(',')[1] || '');
+    const prev = /fill="rgba\(43,95,142,0\.3\)" stroke="#1a3a5c" stroke-width="2"/.test(svg);
+    return { t: m.opts.title, op: (m.opts.opacity == null || m.opts.opacity === 1) ? (prev ? 'prev' : 1) : m.opts.opacity };
+  }));
 
-  test('先點 A 再點 B：地圖同時框住 A 和 B，A 變淡色、B 正常', async ({ page }) => {
+  test('先點 A 再點 B：地圖同時框住 A 和 B，A 是淡色＋深藍外框、B 正常', async ({ page }) => {
     await enterTrip(page);
     await spy(page);
     await tap(page, '大阪城');
@@ -1220,11 +1228,171 @@ test.describe('地圖：從 A 點點到 B 景點', () => {
     await tap(page, '道頓堀');
     const [A, B] = await page.evaluate(() => ['大阪城', '道頓堀'].map((n) => { const s = S.stops.find((x) => x.name === n); return [+s.lat, +s.lng]; }));
     const fit = await page.evaluate(() => window.__fit);
-    expect(fit.length).toBe(1);
-    expect(fit[0]).toEqual([A, B]);
+    expect(fit.length).toBeGreaterThanOrEqual(1);
+    const key = (p) => p.join(',');
+    expect(fit.every((f) => f.every((p) => [key(A), key(B)].includes(key(p))) && f.some((p) => key(p) === key(A)) && f.some((p) => key(p) === key(B)))).toBe(true);
     const m = await live(page);
-    expect(m).toEqual(expect.arrayContaining([{ t: '道頓堀', op: 1 }, { t: '大阪城（上一個）', op: 0.4 }]));
+    expect(m).toEqual(expect.arrayContaining([{ t: '道頓堀', op: 1 }, { t: '大阪城（上一個）', op: 'prev' }]));
     expect(m.length).toBe(2);
+  });
+
+  test('框住兩點時，下方預留景點資訊卡蓋住的高度（兩個點不會被資訊卡遮住）', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await enterTrip(page);
+    await spy(page);
+    await tap(page, '大阪城');
+    await tap(page, '道頓堀');
+    await expect(page.locator('#place-card.show')).toBeVisible();
+    await page.waitForTimeout(100);   // 資訊卡出現後的重新框選
+    const r = await page.evaluate(() => {
+      const a = map.getDiv().getBoundingClientRect(), c = document.getElementById('place-card').getBoundingClientRect();
+      return { cover: Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top), pad: window.__pad, H: a.height };
+    });
+    expect(r.cover).toBeGreaterThan(40);
+    expect(r.pad.bottom).toBeGreaterThanOrEqual(Math.min(r.cover + 40, r.H - 140));
+    expect(r.H - r.pad.top - r.pad.bottom).toBeGreaterThanOrEqual(60);   // 兩點仍有空間
+  });
+
+  test('微動畫：A 先淡出 → 從 A 往 B 畫線 → 最後 B 標記落下；結束後線停在 A→B', async ({ page }) => {
+    await enterTrip(page);
+    await spy(page);
+    await tap(page, '大阪城');
+    await page.evaluate(() => {
+      window.__frames = [];
+      const loop = () => {
+        const a = prevMarker, svg = a ? decodeURIComponent((a.opts.icon.url || '').split(',')[1]) : '';
+        window.__frames.push({ anim: _pairAnimating, aFill: (svg.match(/fill="rgba\(43,95,142,([\d.]+)\)"/) || [])[1], line: _pairLine ? _pairLine.opts.path.length : 0,
+          lineLen: _pairLine ? Math.hypot(_pairLine.opts.path[1].lat - _pairLine.opts.path[0].lat, _pairLine.opts.path[1].lng - _pairLine.opts.path[0].lng) : 0,
+          bDropped: !!(stopMarker && stopMarker.getMap()) });
+        if (window.__frames.length < 400) requestAnimationFrame(loop);
+      };
+      tapStop(S.stops.findIndex((s) => s.name === '道頓堀')); loop();
+    });
+    await page.waitForFunction(() => !_pairAnimating);
+    const f = await page.evaluate(() => window.__frames.filter((x) => x.anim));
+    expect(f.length).toBeGreaterThan(10);
+    const fills = f.map((x) => +x.aFill).filter((x) => x);
+    expect(fills[0]).toBeGreaterThan(0.6);                    // 一開始還是實心
+    expect(Math.min(...fills)).toBeLessThan(0.4);            // 漸漸變淡
+    const lens = f.map((x) => x.lineLen);
+    expect(lens.some((l) => l > 0 && l < Math.max(...lens) * 0.9)).toBe(true);   // 線是一段一段長出來
+    expect(f.every((x) => !x.bDropped)).toBe(true);         // 動畫中 B 還沒落下
+    expect(await page.evaluate(() => !!stopMarker.getMap() && stopMarker.opts.animation === google.maps.Animation.DROP)).toBe(true);
+    const line = await page.evaluate(() => _pairLine.opts.path.map((p) => [+(p.lat.call ? p.lat() : p.lat), +(p.lng.call ? p.lng() : p.lng)]));
+    const [A, B] = await page.evaluate(() => ['大阪城', '道頓堀'].map((n) => { const s = S.stops.find((x) => x.name === n); return [+s.lat, +s.lng]; }));
+    expect(line).toEqual([A, B]);
+  });
+
+  test('動畫中又點別的景點：立刻中止，不留下畫一半的線或多的標記', async ({ page }) => {
+    await enterTrip(page);
+    await spy(page);
+    const names = await page.evaluate(() => S.stops.filter((s) => +s.lat).map((s) => s.name).slice(0, 3));
+    await tap(page, names[0]);
+    await page.evaluate((n) => tapStop(S.stops.findIndex((s) => s.name === n)), names[1]);
+    await page.waitForTimeout(120);   // 動畫進行中
+    await tap(page, names[2]);
+    await page.waitForTimeout(1500);   // 舊動畫若沒中止，這時會跑完並多出標記
+    expect(await live(page)).toEqual([{ t: names[2], op: 1 }]);
+    expect(await page.evaluate(() => _pairLine)).toBe(null);
+  });
+
+  test('系統開啟「減少動態效果」時不播動畫，直接顯示最後畫面', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await enterTrip(page);
+    await spy(page);
+    await tap(page, '大阪城');
+    await page.evaluate(() => tapStop(S.stops.findIndex((s) => s.name === '道頓堀')));
+    expect(await page.evaluate(() => _pairAnimating)).toBe(false);
+    expect(await live(page)).toEqual(expect.arrayContaining([{ t: '道頓堀', op: 1 }, { t: '大阪城（上一個）', op: 'prev' }]));
+  });
+
+  // 假的 Google 路線：DRIVING 可以設成查不到（模擬韓國），回傳一條經過中間點的路線
+  const fakeRoutes = (page, { noDriving = false, secs = 1500 } = {}) => page.evaluate(({ noDriving, secs }) => {
+    window.__reqs = [];
+    dsvc.route = (req, cb) => {
+      window.__reqs.push(req.travelMode);
+      if (noDriving && req.travelMode === 'DRIVING') return cb({ routes: [] }, 'ZERO_RESULTS');
+      const a = req.origin, b = req.destination, LL = google.maps.LatLng;
+      const path = [new LL(a.lat, a.lng), new LL(a.lat + 0.01, (a.lng + b.lng) / 2), new LL(b.lat, b.lng)];
+      cb({ routes: [{ overview_path: path, legs: [{ duration: { value: req.travelMode === 'TRANSIT' ? 2400 : secs } }] }] }, 'OK');
+    };
+  }, { noDriving, secs });
+  const pairInfo = (page) => page.evaluate(() => ({
+    label: _pairLabel && _pairLabel.getMap() ? _pairLabel._txt : null,
+    n: _pairLine ? _pairLine.opts.path.length : 0, color: _pairLine && _pairLine.opts.strokeColor }));
+
+  test('A→B 沿 Google 最快路線畫橘色線（有方向箭頭），標籤顯示「🚗 23mins  🚌 40mins」', async ({ page }) => {
+    await enterTrip(page);
+    await spy(page);
+    await fakeRoutes(page, { secs: 1380 });
+    await tap(page, '大阪城');
+    await tap(page, '道頓堀');
+    const r = await pairInfo(page);
+    expect(r.n).toBe(3);                    // 沿路線（經過中間點），不是直線
+    expect(r.color).toBe('#E8710A');
+    expect(r.label).toBe('🚗 23mins  🚌 40mins');
+    expect((await page.evaluate(() => window.__reqs)).sort()).toEqual(['DRIVING', 'TRANSIT']);
+    const ic = await page.evaluate(() => _pairLine.opts.icons.map((i) => [i.icon.path, i.offset, i.repeat || null]));
+    expect(ic).toEqual([[1, '100%', null], [2, '36px', '80px']]);   // 最前端箭頭＋線上重複箭頭
+  });
+
+  test('線沿比較快的那條路線；1 小時以上顯示「1h 5mins」', async ({ page }) => {
+    await enterTrip(page);
+    await spy(page);
+    await page.evaluate(() => {
+      dsvc.route = (req, cb) => {
+        const a = req.origin, b = req.destination, LL = google.maps.LatLng, car = req.travelMode === 'DRIVING';
+        const path = car ? [new LL(a.lat, a.lng), new LL(a.lat + 0.02, a.lng), new LL(b.lat, b.lng)] : [new LL(a.lat, a.lng), new LL(a.lat, a.lng + 0.01), new LL(a.lat - 0.01, b.lng), new LL(b.lat, b.lng)];
+        cb({ routes: [{ overview_path: path, legs: [{ duration: { value: car ? 3900 : 2700 } }] }] }, 'OK');
+      };
+    });
+    await tap(page, '大阪城');
+    await tap(page, '道頓堀');
+    const r = await pairInfo(page);
+    expect(r.n).toBe(4);   // 公車比較快 → 沿公車路線
+    expect(r.label).toBe('🚗 1h 5mins  🚌 45mins');
+  });
+
+  test('查不到駕車路線（例如韓國）只顯示 🚌；兩者都查不到時畫直線、不顯示標籤；同一段路不重查', async ({ page }) => {
+    await enterTrip(page);
+    await spy(page);
+    await fakeRoutes(page, { noDriving: true });
+    await tap(page, '大阪城');
+    await tap(page, '道頓堀');
+    expect((await pairInfo(page)).label).toBe('🚌 40mins');
+    const n1 = await page.evaluate(() => window.__reqs.length);
+    await tap(page, '大阪城');
+    await tap(page, '道頓堀');
+    expect(await page.evaluate(() => window.__reqs.length)).toBe(n1 + 2);   // 大阪城←道頓堀是另一段，要查
+    await tap(page, '大阪城');
+    await tap(page, '道頓堀');
+    expect(await page.evaluate(() => window.__reqs.length)).toBe(n1 + 2);   // 兩段都查過 → 快取
+    await page.evaluate(() => { _pairRouteCache = {}; dsvc.route = (req, cb) => cb({ routes: [] }, 'ZERO_RESULTS'); });
+    await tap(page, '大阪城');
+    await tap(page, '道頓堀');
+    const r = await pairInfo(page);
+    expect(r.n).toBe(2);
+    expect(r.label).toBe(null);
+  });
+
+  test('線在 2 秒內從出發點沿路線長到目的地', async ({ page }) => {
+    await enterTrip(page);
+    await spy(page);
+    await fakeRoutes(page);
+    await tap(page, '大阪城');
+    await page.evaluate(() => {
+      window.__g = [];
+      const loop = () => { if (_pairLine && _pairAnimating) window.__g.push([performance.now(), _pairLine.opts.path.length, _pairLine.opts.path[_pairLine.opts.path.length - 1]]); if (_pairAnimating || !window.__g.length) requestAnimationFrame(loop); };
+      tapStop(S.stops.findIndex((s) => s.name === '道頓堀')); loop();
+    });
+    await page.waitForFunction(() => !_pairAnimating);
+    const g = await page.evaluate(() => {
+      const grow = window.__g.filter((x) => x[1] >= 2 && !(x[2].lat === window.__g[0][2].lat && x[2].lng === window.__g[0][2].lng));
+      return { ms: grow.length ? grow[grow.length - 1][0] - grow[0][0] : 0, frames: grow.length };
+    });
+    expect(g.frames).toBeGreaterThan(20);
+    expect(g.ms).toBeGreaterThan(1700);
+    expect(g.ms).toBeLessThan(2300);
   });
 
   test('再點 C：只保留 B 當淡色的上一個點；收起景點時兩個標記都清掉', async ({ page }) => {
@@ -1233,7 +1401,7 @@ test.describe('地圖：從 A 點點到 B 景點', () => {
     const names = await page.evaluate(() => S.stops.filter((s) => +s.lat).map((s) => s.name).slice(0, 3));
     for (const n of names) await tap(page, n);
     const m = await live(page);
-    expect(m).toEqual(expect.arrayContaining([{ t: names[2], op: 1 }, { t: names[1] + '（上一個）', op: 0.4 }]));
+    expect(m).toEqual(expect.arrayContaining([{ t: names[2], op: 1 }, { t: names[1] + '（上一個）', op: 'prev' }]));
     expect(m.length).toBe(2);
     await tap(page, names[2]);   // 再點一次 = 收起
     expect(await live(page)).toEqual([]);
