@@ -1205,7 +1205,7 @@ test('團員列表維持原樣：順序不變、沒有「這台裝置」與登�
 test.describe('地圖：從 A 點點到 B 景點', () => {
   const spy = (page) => page.evaluate(() => {
     window.__fit = []; window.__mk = [];
-    map.fitBounds = (b) => window.__fit.push(b.pts.map((p) => [p.lat(), p.lng()]));
+    map.fitBounds = (b, pad) => { window.__fit.push(b.pts.map((p) => [p.lat(), p.lng()])); window.__pad = pad; };
     const M = google.maps.Marker;
     google.maps.Marker = function (o) { const m = new M(o); window.__mk.push(m); return m; };
   });
@@ -1220,11 +1220,28 @@ test.describe('地圖：從 A 點點到 B 景點', () => {
     await tap(page, '道頓堀');
     const [A, B] = await page.evaluate(() => ['大阪城', '道頓堀'].map((n) => { const s = S.stops.find((x) => x.name === n); return [+s.lat, +s.lng]; }));
     const fit = await page.evaluate(() => window.__fit);
-    expect(fit.length).toBe(1);
-    expect(fit[0]).toEqual([A, B]);
+    expect(fit.length).toBeGreaterThanOrEqual(1);
+    expect(fit.every((f) => JSON.stringify(f) === JSON.stringify([A, B]))).toBe(true);
     const m = await live(page);
     expect(m).toEqual(expect.arrayContaining([{ t: '道頓堀', op: 1 }, { t: '大阪城（上一個）', op: 0.4 }]));
     expect(m.length).toBe(2);
+  });
+
+  test('框住兩點時，下方預留景點資訊卡蓋住的高度（兩個點不會被資訊卡遮住）', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await enterTrip(page);
+    await spy(page);
+    await tap(page, '大阪城');
+    await tap(page, '道頓堀');
+    await expect(page.locator('#place-card.show')).toBeVisible();
+    await page.waitForTimeout(100);   // 資訊卡出現後的重新框選
+    const r = await page.evaluate(() => {
+      const a = map.getDiv().getBoundingClientRect(), c = document.getElementById('place-card').getBoundingClientRect();
+      return { cover: Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top), pad: window.__pad, H: a.height };
+    });
+    expect(r.cover).toBeGreaterThan(40);
+    expect(r.pad.bottom).toBeGreaterThanOrEqual(Math.min(r.cover + 40, r.H - 140));
+    expect(r.H - r.pad.top - r.pad.bottom).toBeGreaterThanOrEqual(60);   // 兩點仍有空間
   });
 
   test('再點 C：只保留 B 當淡色的上一個點；收起景點時兩個標記都清掉', async ({ page }) => {
