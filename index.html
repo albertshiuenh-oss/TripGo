@@ -2894,50 +2894,38 @@ function clearPrevPin(){
   if(_pairLabel){ _pairLabel.setMap(null); _pairLabel=null; }
   _pairBounds=null;
 }
-// A→B 路線：依 B 的「前段交通」（開車／計程車→駕車、公車／火車→大眾運輸、步行→步行，沒設定→駕車）向 Google 查路線。
-// 查不到時（例如韓國沒有 Google 駕車路線）改查大眾運輸，再不行就畫直線並標示距離。結果會快取。
+// A→B 路線：同時向 Google 查「駕車（含即時路況）」和「大眾運輸」，線沿比較快的那條畫，標籤顯示兩者時間。
+// 查不到的方式不顯示（例如韓國沒有 Google 駕車路線）；兩者都查不到時畫直線、不顯示標籤。結果會快取。
 var _pairRouteCache={};
-function pairModeOf(key){
-  var st=S.stops.find(function(x){return x._key===key;}), m=st&&st.transit&&st.transit.mode||'car';
+function getPairRoutes(a,b){
   var T=google.maps.TravelMode;
-  return {mode:m, travel:m==='walk'?T.WALKING:(m==='bus'||m==='train')?T.TRANSIT:T.DRIVING};
-}
-function getPairRoute(a,b,key){
-  var pm=pairModeOf(key), T=google.maps.TravelMode;
-  var ck=[a.lat,a.lng,b.lat,b.lng,pm.mode].map(function(v){return typeof v==='function'?v():v;}).join(',');
+  var ck=[a.lat,a.lng,b.lat,b.lng].map(function(v){return typeof v==='function'?v():v;}).join(',');
   if(_pairRouteCache[ck]) return Promise.resolve(_pairRouteCache[ck]);
-  var tries=[pm.travel]; if(pm.travel!==T.TRANSIT) tries.push(T.TRANSIT);
-  var ask=function(i){
-    if(!dsvc||i>=tries.length) return Promise.resolve(null);
+  var ask=function(mode){
+    if(!dsvc) return Promise.resolve(null);
     return new Promise(function(res){
-      var req={origin:a,destination:b,travelMode:tries[i]};
-      if(tries[i]===T.DRIVING) req.drivingOptions={departureTime:new Date(),trafficModel:'bestguess'};
+      var req={origin:a,destination:b,travelMode:mode};
+      if(mode===T.DRIVING) req.drivingOptions={departureTime:new Date(),trafficModel:'bestguess'};
       var done=false, to=setTimeout(function(){ if(!done){done=true;res(null);} },4000);
       try{ dsvc.route(req,function(r,st){
         if(done) return; done=true; clearTimeout(to);
         if(st!==google.maps.DirectionsStatus.OK||!r||!r.routes||!r.routes[0]) return res(null);
         var leg=r.routes[0].legs[0];
-        res({path:r.routes[0].overview_path, secs:(leg.duration_in_traffic||leg.duration).value, travel:tries[i], mode:pm.mode, fallback:i>0});
+        res({path:r.routes[0].overview_path, secs:(leg.duration_in_traffic||leg.duration).value});
       }); }catch(e){ done=true; clearTimeout(to); res(null); }
-    }).then(function(x){ return x||ask(i+1); });
+    });
   };
-  return ask(0).then(function(x){ if(x) _pairRouteCache[ck]=x; return x; });
+  return Promise.all([ask(T.DRIVING),ask(T.TRANSIT)]).then(function(x){
+    var r={car:x[0],bus:x[1]};
+    r.fast=r.car&&r.bus?(r.car.secs<=r.bus.secs?r.car:r.bus):(r.car||r.bus);
+    if(r.fast) _pairRouteCache[ck]=r;
+    return r;
+  });
 }
-function fmtMins(secs){ var m=Math.max(1,Math.round(secs/60)); return m<60?m+' 分':Math.floor(m/60)+' 小時'+(m%60?' '+m%60+' 分':''); }
-function pairLabelText(rt,a,b){
-  if(!rt){
-    var km=google.maps.geometry&&google.maps.geometry.spherical?google.maps.geometry.spherical.computeDistanceBetween(a,b)/1000:haversineKm(a,b);
-    return '📏 直線 '+(km<10?km.toFixed(1):Math.round(km))+' km（查不到路線）';
-  }
-  var T=google.maps.TravelMode;
-  var ic=rt.travel===T.WALKING?'🚶':rt.travel===T.TRANSIT?(rt.mode==='train'?'🚆':'🚌'):(rt.mode==='taxi'?'🚕':'🚗');
-  return ic+' 約 '+fmtMins(rt.secs)+(rt.fallback?'（大眾運輸）':'');
-}
-function haversineKm(a,b){
-  var g=function(p,k){var v=p[k];return typeof v==='function'?v.call(p):+v;}, R=6371, r=Math.PI/180;
-  var dLa=(g(b,'lat')-g(a,'lat'))*r, dLn=(g(b,'lng')-g(a,'lng'))*r;
-  var h=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(g(a,'lat')*r)*Math.cos(g(b,'lat')*r)*Math.sin(dLn/2)*Math.sin(dLn/2);
-  return 2*R*Math.asin(Math.sqrt(h));
+function fmtMins(secs){ var m=Math.max(1,Math.round(secs/60)); return m<60?m+'mins':Math.floor(m/60)+'h'+(m%60?' '+m%60+'mins':''); }
+function pairLabelText(rs){
+  if(!rs) return '';
+  return [rs.car?'🚗 '+fmtMins(rs.car.secs):'', rs.bus?'🚌 '+fmtMins(rs.bus.secs):''].filter(Boolean).join('  ');
 }
 function pairLabelIcon(text){
   var w=20;   // 估寬度：中文 13px、英數空白 7.5px、表情符號 17px
@@ -2959,9 +2947,12 @@ function focusStopOnMap(pos, title, key){
   var tok=++_pairAnim; _pairAnimating=true;
   var alive=function(){ return tok===_pairAnim; };   // 中途點了別的景點 → clearPrevPin 讓 _pairAnim 變了 → 這次動畫停止
   prevMarker=oldA; prevMarker.setOptions({zIndex:1, clickable:false, title:A.title+'（上一個）'});
-  // 橘色（和每天路線的藍色區分），沿 Google 路線畫
-  _pairLine=new google.maps.Polyline({path:[A.pos,A.pos], map:map, strokeColor:'#E8710A', strokeOpacity:0.95, strokeWeight:5, zIndex:3, clickable:false});
-  var route=null, routeP=getPairRoute(A.pos,pos,key).then(function(r){ route=r; return r; });
+  // 橘色（和每天路線的藍色區分），沿 Google 最快路線畫；線上有白色箭頭、最前端有橘色箭頭，看得出方向
+  var SP=google.maps.SymbolPath||{}, arrows=SP.FORWARD_CLOSED_ARROW!=null?[
+    {icon:{path:SP.FORWARD_CLOSED_ARROW, scale:3.5, strokeColor:'#B3530A', strokeWeight:1.5, fillColor:'#E8710A', fillOpacity:1}, offset:'100%'},
+    {icon:{path:SP.FORWARD_OPEN_ARROW, scale:1.8, strokeColor:'#fff', strokeWeight:2}, offset:'36px', repeat:'80px'}]:[];
+  _pairLine=new google.maps.Polyline({path:[A.pos,A.pos], map:map, strokeColor:'#E8710A', strokeOpacity:0.95, strokeWeight:5, zIndex:3, clickable:false, icons:arrows});
+  var routes=null, route=null, routeP=getPairRoutes(A.pos,pos).then(function(r){ routes=r; route=r&&r.fast; return r; });
   var fullPath=function(){ return route&&route.path&&route.path.length>1?route.path:[A.pos,pos]; };
   var finish=function(){   // 最後狀態：A 淡色＋外框、A→B 的路線與時間、B 標記、框住兩點
     prevMarker.setIcon(pinIcon(1));
@@ -2969,9 +2960,8 @@ function focusStopOnMap(pos, title, key){
     fp.forEach(function(p){ b.extend(p); });
     var mid=fp[Math.floor(fp.length/2)];
     if(fp.length===2) mid={lat:(la(A.pos)+la(pos))/2, lng:(ln(A.pos)+ln(pos))/2};
-    var txt=pairLabelText(route,A.pos,pos);
-    _pairLabel=new google.maps.Marker({position:mid, map:map, zIndex:20, clickable:false, icon:pairLabelIcon(txt), title:txt});
-    _pairLabel._txt=txt;
+    var txt=pairLabelText(routes);
+    if(txt){ _pairLabel=new google.maps.Marker({position:mid, map:map, zIndex:20, clickable:false, icon:pairLabelIcon(txt), title:txt}); _pairLabel._txt=txt; }
     dropStopPin(pos, title); if(stopMarker.setZIndex) stopMarker.setZIndex(10);
     _pin={key:key,pos:pos,title:title}; _pairBounds=b; _pairAnimating=false;
     fitPair();
@@ -3001,7 +2991,7 @@ function focusStopOnMap(pos, title, key){
       for(var i=1;i<fp.length;i++) cum.push(cum[i-1]+Math.hypot(la(fp[i])-la(fp[i-1]),ln(fp[i])-ln(fp[i-1])));
       var total=cum[cum.length-1]||1, bb=new google.maps.LatLngBounds(); fp.forEach(function(p){bb.extend(p);});
       fitPair(bb);
-      var t1=performance.now(), D=Math.min(1400,700+fp.length*4);
+      var t1=performance.now(), D=2000;   // 2 秒從出發點長到目的地
       (function grow(now){
         if(!alive()) return;
         var t=Math.min(1,(now-t1)/D), d=(1-Math.pow(1-t,3))*total, j=1;   // ease-out

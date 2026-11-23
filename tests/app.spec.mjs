@@ -1321,48 +1321,78 @@ test.describe('地圖：從 A 點點到 B 景點', () => {
     label: _pairLabel && _pairLabel.getMap() ? _pairLabel._txt : null,
     n: _pairLine ? _pairLine.opts.path.length : 0, color: _pairLine && _pairLine.opts.strokeColor }));
 
-  test('A→B 沿 Google 駕車路線畫橘色線，並在路線上標示預估時間', async ({ page }) => {
+  test('A→B 沿 Google 最快路線畫橘色線（有方向箭頭），標籤顯示「🚗 23mins  🚌 40mins」', async ({ page }) => {
     await enterTrip(page);
     await spy(page);
-    await fakeRoutes(page);
+    await fakeRoutes(page, { secs: 1380 });
     await tap(page, '大阪城');
     await tap(page, '道頓堀');
     const r = await pairInfo(page);
     expect(r.n).toBe(3);                    // 沿路線（經過中間點），不是直線
-    expect(r.color).toBe('#E8710A');        // 橘色，和每天路線的藍色區分
-    expect(r.label).toBe('🚗 約 25 分');
-    expect(await page.evaluate(() => window.__reqs)).toEqual(['DRIVING']);
+    expect(r.color).toBe('#E8710A');
+    expect(r.label).toBe('🚗 23mins  🚌 40mins');
+    expect((await page.evaluate(() => window.__reqs)).sort()).toEqual(['DRIVING', 'TRANSIT']);
+    const ic = await page.evaluate(() => _pairLine.opts.icons.map((i) => [i.icon.path, i.offset, i.repeat || null]));
+    expect(ic).toEqual([[1, '100%', null], [2, '36px', '80px']]);   // 最前端箭頭＋線上重複箭頭
   });
 
-  test('查不到駕車路線（例如韓國）時改用大眾運輸；B 的前段交通是步行就用步行', async ({ page }) => {
+  test('線沿比較快的那條路線；1 小時以上顯示「1h 5mins」', async ({ page }) => {
+    await enterTrip(page);
+    await spy(page);
+    await page.evaluate(() => {
+      dsvc.route = (req, cb) => {
+        const a = req.origin, b = req.destination, LL = google.maps.LatLng, car = req.travelMode === 'DRIVING';
+        const path = car ? [new LL(a.lat, a.lng), new LL(a.lat + 0.02, a.lng), new LL(b.lat, b.lng)] : [new LL(a.lat, a.lng), new LL(a.lat, a.lng + 0.01), new LL(a.lat - 0.01, b.lng), new LL(b.lat, b.lng)];
+        cb({ routes: [{ overview_path: path, legs: [{ duration: { value: car ? 3900 : 2700 } }] }] }, 'OK');
+      };
+    });
+    await tap(page, '大阪城');
+    await tap(page, '道頓堀');
+    const r = await pairInfo(page);
+    expect(r.n).toBe(4);   // 公車比較快 → 沿公車路線
+    expect(r.label).toBe('🚗 1h 5mins  🚌 45mins');
+  });
+
+  test('查不到駕車路線（例如韓國）只顯示 🚌；兩者都查不到時畫直線、不顯示標籤；同一段路不重查', async ({ page }) => {
     await enterTrip(page);
     await spy(page);
     await fakeRoutes(page, { noDriving: true });
     await tap(page, '大阪城');
     await tap(page, '道頓堀');
-    expect((await pairInfo(page)).label).toBe('🚌 約 40 分（大眾運輸）');
-    expect(await page.evaluate(() => window.__reqs)).toEqual(['DRIVING', 'TRANSIT']);
-    await page.evaluate(() => { const s = S.stops.find((x) => x.name === '大阪城'); s.transit = { mode: 'walk', minutes: 10 }; });
+    expect((await pairInfo(page)).label).toBe('🚌 40mins');
+    const n1 = await page.evaluate(() => window.__reqs.length);
     await tap(page, '大阪城');
-    expect((await pairInfo(page)).label).toBe('🚶 約 25 分');
-  });
-
-  test('路線查不到時畫直線並標示直線距離；同一段路第二次不再重查', async ({ page }) => {
-    await enterTrip(page);
-    await spy(page);
-    await page.evaluate(() => { window.__reqs = []; const o = dsvc.route; dsvc.route = (req, cb) => { window.__reqs.push(req.travelMode); return o(req, cb); }; });
+    await tap(page, '道頓堀');
+    expect(await page.evaluate(() => window.__reqs.length)).toBe(n1 + 2);   // 大阪城←道頓堀是另一段，要查
+    await tap(page, '大阪城');
+    await tap(page, '道頓堀');
+    expect(await page.evaluate(() => window.__reqs.length)).toBe(n1 + 2);   // 兩段都查過 → 快取
+    await page.evaluate(() => { _pairRouteCache = {}; dsvc.route = (req, cb) => cb({ routes: [] }, 'ZERO_RESULTS'); });
     await tap(page, '大阪城');
     await tap(page, '道頓堀');
     const r = await pairInfo(page);
     expect(r.n).toBe(2);
-    expect(r.label).toMatch(/^📏 直線 [\d.]+ km（查不到路線）$/);
+    expect(r.label).toBe(null);
+  });
+
+  test('線在 2 秒內從出發點沿路線長到目的地', async ({ page }) => {
+    await enterTrip(page);
+    await spy(page);
     await fakeRoutes(page);
     await tap(page, '大阪城');
-    await tap(page, '道頓堀');
-    const n1 = await page.evaluate(() => window.__reqs.length);
-    await tap(page, '大阪城');
-    await tap(page, '道頓堀');
-    expect(await page.evaluate(() => window.__reqs.length)).toBe(n1);   // 快取
+    await page.evaluate(() => {
+      window.__g = [];
+      const loop = () => { if (_pairLine && _pairAnimating) window.__g.push([performance.now(), _pairLine.opts.path.length, _pairLine.opts.path[_pairLine.opts.path.length - 1]]); if (_pairAnimating || !window.__g.length) requestAnimationFrame(loop); };
+      tapStop(S.stops.findIndex((s) => s.name === '道頓堀')); loop();
+    });
+    await page.waitForFunction(() => !_pairAnimating);
+    const g = await page.evaluate(() => {
+      const grow = window.__g.filter((x) => x[1] >= 2 && !(x[2].lat === window.__g[0][2].lat && x[2].lng === window.__g[0][2].lng));
+      return { ms: grow.length ? grow[grow.length - 1][0] - grow[0][0] : 0, frames: grow.length };
+    });
+    expect(g.frames).toBeGreaterThan(20);
+    expect(g.ms).toBeGreaterThan(1700);
+    expect(g.ms).toBeLessThan(2300);
   });
 
   test('再點 C：只保留 B 當淡色的上一個點；收起景點時兩個標記都清掉', async ({ page }) => {
