@@ -1143,36 +1143,42 @@ test.describe('食住規畫', () => {
 
 test.describe('上方標題列', () => {
   for (const w of [390, 360]) {
-    test('手機寬度 ' + w + 'px：字體維持 20px，Busan X\'mas 完整顯示；名字只顯示第一個字；連線只用圖示並在最右邊；沒有分享按鈕', async ({ page }) => {
+    test('手機寬度 ' + w + 'px：行程名稱 20px 完整顯示；名字縮寫 20px、靠右緊貼連線圖示；高度不變', async ({ page }) => {
       await page.setViewportSize({ width: w, height: 800 });
       await enterTrip(page);
+      await page.evaluate(() => startApp(S.groupCode, S.myUid, 'Albert SHIUE', "Busan X'mas", S.isOrg));
       await page.evaluate(() => { document.getElementById('tb-trip').textContent = "Busan X'mas"; });
       const m = await page.evaluate(() => {
-        const t = document.getElementById('tb-trip'), ns = document.getElementById('net-status');
+        const t = document.getElementById('tb-trip'), n = document.getElementById('tb-myname'), ns = document.getElementById('net-status');
         const vis = [...document.querySelectorAll('.topbar > *')].filter((e) => e.offsetParent && e.getBoundingClientRect().width > 0);
-        return { h: document.querySelector('.topbar').getBoundingClientRect().height, fs: getComputedStyle(t).fontSize,
-          full: t.scrollWidth <= t.clientWidth + 1, last: vis[vis.length - 1].id, nsText: ns.innerText.trim(), nsTitle: ns.title,
-          right: Math.max(...vis.map((e) => e.getBoundingClientRect().right)) };
+        const nr = n.getBoundingClientRect(), sr = ns.getBoundingClientRect();
+        return { h: document.querySelector('.topbar').getBoundingClientRect().height, fs: getComputedStyle(t).fontSize, nfs: getComputedStyle(n).fontSize,
+          full: t.scrollWidth <= t.clientWidth + 1, order: vis.slice(-2).map((e) => e.id), gap: sr.left - nr.right, nsText: ns.innerText.trim(),
+          right: Math.max(...vis.map((e) => e.getBoundingClientRect().right)), text: n.textContent };
       });
       expect(m.fs).toBe('20px');
+      expect(m.nfs).toBe('20px');
+      expect(m.text).toBe('AL');
       expect(m.full).toBe(true);
       expect(m.h).toBeLessThanOrEqual(45);
-      expect(m.last).toBe('net-status');
+      expect(m.order).toEqual(['tb-myname', 'net-status']);
+      expect(m.gap).toBeLessThanOrEqual(10);   // 挨在一起
       expect(m.nsText).toBe('');
-      expect(m.nsTitle).toBe('線上');
       expect(m.right).toBeLessThanOrEqual(w);
       await expect(page.locator('#btn-share-trip')).toHaveCount(0);
       await expect(page.locator('.tb-logo')).toContainText('TripGo');
     });
   }
-  test('名字有空白時只顯示第一個字（Albert SHIUE → Albert），完整名字放在提示', async ({ page }) => {
+  test('名字縮寫：完整名字放在提示；點了切到團員列表', async ({ page }) => {
     await enterTrip(page);
     await page.evaluate(() => startApp(S.groupCode, S.myUid, 'Albert SHIUE', S.tripName, S.isOrg));
-    await expect(page.locator('#tb-myname')).toHaveText('Albert');
-    await expect(page.locator('#tb-myname')).toHaveAttribute('title', 'Albert SHIUE');
+    await expect(page.locator('#tb-myname')).toHaveText('AL');
+    await expect(page.locator('#tb-myname')).toHaveAttribute('title', /Albert SHIUE/);
+    await page.locator('#tb-myname').click();
+    await expect(page.locator('#pane-locations')).toHaveClass(/on/);
   });
-
 });
+
 
 test('首頁旅程卡片：「匯出」換成「分享」，點了複製分享連結，不會進入旅程', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
@@ -1185,4 +1191,53 @@ test('首頁旅程卡片：「匯出」換成「分享」，點了複製分享�
   await expect(page.locator('#toast, .toast').first()).toContainText('分享連結已複製');
   expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('?view=TEST01');
   await expect(page.locator('#S-app.show')).toHaveCount(0);   // 點分享不會進入旅程
+});
+
+test('團員列表維持原樣：順序不變、沒有「這台裝置」與登出按鈕', async ({ page }) => {
+  await enterTrip(page);
+  await page.locator('.tab[data-pane="locations"]').click();
+  const names = await page.locator('#mem-list .mem-clist-row .mem-nm').evaluateAll((els) => els.map((e) => e.firstChild.textContent));
+  expect(names).toEqual(await page.evaluate(() => uniqueMembers().map((m) => m.name)));
+  await expect(page.locator('#mem-list')).not.toContainText('這台裝置');
+  await expect(page.locator('#mem-list .mem-logout-btn')).toHaveCount(0);
+});
+
+test.describe('地圖：從 A 點點到 B 景點', () => {
+  const spy = (page) => page.evaluate(() => {
+    window.__fit = []; window.__mk = [];
+    map.fitBounds = (b) => window.__fit.push(b.pts.map((p) => [p.lat(), p.lng()]));
+    const M = google.maps.Marker;
+    google.maps.Marker = function (o) { const m = new M(o); window.__mk.push(m); return m; };
+  });
+  const tap = (page, name) => page.evaluate((n) => tapStop(S.stops.findIndex((s) => s.name === n)), name);
+  const live = (page) => page.evaluate(() => window.__mk.filter((m) => m.getMap()).map((m) => ({ t: m.opts.title, op: m.opts.opacity == null ? 1 : m.opts.opacity })));
+
+  test('先點 A 再點 B：地圖同時框住 A 和 B，A 變淡色、B 正常', async ({ page }) => {
+    await enterTrip(page);
+    await spy(page);
+    await tap(page, '大阪城');
+    expect(await page.evaluate(() => window.__fit.length)).toBe(0);   // 第一個點：照舊置中
+    await tap(page, '道頓堀');
+    const [A, B] = await page.evaluate(() => ['大阪城', '道頓堀'].map((n) => { const s = S.stops.find((x) => x.name === n); return [+s.lat, +s.lng]; }));
+    const fit = await page.evaluate(() => window.__fit);
+    expect(fit.length).toBe(1);
+    expect(fit[0]).toEqual([A, B]);
+    const m = await live(page);
+    expect(m).toEqual(expect.arrayContaining([{ t: '道頓堀', op: 1 }, { t: '大阪城（上一個）', op: 0.4 }]));
+    expect(m.length).toBe(2);
+  });
+
+  test('再點 C：只保留 B 當淡色的上一個點；收起景點時兩個標記都清掉', async ({ page }) => {
+    await enterTrip(page);
+    await spy(page);
+    const names = await page.evaluate(() => S.stops.filter((s) => +s.lat).map((s) => s.name).slice(0, 3));
+    for (const n of names) await tap(page, n);
+    const m = await live(page);
+    expect(m).toEqual(expect.arrayContaining([{ t: names[2], op: 1 }, { t: names[1] + '（上一個）', op: 0.4 }]));
+    expect(m.length).toBe(2);
+    await tap(page, names[2]);   // 再點一次 = 收起
+    expect(await live(page)).toEqual([]);
+    await tap(page, names[0]);   // 收起後再點：沒有上一個點
+    expect(await live(page)).toEqual([{ t: names[0], op: 1 }]);
+  });
 });
