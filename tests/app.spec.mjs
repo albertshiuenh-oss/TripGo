@@ -901,3 +901,48 @@ test('首頁「未完成」按鈕：先跳確認「要把這個旅程標為已�
   await page.locator('#confirm-dialog #cd-yes').click();
   await expect(page.locator('#jtp-done-section')).toContainText('大阪');
 });
+
+test.describe('跨年行程（12 月 → 隔年 1 月）', () => {
+  const addCrossYear = async (page) => {
+    await page.clock.setFixedTime(new Date('2026-11-23T08:00:00+08:00'));
+    await enterTrip(page);
+    await page.evaluate(() => {
+      const mk = (day, name) => ({ name, day, arrive: '10:00', depart: '11:30', lat: 34.7, lng: 135.5, category: '住宿', createdAt: 900 });
+      window.FB.set('tripgo/groups/TEST01/stops/-y1', mk('Dec 31', '跨年飯店'));
+      window.FB.set('tripgo/groups/TEST01/stops/-y2', mk('Jan 1', '退房飯店'));
+    });
+    await page.waitForFunction(() => S.stops.some((s) => s.name === '退房飯店'));
+  };
+
+  test('「Jan 1」會算成隔年 2027-01-01，不是今年的 2026-01-01', async ({ page }) => {
+    await addCrossYear(page);
+    expect(await page.evaluate(() => labelToDate('Jan 1'))).toBe('2027-01-01');
+    expect(await page.evaluate(() => labelToDate('Dec 31'))).toBe('2026-12-31');
+    expect(await page.evaluate(() => labelToDate('Jan 1, 2030'))).toBe('2030-01-01');   // 有寫年份的照舊
+  });
+
+  test('行程頁排序：Dec 31 在 Jan 1 前面；編輯表單的日期是 2027/01/01', async ({ page }) => {
+    await addCrossYear(page);
+    const order = await page.evaluate(() => S.stops.map((s) => s.day));
+    const sorted = await page.evaluate(() => sortStopsForDisplay(S.stops).map((s) => s.day));
+    expect(sorted.indexOf('Dec 31')).toBeLessThan(sorted.indexOf('Jan 1'));
+    await page.evaluate(() => { const i = S.stops.findIndex((s) => s.name === '退房飯店'); tapStop(i); setTimeout(() => openInlineEdit(i), 50); });
+    await expect(page.locator('#ief-day')).toHaveValue('2027-01-01');
+  });
+
+  test('把行程從 12/31 改成 2027/1/1 後再開編輯，日期仍是 2027/1/1', async ({ page }) => {
+    await addCrossYear(page);
+    await page.evaluate(() => { const i = S.stops.findIndex((s) => s.name === '跨年飯店'); tapStop(i); setTimeout(() => openInlineEdit(i), 50); });
+    await page.locator('#ief-day').fill('2027-01-01');
+    await page.locator('.exp-ef-save').click();
+    await page.waitForFunction(() => S.stops.find((s) => s.name === '跨年飯店').day === 'Jan 1');
+    await page.evaluate(() => { const i = S.stops.findIndex((s) => s.name === '跨年飯店'); tapStop(i); setTimeout(() => openInlineEdit(i), 50); });
+    await expect(page.locator('#ief-day')).toHaveValue('2027-01-01');
+  });
+
+  test('只有同一年的行程，維持原本「今年」的算法', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-09-01T08:00:00+08:00'));
+    await enterTrip(page);
+    expect(await page.evaluate(() => labelToDate('Oct 3'))).toBe('2026-10-03');
+  });
+});
