@@ -1122,3 +1122,30 @@ test.describe('食住規畫', () => {
     });
   }
 });
+
+test.describe('上方標題列', () => {
+  for (const w of [390, 360]) {
+    test('手機寬度 ' + w + 'px：行程名稱看得到（Busan X\'mas 不被截斷），標題列高度不變', async ({ page }) => {
+      await page.setViewportSize({ width: w, height: 800 });
+      await enterTrip(page);
+      await page.evaluate(() => {
+        document.getElementById('tb-trip').textContent = "Busan X'mas";
+        document.getElementById('tb-myname').textContent = 'Albert SHIUE';
+        document.getElementById('btn-share-trip').style.display = '';
+      });
+      const m = await page.evaluate(() => {
+        const t = document.getElementById('tb-trip');
+        return { h: document.querySelector('.topbar').getBoundingClientRect().height, full: t.scrollWidth <= t.clientWidth + 1, w: t.getBoundingClientRect().width,
+          right: Math.max(...[...document.querySelectorAll('.topbar > *')].filter((e) => e.offsetParent).map((e) => e.getBoundingClientRect().right)) };
+      });
+      expect(m.full).toBe(true);
+      expect(m.h).toBeLessThanOrEqual(45);
+      expect(m.right).toBeLessThanOrEqual(w);   // 右邊按鈕沒有被擠出畫面
+    });
+  }
+  test('桌面寬度仍顯示「TripGo」文字', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await enterTrip(page);
+    await expect(page.locator('.tb-logo-txt')).toBeVisible();
+  });
+});
