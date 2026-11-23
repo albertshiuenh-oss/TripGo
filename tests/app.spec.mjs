@@ -1,4 +1,5 @@
 import { test, expect, enterTrip, login, writes, SEED } from './harness.mjs';
+import { readFileSync } from 'node:fs';
 
 
 // Distance (px) between the vertical centre of `sel` and the centre of the scroll box `box`
@@ -174,19 +175,19 @@ test.describe('行程／餐廳：今天', () => {
     expect(await page.locator('[id^="sr-"]').evaluateAll((els) => els.filter((e) => /\s/.test(e.id)).length)).toBe(0);
   });
 
-  test('餐廳頁：今天的日期標題有標示，切換進來時自動置中', async ({ page }) => {
+  test('食住規畫頁：今天的那幾行有標示「今天」，切換進來時自動置中', async ({ page }) => {
     await page.addInitScript((s) => { window.__TG_SEED = s; }, longTrip());
     await page.clock.setFixedTime(new Date('2026-10-10T12:00:00+08:00'));
     await enterTrip(page);
     await page.locator('.tab[data-pane="restaurant"]').click();
-    const hdr = page.locator('.rest-day-hdr.day-today');
-    await expect(hdr).toHaveCount(1);
-    await expect(hdr).toContainText('Oct 10');
-    await expect(hdr.locator('.day-badge')).toHaveText('今天');
+    const rows = page.locator('.rest-row.day-today');
+    await expect(rows.first()).toBeVisible();
+    expect(await rows.evaluateAll((els) => els.every((e) => e.dataset.date === '2026-10-10'))).toBe(true);
+    await expect(rows.first().locator('.rr-date')).toHaveText('今天');
     await expect.poll(() => page.evaluate(() => {
       const box = document.getElementById('restaurant-list').getBoundingClientRect();
-      const h = document.querySelector('.rest-day-hdr.day-today');
-      const a = h.getBoundingClientRect(), z = h.nextElementSibling.getBoundingClientRect();
+      const t = document.querySelectorAll('.rest-row.day-today');
+      const a = t[0].getBoundingClientRect(), z = t[t.length - 1].getBoundingClientRect();
       return Math.abs((a.top + z.bottom) / 2 - (box.top + box.bottom) / 2);
     })).toBeLessThan(80);
   });
@@ -969,4 +970,219 @@ test.describe('跨年行程：第一次載入的畫面順序', () => {
     const names = await page.evaluate(() => S.stops.map((s) => s.name));
     expect(names).toEqual(['桃園機場', '金海機場', '退房', '機場回程']);
   });
+});
+
+test.describe('餐廳預訂', () => {
+  const openEdit = (page, name) => page.evaluate((n) => { const i = S.stops.findIndex((s) => s.name === n); tapStop(i); setTimeout(() => openInlineEdit(i), 50); }, name);
+
+  test('分類是「餐廳」才出現預訂欄位，且和分類在同一列；切換分類會即時顯示／隱藏', async ({ page }) => {
+    await enterTrip(page);
+    await openEdit(page, '道頓堀');
+    await expect(page.locator('#ief-category')).toBeVisible();
+    await expect(page.locator('#ief-resv')).toBeHidden();
+    await page.locator('#ief-category').selectOption('餐廳');
+    await expect(page.locator('#ief-resv')).toBeVisible();
+    await expect(page.locator('#ief-resv-no')).toBeVisible();
+    const [c, r, n] = await Promise.all(['#ief-category', '#ief-resv', '#ief-resv-no'].map((sel) => page.locator(sel).boundingBox()));
+    expect(Math.abs(c.y - r.y)).toBeLessThan(4);   // 同一列
+    expect(Math.abs(c.y - n.y)).toBeLessThan(4);
+    expect(c.width).toBeLessThan(r.width * 2);     // 分類不再佔滿整列
+    await page.locator('#ief-category').selectOption('景點');
+    await expect(page.locator('#ief-resv')).toBeHidden();
+  });
+
+  test('存檔寫入 resv / resvNo，再開編輯會帶入；預訂編號含 HTML 只當文字', async ({ page }) => {
+    await enterTrip(page);
+    await openEdit(page, '道頓堀');
+    await page.locator('#ief-category').selectOption('餐廳');
+    await page.locator('#ief-resv').selectOption('已訂');
+    await page.locator('#ief-resv-no').fill('<b>A123</b>');
+    await page.locator('.exp-ef-save').click();
+    await page.waitForFunction(() => S.stops.find((s) => s.name === '道頓堀').resvNo === '<b>A123</b>');
+    expect(await page.evaluate(() => S.stops.find((s) => s.name === '道頓堀').resv)).toBe('已訂');
+    await openEdit(page, '道頓堀');
+    await expect(page.locator('#ief-resv')).toHaveValue('已訂');
+    await expect(page.locator('#ief-resv-no')).toHaveValue('<b>A123</b>');
+    await page.locator('.tab[data-pane="restaurant"]').click();
+    const card = page.locator('.rest-card', { hasText: '道頓堀' });
+    await expect(card.locator('.rest-resv')).toHaveText('✅ 已訂 #<b>A123</b>');
+    await expect(page.locator('#restaurant-list b')).toHaveCount(0);
+  });
+
+  test('飲食行程上方統計所有餐廳的預訂狀況', async ({ page }) => {
+    await enterTrip(page);
+    await page.evaluate(() => {
+      const b = 'tripgo/groups/TEST01/stops/';
+      const mk = (name, resv, n) => ({ name, day: 'Oct 2', arrive: '1' + n + ':00', lat: 34.7, lng: 135.5, category: '餐廳', resv, createdAt: 800 + n });
+      window.FB.set(b + '-r1', mk('甲店', '已訂', 1));
+      window.FB.set(b + '-r2', mk('乙店', '已訂', 2));
+      window.FB.set(b + '-r3', mk('丙店', '待訂', 3));
+      window.FB.set(b + '-r4', mk('丁店', '', 4));
+    });
+    await page.waitForFunction(() => S.stops.some((s) => s.name === '丁店'));
+    await page.locator('.tab[data-pane="restaurant"]').click();
+    const sum = page.locator('#rest-resv-sum');
+    await expect(sum).toContainText('已訂 2');
+    await expect(sum).toContainText('待訂 1');
+    await expect(sum).toContainText('未設定');
+    await expect(page.locator('.rest-card', { hasText: '丙店' }).locator('.rest-resv')).toHaveText('⏳ 待訂');
+  });
+
+  test('新增景點時選「餐廳」也可以填預訂', async ({ page }) => {
+    await enterTrip(page);
+    await page.evaluate(() => openNewStopForm({ day: '2026-10-02' }));
+    await expect(page.locator('#ief-resv')).toBeHidden();
+    await page.locator('#ief-name').fill('新餐廳');
+    await page.locator('#ief-category').selectOption('餐廳');
+    await page.locator('#ief-resv').selectOption('待訂');
+    await page.locator('#ief-resv-no').fill('X9');
+    await page.locator('#ief-save').click();
+    await page.waitForFunction(() => S.stops.some((s) => s.name === '新餐廳'));
+    const s = await page.evaluate(() => S.stops.find((x) => x.name === '新餐廳'));
+    expect([s.resv, s.resvNo]).toEqual(['待訂', 'X9']);
+  });
+});
+
+test.describe('住宿預訂', () => {
+  const openEdit = (page, name) => page.evaluate((n) => { const i = S.stops.findIndex((s) => s.name === n); tapStop(i); setTimeout(() => openInlineEdit(i), 50); }, name);
+  test('分類「住宿」也有預訂欄位；存檔後行程頁的分類旁顯示「已訂 #編號」', async ({ page }) => {
+    await enterTrip(page);
+    await openEdit(page, '道頓堀');
+    await page.locator('#ief-category').selectOption('住宿');
+    await expect(page.locator('#ief-resv')).toBeVisible();
+    await page.locator('#ief-resv').selectOption('已訂');
+    await page.locator('#ief-resv-no').fill('HTL-88');
+    await page.locator('.exp-ef-save').click();
+    await page.waitForFunction(() => S.stops.find((s) => s.name === '道頓堀').resvNo === 'HTL-88');
+    await expect(page.locator('#stop-list .resv-tag.r-yes')).toHaveText('✅ 已訂 #HTL-88');
+    await openEdit(page, '道頓堀');
+    await expect(page.locator('#ief-resv')).toHaveValue('已訂');
+  });
+  test('景點、其他分類沒有預訂欄位；沒設定預訂的不顯示標籤', async ({ page }) => {
+    await enterTrip(page);
+    await expect(page.locator('#stop-list .resv-tag')).toHaveCount(0);
+    await openEdit(page, '道頓堀');
+    for (const c of ['景點', '其他', '']) {
+      await page.locator('#ief-category').selectOption(c);
+      await expect(page.locator('#ief-resv')).toBeHidden();
+    }
+  });
+});
+
+// 讀取 App 產生的 .xlsx（未壓縮 zip），不依賴外部套件：檢查 zip 結構、取出 sheet1 的儲存格文字
+function readXlsx(file) {
+  const buf = readFileSync(file);
+  const files = {};
+  let p = 0;
+  while (buf.readUInt32LE(p) === 0x04034b50) {
+    expect(buf.readUInt16LE(p + 8)).toBe(0);   // stored
+    const size = buf.readUInt32LE(p + 18), nlen = buf.readUInt16LE(p + 26), xlen = buf.readUInt16LE(p + 28);
+    const name = buf.toString('utf8', p + 30, p + 30 + nlen);
+    files[name] = buf.toString('utf8', p + 30 + nlen + xlen, p + 30 + nlen + xlen + size);
+    p += 30 + nlen + xlen + size;
+  }
+  expect(buf.readUInt32LE(buf.length - 22)).toBe(0x06054b50);   // end of central directory
+  for (const k of ['[Content_Types].xml', '_rels/.rels', 'xl/workbook.xml', 'xl/_rels/workbook.xml.rels', 'xl/styles.xml', 'xl/worksheets/sheet1.xml']) expect(files[k]).toBeTruthy();
+  const un = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+  return [...files['xl/worksheets/sheet1.xml'].matchAll(/<row [^>]*>(.*?)<\/row>/g)].map((r) => [...r[1].matchAll(/<t[^>]*>(.*?)<\/t>/g)].map((c) => un(c[1])));
+}
+
+test.describe('食住規畫', () => {
+  const addStays = (page) => page.evaluate(() => {
+    const b = 'tripgo/groups/TEST01/stops/';
+    window.FB.set(b + '-h1', { name: 'Anook Hotel', day: 'Oct 2', arrive: '15:00', lat: 34.7, lng: 135.5, category: '住宿', resv: '已訂', resvNo: 'H-1', note: '含早餐', createdAt: 901 });
+    window.FB.set(b + '-h2', { name: '京都旅館', day: 'Oct 3', arrive: '16:00', lat: 35, lng: 135.7, category: '住宿', resv: '待訂', createdAt: 902 });
+    window.FB.set(b + '-f1', { name: '一蘭拉麵', day: 'Oct 3', arrive: '12:00', lat: 34.7, lng: 135.5, category: '餐廳', resv: '已訂', resvNo: 'R-7', createdAt: 903 });
+  });
+  test('分頁名稱是「食住規畫」，內頁分「飲食」「住宿」；每筆一行：日期＋時間＋名稱', async ({ page }) => {
+    await enterTrip(page);
+    await addStays(page);
+    await page.waitForFunction(() => S.stops.some((s) => s.name === '京都旅館'));
+    await page.locator('.tab[data-pane="restaurant"]').click();
+    await expect(page.locator('#pane-restaurant')).toContainText('食住規畫');
+    await expect(page.locator('.rest-sub[data-sub="food"]')).toHaveClass(/on/);
+    const r = page.locator('.rest-row', { hasText: '一蘭拉麵' });
+    await expect(r.locator('.rr-date')).toHaveText('10/3（六）');
+    await expect(r.locator('.rr-time')).toHaveText('12:00');
+    const [d, n] = await Promise.all([r.locator('.rr-date').boundingBox(), r.locator('.rr-name').boundingBox()]);
+    expect(Math.abs(d.y + d.height / 2 - (n.y + n.height / 2))).toBeLessThan(4);   // 同一行
+    await expect(page.locator('#restaurant-list')).not.toContainText('Anook Hotel');
+    await page.locator('.rest-sub[data-sub="stay"]').click();
+    await expect(page.locator('.rest-row')).toHaveCount(2);
+    await expect(page.locator('.rest-row').first()).toContainText('Anook Hotel');
+    await expect(page.locator('#rest-resv-sum')).toContainText('已訂 1');
+    await expect(page.locator('#rest-resv-sum')).toContainText('待訂 1');
+    await expect(page.locator('#restaurant-list')).not.toContainText('一蘭拉麵');
+  });
+
+  for (const [sub, label, first, count] of [['food', '飲食', null, null], ['stay', '住宿', 'Anook Hotel', 2]]) {
+    test('最下方「產出 Excel（' + label + '）」下載可開啟的 .xlsx，內容正確', async ({ page }) => {
+      await enterTrip(page);
+      await addStays(page);
+      await page.waitForFunction(() => S.stops.some((s) => s.name === '京都旅館'));
+      await page.locator('.tab[data-pane="restaurant"]').click();
+      await page.locator('.rest-sub[data-sub="' + sub + '"]').click();
+      const btn = page.locator('#rest-xlsx');
+      await expect(btn).toHaveText('📥 產出 Excel（' + label + '）');
+      const want = await page.evaluate((s) => restItems(s).map((x) => x.name), sub);
+      const [dl] = await Promise.all([page.waitForEvent('download'), btn.click()]);
+      expect(dl.suggestedFilename()).toMatch(new RegExp(label + '\\.xlsx$'));
+      const f = test.info().outputPath('out.xlsx'); await dl.saveAs(f);
+      const rows = readXlsx(f);
+      expect(rows[0]).toEqual(['日期', '時間', '名稱', '預訂狀態', '預訂編號', '備註']);
+      expect(rows.slice(1).map((r) => r[2])).toEqual(want);
+      if (first) {
+        expect(rows.length - 1).toBe(count);
+        expect(rows[1]).toEqual(['2026/10/02（五）', '15:00', 'Anook Hotel', '已預訂', 'H-1', '含早餐']);
+      } else {
+        expect(rows.find((r) => r[2] === '一蘭拉麵').slice(3, 5)).toEqual(['已預訂', 'R-7']);
+      }
+    });
+  }
+});
+
+test.describe('上方標題列', () => {
+  for (const w of [390, 360]) {
+    test('手機寬度 ' + w + 'px：字體維持 20px，Busan X\'mas 完整顯示；名字只顯示第一個字；連線只用圖示並在最右邊；沒有分享按鈕', async ({ page }) => {
+      await page.setViewportSize({ width: w, height: 800 });
+      await enterTrip(page);
+      await page.evaluate(() => { document.getElementById('tb-trip').textContent = "Busan X'mas"; });
+      const m = await page.evaluate(() => {
+        const t = document.getElementById('tb-trip'), ns = document.getElementById('net-status');
+        const vis = [...document.querySelectorAll('.topbar > *')].filter((e) => e.offsetParent && e.getBoundingClientRect().width > 0);
+        return { h: document.querySelector('.topbar').getBoundingClientRect().height, fs: getComputedStyle(t).fontSize,
+          full: t.scrollWidth <= t.clientWidth + 1, last: vis[vis.length - 1].id, nsText: ns.innerText.trim(), nsTitle: ns.title,
+          right: Math.max(...vis.map((e) => e.getBoundingClientRect().right)) };
+      });
+      expect(m.fs).toBe('20px');
+      expect(m.full).toBe(true);
+      expect(m.h).toBeLessThanOrEqual(45);
+      expect(m.last).toBe('net-status');
+      expect(m.nsText).toBe('');
+      expect(m.nsTitle).toBe('線上');
+      expect(m.right).toBeLessThanOrEqual(w);
+      await expect(page.locator('#btn-share-trip')).toHaveCount(0);
+      await expect(page.locator('.tb-logo')).toContainText('TripGo');
+    });
+  }
+  test('名字有空白時只顯示第一個字（Albert SHIUE → Albert），完整名字放在提示', async ({ page }) => {
+    await enterTrip(page);
+    await page.evaluate(() => startApp(S.groupCode, S.myUid, 'Albert SHIUE', S.tripName, S.isOrg));
+    await expect(page.locator('#tb-myname')).toHaveText('Albert');
+    await expect(page.locator('#tb-myname')).toHaveAttribute('title', 'Albert SHIUE');
+  });
+
+});
+
+test('首頁旅程卡片：「匯出」換成「分享」，點了複製分享連結，不會進入旅程', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await login(page);
+  await page.goto('/');
+  const btn = page.locator('#jtp-list .jtp-share-btn').first();
+  await expect(btn).toHaveText('分享', { timeout: 6000 });
+  await expect(page.locator('#jtp-list', { hasText: '匯出' })).toHaveCount(0);
+  await btn.click();
+  await expect(page.locator('#toast, .toast').first()).toContainText('分享連結已複製');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('?view=TEST01');
+  await expect(page.locator('#S-app.show')).toHaveCount(0);   // 點分享不會進入旅程
 });
