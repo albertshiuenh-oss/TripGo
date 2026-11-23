@@ -1,5 +1,8 @@
 # 更新紀錄
 
+## v5.15 — 2026-11-24
+- 修正：剛開啟 App 就點景點（例如 A→B 動畫）時，幾秒後地圖會被拉回自己目前的位置。原因是開啟時會要一次 GPS 位置、拿到後把地圖移過去，而 iPhone 高精度定位要幾秒才回應。現在如果這段時間已經點過景點、搜尋、點過地圖上的店家或拖動地圖，就只更新自己的藍點、不移動地圖；按「定位」按鈕照樣會移到自己的位置（含測試）
+
 ## v5.14 — 2026-11-23
 - 維護：部署流程改成「打包」和「發佈」兩個步驟（GitHub 官方範本寫法），發佈等打包完全結束才開始，減少「No artifacts named github-pages」的部署失敗；GitHub Actions 工具升級到 Node.js 24 版本（checkout v5、configure-pages v6、upload-pages-artifact v5、deploy-pages v5、setup-node v5、upload-artifact v6）。App 功能沒有改變
 
