@@ -897,6 +897,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .rest-resv{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:1px 7px;margin-top:3px}
 .rest-resv.r-yes{background:#E8F5E9;color:#2E7D32}.rest-resv.r-todo{background:#FFF3E0;color:#E65100}.rest-resv.r-none{background:var(--bg2);color:var(--text2)}.rest-resv.r-unset{background:transparent;color:var(--text2);font-weight:500;padding-left:0}
 .cat-tag.resv-tag.r-yes{background:#E8F5E9;color:#2E7D32}.cat-tag.resv-tag.r-todo{background:#FFF3E0;color:#E65100}.cat-tag.resv-tag.r-none{background:var(--bg2);color:var(--text2)}
+.rest-subs{display:flex;gap:4px}.rest-sub{border:1px solid var(--border);background:#fff;color:var(--text2);font-size:12px;font-weight:700;border-radius:14px;padding:3px 10px;cursor:pointer}.rest-sub.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.rest-row{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--bg2);cursor:pointer;font-size:13px}
+.rest-row:active{background:var(--bg2)}.rest-row.day-today{background:#EEF4FF;border-left:3px solid var(--blue);padding-left:11px}
+.rest-row .rr-date{flex:0 0 76px;color:var(--blue);font-weight:700;font-size:12px}
+.rest-row .rr-time{flex:0 0 auto;min-width:38px;color:var(--text2);font-size:12px}
+.rest-row .rr-name{flex:1;min-width:0;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rest-row .rest-resv{margin-top:0;flex:0 0 auto;max-width:42%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rest-xlsx{display:block;margin:14px auto 18px;border:1px solid var(--blue);background:#fff;color:var(--blue);font-size:13px;font-weight:700;border-radius:10px;padding:8px 16px;cursor:pointer}
 .rest-resv-sum{display:flex;gap:6px;flex-wrap:wrap;padding:6px 14px 8px;font-size:12px;border-bottom:1px solid var(--bg2)}
 .offline-banner{display:none;align-items:center;gap:8px;padding:7px 14px;background:#E65100;color:#fff;font-size:12px;font-weight:600;flex-shrink:0}
 .share-banner{display:flex;align-items:center;gap:8px;padding:7px 14px;background:#185FA5;color:#fff;font-size:12px;font-weight:600;flex-shrink:0}
@@ -1431,7 +1439,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <div class="offline-banner" id="offline-banner"><i class="ti ti-wifi-off"></i><span id="offline-msg">離線模式 · 顯示快取資料</span></div>
       <div class="tabs">
         <button class="tab on" data-pane="itinerary" aria-label="行程"><i class="ti ti-route"></i></button>
-        <button class="tab" data-pane="restaurant" aria-label="餐廳"><i class="ti ti-tools-kitchen-2"></i></button>
+        <button class="tab" data-pane="restaurant" aria-label="食住規畫"><i class="ti ti-tools-kitchen-2"></i></button>
         <button class="tab" data-pane="expense" aria-label="費用"><span class="tab-dollar">$</span><span class="tab-dot" id="expense-unread-dot"></span></button>
         <button class="tab" data-pane="locations" aria-label="成員"><i class="ti ti-users"></i><span class="tab-dot" id="members-unread-dot"></span></button>
         <button class="tab" data-pane="weather" aria-label="天氣"><i class="ti ti-cloud"></i></button>
@@ -1484,8 +1492,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <div class="pane" id="pane-restaurant">
         <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
           <i class="ti ti-tools-kitchen-2" style="font-size:16px;color:var(--blue)"></i>
-          <span style="font-size:13px;font-weight:700">飲食行程</span>
+          <span style="font-size:13px;font-weight:700">食住規畫</span>
           <span id="restaurant-count" style="font-size:11px;color:var(--text2)"></span>
+          <div class="rest-subs" role="tablist" style="margin-left:auto"><button class="rest-sub on" data-sub="food" role="tab">🍽️ 飲食</button><button class="rest-sub" data-sub="stay" role="tab">🏨 住宿</button></div>
         </div>
         <div id="restaurant-list" style="overflow-y:auto;flex:1"></div>
       </div>
@@ -4318,54 +4327,59 @@ function resvTag(s){
   var m={'已訂':['r-yes','✅ 已訂'],'待訂':['r-todo','⏳ 待訂'],'免訂':['r-none','🚶 免訂']}[s.resv]; if(!m) return '';
   return '<span class="cat-tag resv-tag '+m[0]+'">'+m[1]+(s.resv!=='免訂'&&s.resvNo?' #'+escHtml(s.resvNo):'')+'</span>';
 }
-function resvBadge(s){
-  if(!hasResv(s.category)) return '';
-  var no=s.resvNo?' #'+escHtml(s.resvNo):'';
-  if(s.resv==='已訂') return '<span class="rest-resv r-yes">✅ 已預訂'+no+'</span>';
-  if(s.resv==='待訂') return '<span class="rest-resv r-todo">⏳ 待預訂'+no+'</span>';
-  if(s.resv==='免訂') return '<span class="rest-resv r-none">🚶 不需預訂</span>';
-  return '<span class="rest-resv r-unset">預訂：未設定'+no+'</span>';
+function resvBadge(s){   // 一行式清單用的短標籤；沒設定不顯示（上方統計會算）
+  if(!hasResv(s.category)||!s.resv) return '';
+  var m={'已訂':['r-yes','✅ 已訂'],'待訂':['r-todo','⏳ 待訂'],'免訂':['r-none','🚶 免訂']}[s.resv]; if(!m) return '';
+  return '<span class="rest-resv '+m[0]+'">'+m[1]+(s.resv!=='免訂'&&s.resvNo?' #'+escHtml(s.resvNo):'')+'</span>';
+}
+var _restSub='food';
+function restItems(sub){
+  var list=S.stops.filter(function(s){return sub==='stay'?s.category==='住宿':isFood(s);});
+  return list.map(function(s,i){return {s:s,iso:labelToDate(s.day||'')||'',t:timeToMinutes(s.arrive),i:i};})
+    .sort(function(a,b){ if(a.iso!==b.iso) return a.iso<b.iso?-1:1; var ta=a.t==null?1e4:a.t, tb=b.t==null?1e4:b.t; return ta-tb||a.i-b.i; })
+    .map(function(x){return x.s;});
+}
+var RESV_TXT={'已訂':'已預訂','待訂':'待預訂','免訂':'不需預訂','':'未設定'};
+function restDateStr(iso,withW){
+  if(!iso) return '未指定';
+  var d=new Date(iso+'T12:00:00'); return (d.getMonth()+1)+'/'+d.getDate()+(withW?'（'+'日一二三四五六'[d.getDay()]+'）':'');
 }
 function renderRestaurant(center){
   var list=document.getElementById('restaurant-list'); if(!list) return;
-  var stops=S.stops.filter(function(s){return isFood(s);});
+  var sub=_restSub, stay=sub==='stay';
+  document.querySelectorAll('.rest-sub').forEach(function(b){b.classList.toggle('on',b.dataset.sub===sub);});
+  var stops=restItems(sub);
   var countEl=document.getElementById('restaurant-count');
   if(!stops.length){
-    list.innerHTML='<div style="padding:24px;text-align:center;color:var(--text2);font-size:13px">🍽️ 行程裡還沒有飲食景點<br><span style="font-size:11px">景點備註含「早餐/午餐/中餐/晚餐/餐廳」等關鍵字<br>或景點分類設為「🍽️ 餐廳」即可自動顯示</span></div>';
+    list.innerHTML='<div style="padding:24px;text-align:center;color:var(--text2);font-size:13px">'+(stay?'🏨 行程裡還沒有住宿<br><span style="font-size:11px">把景點分類設為「住宿」就會列在這裡</span>':'🍽️ 行程裡還沒有飲食景點<br><span style="font-size:11px">景點名稱或備註含「早餐/午餐/晚餐/點心/消夜/餐廳」等關鍵字<br>或景點分類設為「餐廳」</span>')+'</div>';
     if(countEl) countEl.textContent=''; return;
   }
-  if(countEl) countEl.textContent='共 '+stops.length+' 家';
-  var days={},dayOrd=[];
-  stops.forEach(function(s){var d=s.day||'未指定';if(!days[d]){days[d]=[];dayOrd.push(d);}days[d].push(s);});
-  dayOrd.sort(function(a,b){var da=labelToDate(a)||a,db=labelToDate(b)||b;return da<db?-1:da>db?1:0;});
+  if(countEl) countEl.textContent='共 '+stops.length+(stay?' 筆':' 家');
+  var rs=stops.filter(function(s){return hasResv(s.category);});
   var html='';
-  dayOrd.forEach(function(day){
-    var _rh=dayHdrAttrs(day);
-    html+='<div class="rest-day-hdr'+_rh.cls+'" data-date="'+_rh.iso+'">'+escHtml(day)+_rh.badge+'</div>';
-    days[day].forEach(function(s){
-      var icon=s.category==='住宿'?'🏨':s.category==='景點'?'📍':'🍽️';
-      var t=(s.arrive||'')+(s.depart?' ~ '+s.depart:'');
-      html+='<div class="rest-card" data-key="'+escHtml(s._key||'')+'">'+
-        '<div class="rest-icon">'+icon+'</div><div class="rest-info">'+
-        '<div class="rest-name">'+escHtml(s.name||'')+'</div>'+
-        '<div class="rest-time">'+(t?t+' · ':'')+escHtml(s.note||'')+'</div>'+resvBadge(s)+'</div></div>';
-    });
-  });
-  var rs=stops.filter(function(s){return s.category==='餐廳';});
   if(rs.length){
     var c=function(v){return rs.filter(function(s){return (s.resv||'')===v;}).length;};
     var parts=[];
-    if(c('已訂')) parts.push('<span class="rest-resv r-yes">✅ 已預訂 '+c('已訂')+'</span>');
-    if(c('待訂')) parts.push('<span class="rest-resv r-todo">⏳ 待預訂 '+c('待訂')+'</span>');
-    if(c('免訂')) parts.push('<span class="rest-resv r-none">🚶 不需預訂 '+c('免訂')+'</span>');
+    if(c('已訂')) parts.push('<span class="rest-resv r-yes">✅ 已訂 '+c('已訂')+'</span>');
+    if(c('待訂')) parts.push('<span class="rest-resv r-todo">⏳ 待訂 '+c('待訂')+'</span>');
+    if(c('免訂')) parts.push('<span class="rest-resv r-none">🚶 免訂 '+c('免訂')+'</span>');
     if(c('')) parts.push('<span class="rest-resv r-unset">未設定 '+c('')+'</span>');
-    html='<div class="rest-resv-sum" id="rest-resv-sum">'+parts.join('')+'</div>'+html;
+    html+='<div class="rest-resv-sum" id="rest-resv-sum">'+parts.join('')+'</div>';
   }
+  stops.forEach(function(s){
+    var iso=labelToDate(s.day||''), today=dateState(iso)==='today';
+    html+='<div class="rest-row rest-card'+(today?' day-today':'')+'" data-key="'+escHtml(s._key||'')+'" data-date="'+iso+'">'+
+      '<span class="rr-date">'+(today?'今天':restDateStr(iso,true))+'</span>'+
+      '<span class="rr-time">'+escHtml(s.arrive||'')+'</span>'+
+      '<span class="rr-name">'+escHtml(s.name||'')+'</span>'+resvBadge(s)+'</div>';
+  });
+  html+='<button class="rest-xlsx" id="rest-xlsx">📥 產出 Excel（'+(stay?'住宿':'飲食')+'）</button>';
   list.innerHTML=html;
+  document.getElementById('rest-xlsx').addEventListener('click',function(){exportRestXlsx(sub);});
   if(center){
     setTimeout(function(){
-      var hdr=pickFocusHdr(list,'.rest-day-hdr');
-      if(hdr) centerBlock(list,hdr,dayBlockEnd(hdr,'.rest-day-hdr'));
+      var t=list.querySelectorAll('.rest-row.day-today');
+      if(t.length) centerBlock(list,t[0],t[t.length-1]);
     },50);
   }
   list.querySelectorAll('.rest-card').forEach(function(card){
@@ -4374,6 +4388,53 @@ function renderRestaurant(center){
       if(idx>=0){showPane('itinerary');tapStop(idx);}
     });
   });
+}
+document.addEventListener('click',function(e){
+  var b=e.target&&e.target.closest&&e.target.closest('.rest-sub'); if(!b) return;
+  _restSub=b.dataset.sub; renderRestaurant(true);
+});
+// ── 產出 .xlsx（不用外部套件：最小的 Office Open XML + 未壓縮 zip）──
+function xlsxBlob(rows){
+  var esc=function(v){return String(v==null?'':v).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'');};
+  var col=function(i){return String.fromCharCode(65+i);};
+  var sheet='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols><col min="1" max="1" width="14" customWidth="1"/><col min="2" max="2" width="8" customWidth="1"/><col min="3" max="3" width="36" customWidth="1"/><col min="4" max="5" width="12" customWidth="1"/><col min="6" max="6" width="40" customWidth="1"/></cols><sheetData>'+
+    rows.map(function(r,ri){return '<row r="'+(ri+1)+'">'+r.map(function(v,ci){return '<c r="'+col(ci)+(ri+1)+'" t="inlineStr"'+(ri===0?' s="1"':'')+'><is><t xml:space="preserve">'+esc(v)+'</t></is></c>';}).join('')+'</row>';}).join('')+'</sheetData></worksheet>';
+  var files={
+    '[Content_Types].xml':'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>',
+    '_rels/.rels':'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
+    'xl/workbook.xml':'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets></workbook>',
+    'xl/_rels/workbook.xml.rels':'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>',
+    'xl/styles.xml':'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="2"><xf/><xf fontId="1" applyFont="1"/></cellXfs></styleSheet>',
+    'xl/worksheets/sheet1.xml':sheet
+  };
+  var enc=new TextEncoder(), crcT=[];
+  for(var n=0;n<256;n++){var c=n;for(var k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;crcT[n]=c>>>0;}
+  var crc=function(b){var c=0xFFFFFFFF;for(var i=0;i<b.length;i++)c=crcT[(c^b[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0;};
+  var parts=[],cd=[],off=0;
+  var u16=function(v){return [v&255,(v>>>8)&255];}, u32=function(v){return [v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255];};
+  Object.keys(files).forEach(function(name){
+    var nb=enc.encode(name), db=enc.encode(files[name]), c=crc(db);
+    var common=[].concat(u16(20),u16(0x800),u16(0),u16(0),u16(0x21),u32(c),u32(db.length),u32(db.length),u16(nb.length),u16(0));
+    var lh=new Uint8Array([].concat(u32(0x04034b50),common));
+    parts.push(lh,nb,db);
+    cd.push(new Uint8Array([].concat(u32(0x02014b50),u16(20),common,u16(0),u16(0),u16(0),u32(0),u32(off))),nb);
+    off+=lh.length+nb.length+db.length;
+  });
+  var cdLen=cd.reduce(function(a,b){return a+b.length;},0);
+  var end=new Uint8Array([].concat(u32(0x06054b50),u16(0),u16(0),u16(Object.keys(files).length),u16(Object.keys(files).length),u32(cdLen),u32(off),u16(0)));
+  return new Blob(parts.concat(cd,[end]),{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+function exportRestXlsx(sub){
+  var stay=sub==='stay';
+  var rows=[['日期','時間','名稱','預訂狀態','預訂編號','備註']];
+  restItems(sub).forEach(function(s){
+    var iso=labelToDate(s.day||'');
+    rows.push([iso?iso.replace(/-/g,'/')+restDateStr(iso,true).replace(/^[^（]*/,''):'未指定', s.arrive||'', s.name||'',
+      hasResv(s.category)?RESV_TXT[s.resv||'']||'':'', hasResv(s.category)?s.resvNo||'':'', s.note||'']);
+  });
+  var a=document.createElement('a'); a.href=URL.createObjectURL(xlsxBlob(rows));
+  a.download=(S.tripName||'TripGo').replace(/[\\/:*?"<>|\s]+/g,'-')+'-'+(stay?'住宿':'飲食')+'.xlsx';
+  document.body.appendChild(a); a.click(); setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1000);
 }
 
 function renderLocList(){

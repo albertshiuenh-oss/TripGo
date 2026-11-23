@@ -174,19 +174,19 @@ test.describe('行程／餐廳：今天', () => {
     expect(await page.locator('[id^="sr-"]').evaluateAll((els) => els.filter((e) => /\s/.test(e.id)).length)).toBe(0);
   });
 
-  test('餐廳頁：今天的日期標題有標示，切換進來時自動置中', async ({ page }) => {
+  test('食住規畫頁：今天的那幾行有標示「今天」，切換進來時自動置中', async ({ page }) => {
     await page.addInitScript((s) => { window.__TG_SEED = s; }, longTrip());
     await page.clock.setFixedTime(new Date('2026-10-10T12:00:00+08:00'));
     await enterTrip(page);
     await page.locator('.tab[data-pane="restaurant"]').click();
-    const hdr = page.locator('.rest-day-hdr.day-today');
-    await expect(hdr).toHaveCount(1);
-    await expect(hdr).toContainText('Oct 10');
-    await expect(hdr.locator('.day-badge')).toHaveText('今天');
+    const rows = page.locator('.rest-row.day-today');
+    await expect(rows.first()).toBeVisible();
+    expect(await rows.evaluateAll((els) => els.every((e) => e.dataset.date === '2026-10-10'))).toBe(true);
+    await expect(rows.first().locator('.rr-date')).toHaveText('今天');
     await expect.poll(() => page.evaluate(() => {
       const box = document.getElementById('restaurant-list').getBoundingClientRect();
-      const h = document.querySelector('.rest-day-hdr.day-today');
-      const a = h.getBoundingClientRect(), z = h.nextElementSibling.getBoundingClientRect();
+      const t = document.querySelectorAll('.rest-row.day-today');
+      const a = t[0].getBoundingClientRect(), z = t[t.length - 1].getBoundingClientRect();
       return Math.abs((a.top + z.bottom) / 2 - (box.top + box.bottom) / 2);
     })).toBeLessThan(80);
   });
@@ -1004,7 +1004,7 @@ test.describe('餐廳預訂', () => {
     await expect(page.locator('#ief-resv-no')).toHaveValue('<b>A123</b>');
     await page.locator('.tab[data-pane="restaurant"]').click();
     const card = page.locator('.rest-card', { hasText: '道頓堀' });
-    await expect(card.locator('.rest-resv')).toHaveText('✅ 已預訂 #<b>A123</b>');
+    await expect(card.locator('.rest-resv')).toHaveText('✅ 已訂 #<b>A123</b>');
     await expect(page.locator('#restaurant-list b')).toHaveCount(0);
   });
 
@@ -1021,10 +1021,10 @@ test.describe('餐廳預訂', () => {
     await page.waitForFunction(() => S.stops.some((s) => s.name === '丁店'));
     await page.locator('.tab[data-pane="restaurant"]').click();
     const sum = page.locator('#rest-resv-sum');
-    await expect(sum).toContainText('已預訂 2');
-    await expect(sum).toContainText('待預訂 1');
+    await expect(sum).toContainText('已訂 2');
+    await expect(sum).toContainText('待訂 1');
     await expect(sum).toContainText('未設定');
-    await expect(page.locator('.rest-card', { hasText: '丙店' }).locator('.rest-resv')).toHaveText('⏳ 待預訂');
+    await expect(page.locator('.rest-card', { hasText: '丙店' }).locator('.rest-resv')).toHaveText('⏳ 待訂');
   });
 
   test('新增景點時選「餐廳」也可以填預訂', async ({ page }) => {
@@ -1066,4 +1066,59 @@ test.describe('住宿預訂', () => {
       await expect(page.locator('#ief-resv')).toBeHidden();
     }
   });
+});
+
+test.describe('食住規畫', () => {
+  const addStays = (page) => page.evaluate(() => {
+    const b = 'tripgo/groups/TEST01/stops/';
+    window.FB.set(b + '-h1', { name: 'Anook Hotel', day: 'Oct 2', arrive: '15:00', lat: 34.7, lng: 135.5, category: '住宿', resv: '已訂', resvNo: 'H-1', note: '含早餐', createdAt: 901 });
+    window.FB.set(b + '-h2', { name: '京都旅館', day: 'Oct 3', arrive: '16:00', lat: 35, lng: 135.7, category: '住宿', resv: '待訂', createdAt: 902 });
+    window.FB.set(b + '-f1', { name: '一蘭拉麵', day: 'Oct 3', arrive: '12:00', lat: 34.7, lng: 135.5, category: '餐廳', resv: '已訂', resvNo: 'R-7', createdAt: 903 });
+  });
+  test('分頁名稱是「食住規畫」，內頁分「飲食」「住宿」；每筆一行：日期＋時間＋名稱', async ({ page }) => {
+    await enterTrip(page);
+    await addStays(page);
+    await page.waitForFunction(() => S.stops.some((s) => s.name === '京都旅館'));
+    await page.locator('.tab[data-pane="restaurant"]').click();
+    await expect(page.locator('#pane-restaurant')).toContainText('食住規畫');
+    await expect(page.locator('.rest-sub[data-sub="food"]')).toHaveClass(/on/);
+    const r = page.locator('.rest-row', { hasText: '一蘭拉麵' });
+    await expect(r.locator('.rr-date')).toHaveText('10/3（六）');
+    await expect(r.locator('.rr-time')).toHaveText('12:00');
+    const [d, n] = await Promise.all([r.locator('.rr-date').boundingBox(), r.locator('.rr-name').boundingBox()]);
+    expect(Math.abs(d.y + d.height / 2 - (n.y + n.height / 2))).toBeLessThan(4);   // 同一行
+    await expect(page.locator('#restaurant-list')).not.toContainText('Anook Hotel');
+    await page.locator('.rest-sub[data-sub="stay"]').click();
+    await expect(page.locator('.rest-row')).toHaveCount(2);
+    await expect(page.locator('.rest-row').first()).toContainText('Anook Hotel');
+    await expect(page.locator('#rest-resv-sum')).toContainText('已訂 1');
+    await expect(page.locator('#rest-resv-sum')).toContainText('待訂 1');
+    await expect(page.locator('#restaurant-list')).not.toContainText('一蘭拉麵');
+  });
+
+  for (const [sub, label, first, count] of [['food', '飲食', null, null], ['stay', '住宿', 'Anook Hotel', 2]]) {
+    test('最下方「產出 Excel（' + label + '）」下載可開啟的 .xlsx，內容正確', async ({ page }) => {
+      await enterTrip(page);
+      await addStays(page);
+      await page.waitForFunction(() => S.stops.some((s) => s.name === '京都旅館'));
+      await page.locator('.tab[data-pane="restaurant"]').click();
+      await page.locator('.rest-sub[data-sub="' + sub + '"]').click();
+      const btn = page.locator('#rest-xlsx');
+      await expect(btn).toHaveText('📥 產出 Excel（' + label + '）');
+      const want = await page.evaluate((s) => restItems(s).map((x) => x.name), sub);
+      const [dl] = await Promise.all([page.waitForEvent('download'), btn.click()]);
+      expect(dl.suggestedFilename()).toMatch(new RegExp(label + '\\.xlsx$'));
+      const fs = await import('node:fs'); const cp = await import('node:child_process');
+      const f = test.info().outputPath('out.xlsx'); await dl.saveAs(f);
+      const rows = JSON.parse(cp.execFileSync('python3', ['-c', 'import openpyxl,json,sys;ws=openpyxl.load_workbook(sys.argv[1]).active;print(json.dumps([[c if c is not None else "" for c in r] for r in ws.iter_rows(values_only=True)],ensure_ascii=False))', f]).toString());
+      expect(rows[0]).toEqual(['日期', '時間', '名稱', '預訂狀態', '預訂編號', '備註']);
+      expect(rows.slice(1).map((r) => r[2])).toEqual(want);
+      if (first) {
+        expect(rows.length - 1).toBe(count);
+        expect(rows[1]).toEqual(['2026/10/02（五）', '15:00', 'Anook Hotel', '已預訂', 'H-1', '含早餐']);
+      } else {
+        expect(rows.find((r) => r[2] === '一蘭拉麵').slice(3, 5)).toEqual(['已預訂', 'R-7']);
+      }
+    });
+  }
 });
