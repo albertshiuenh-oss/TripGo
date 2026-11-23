@@ -318,18 +318,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   user-select:none;
 }
 .tb-trip{
-  font-size:18px;font-weight:600;color:var(--text);line-height:1.2;
+  font-size:20px;font-weight:600;color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   min-width:0;cursor:pointer;flex:1 1 auto;   /* 行程名稱吃掉剩下的空間（原本被一個空白元素分走一半） */
 }
-@media(max-width:480px){
-  .tb-logo-txt{display:none}                 /* 手機上 logo 只留圖示，空間讓給行程名稱 */
-  #tb-myname{max-width:72px!important}
-}
-@media(max-width:400px){
-  #net-label{display:none}                   /* 小手機：連線狀態只留圖示（離線時仍是紅色） */
-  .tb-trip{font-size:17px}
-}
+#net-label{display:none}                     /* 連線狀態只用圖示（離線時變紅色） */
+#net-status{padding:3px 6px}
 .tb-trip:active{opacity:.7}
 #net-status{
   display:flex;align-items:center;gap:4px;
@@ -1388,12 +1382,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 <!-- ========== MAIN APP ========== -->
 <div id="S-app">
   <div class="topbar">
-    <span class="tb-logo" id="tb-logo" aria-label="TripGo 選單"><i class="ti ti-map-2"></i><span class="tb-logo-txt"> TripGo</span></span>
+    <span class="tb-logo" id="tb-logo"><i class="ti ti-map-2"></i> TripGo</span>
     <span class="tb-trip" id="tb-trip">旅遊群組</span>
-    <span id="net-status" class="online" style="margin-right:4px"><i class="ti ti-wifi" style="font-size:11px"></i><span id="net-label">線上</span></span>
     <span id="tb-myname" style="font-size:11px;color:var(--text2);font-weight:600;flex-shrink:0;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:6px"></span>
     <button id="btn-logout" title="登出" style="display:none;background:none;border:1px solid rgba(255,255,255,.3);color:rgba(255,255,255,.7);font-size:10px;padding:2px 8px;border-radius:6px;cursor:pointer;margin-right:4px" onclick="doLogout()">登出</button>
-    <button id="btn-share-trip" class="share-btn" style="display:none"><i class="ti ti-share"></i></button>
+    <span id="net-status" class="online" style="margin-left:2px" title="線上" aria-label="線上"><i class="ti ti-wifi" style="font-size:15px"></i><span id="net-label">線上</span></span>
 
   </div>
   <div class="main">
@@ -1765,6 +1758,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
     var nl = document.getElementById('net-label');
     var badge = document.getElementById('offline-badge');
     if(!ns) return;
+    ns.title=_online?'線上':'離線'; ns.setAttribute('aria-label',ns.title);
     if(_online){
       ns.className='online';
       if(ns.querySelector('i')) ns.querySelector('i').className='ti ti-wifi';
@@ -2368,8 +2362,7 @@ function pcAddToItinerary(){
 function startApp(code, uid, name, tripName, isOrg){
   loadMapsScript();
   S.groupCode=code; S.myUid=uid; S.myName=name; S.isOrg=isOrg;
-  var _nmEl=document.getElementById('tb-myname'); if(_nmEl) _nmEl.textContent=name;
-  var _sb=document.getElementById('btn-share-trip'); if(_sb) _sb.style.display='inline-flex';
+  var _nmEl=document.getElementById('tb-myname'); if(_nmEl){ _nmEl.textContent=String(name||'').trim().split(/\s+/)[0]; _nmEl.title=name||''; }   // 只顯示第一個字（Albert SHIUE → Albert）
   var _lb=document.getElementById('btn-logout'); if(_lb) _lb.style.display='inline-block';
   if(_currentUser&&_currentUser.uid) uid=_currentUser.uid;
   // 讀取主幣別
@@ -5336,6 +5329,11 @@ function showOfflineBanner(show,cachedAt){
   }else{b.style.display='none';}
 }
 // ══ 行程分享 ══
+function copyShareLink(code){
+  var url=getShareUrl(code||'');
+  if(navigator.clipboard) navigator.clipboard.writeText(url).catch(function(){});
+  showToast('📋 分享連結已複製！',2200);
+}
 function getShareUrl(code){return location.href.split('?')[0]+'?view='+(code||'');}
 function initShareView(code){
   if(!window.FB||!window.FB.ready){showToast('⏳ 連線中',1500);return;}
@@ -5425,7 +5423,7 @@ function doLogout(){
   var ne=document.getElementById('js-home-name'); if(ne) ne.value='';
   document.getElementById('S-join').classList.add('hide');
   var lb=document.getElementById('btn-logout'); if(lb) lb.style.display='none';
-  var sb=document.getElementById('btn-share-trip'); if(sb) sb.style.display='none';
+
 }
 
 // ── Logo 選單 ──
@@ -5592,7 +5590,7 @@ function renderTripsPreview(inputName, _skipFbSearch){
       '</div>'+
       (isDone
         ? '<span class="jtp-done-badge">✓ 已完成</span><button class="jtp-undo-btn" data-code="'+t.code+'">恢復</button>'
-        : (t.isOrg?'<button class="jtp-export-btn" data-code="'+t.code+'" data-trip="'+escHtml(t.tripName)+'"><i class="ti ti-file-export"></i> 匯出</button>':'')+
+        : '<button class="jtp-export-btn jtp-share-btn" data-code="'+t.code+'"><i class="ti ti-share"></i> 分享</button>'+
           '<button class="jtp-complete-btn" data-code="'+t.code+'">未完成</button>'+
           (t.isOrg?'<button class="jtp-del" data-code="'+t.code+'">🗑</button>':'')+
           '<i class="ti ti-chevron-right" style="font-size:14px;color:var(--blue);opacity:.5;flex-shrink:0"></i>'
@@ -5626,7 +5624,7 @@ function renderTripsPreview(inputName, _skipFbSearch){
     if(exportBtn){ exportBtn.addEventListener('touchstart',function(e){e.stopPropagation();},{passive:false});
       exportBtn.addEventListener('click',(function(code,trip){ return function(e){
         e.stopPropagation();e.stopImmediatePropagation();_b=true;setTimeout(function(){_b=false;},500);
-        exportTripKML(code,trip);
+        copyShareLink(code);
       };})(t.code,t.tripName)); }
     var compBtn=card.querySelector('.jtp-complete-btn');
     if(compBtn){ compBtn.addEventListener('touchstart',function(e){e.stopPropagation();},{passive:false});
@@ -6334,11 +6332,7 @@ window.addEventListener('load',function(){
     }catch(e){}
   })();
   // 分享按鈕
-  document.getElementById('btn-share-trip').addEventListener('click',function(){
-    var url=getShareUrl(S.groupCode||'');
-    if(navigator.clipboard) navigator.clipboard.writeText(url).catch(function(){});
-    showToast('📋 分享連結已複製！',2200);
-  });
+
   // 主幣別切換
   var _pcSel=document.getElementById('primary-currency');
   if(_pcSel){ _pcSel.addEventListener('change',function(){

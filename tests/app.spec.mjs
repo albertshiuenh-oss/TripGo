@@ -1125,27 +1125,46 @@ test.describe('食住規畫', () => {
 
 test.describe('上方標題列', () => {
   for (const w of [390, 360]) {
-    test('手機寬度 ' + w + 'px：行程名稱看得到（Busan X\'mas 不被截斷），標題列高度不變', async ({ page }) => {
+    test('手機寬度 ' + w + 'px：字體維持 20px，Busan X\'mas 完整顯示；名字只顯示第一個字；連線只用圖示並在最右邊；沒有分享按鈕', async ({ page }) => {
       await page.setViewportSize({ width: w, height: 800 });
       await enterTrip(page);
-      await page.evaluate(() => {
-        document.getElementById('tb-trip').textContent = "Busan X'mas";
-        document.getElementById('tb-myname').textContent = 'Albert SHIUE';
-        document.getElementById('btn-share-trip').style.display = '';
-      });
+      await page.evaluate(() => { document.getElementById('tb-trip').textContent = "Busan X'mas"; });
       const m = await page.evaluate(() => {
-        const t = document.getElementById('tb-trip');
-        return { h: document.querySelector('.topbar').getBoundingClientRect().height, full: t.scrollWidth <= t.clientWidth + 1, w: t.getBoundingClientRect().width,
-          right: Math.max(...[...document.querySelectorAll('.topbar > *')].filter((e) => e.offsetParent).map((e) => e.getBoundingClientRect().right)) };
+        const t = document.getElementById('tb-trip'), ns = document.getElementById('net-status');
+        const vis = [...document.querySelectorAll('.topbar > *')].filter((e) => e.offsetParent && e.getBoundingClientRect().width > 0);
+        return { h: document.querySelector('.topbar').getBoundingClientRect().height, fs: getComputedStyle(t).fontSize,
+          full: t.scrollWidth <= t.clientWidth + 1, last: vis[vis.length - 1].id, nsText: ns.innerText.trim(), nsTitle: ns.title,
+          right: Math.max(...vis.map((e) => e.getBoundingClientRect().right)) };
       });
+      expect(m.fs).toBe('20px');
       expect(m.full).toBe(true);
       expect(m.h).toBeLessThanOrEqual(45);
-      expect(m.right).toBeLessThanOrEqual(w);   // 右邊按鈕沒有被擠出畫面
+      expect(m.last).toBe('net-status');
+      expect(m.nsText).toBe('');
+      expect(m.nsTitle).toBe('線上');
+      expect(m.right).toBeLessThanOrEqual(w);
+      await expect(page.locator('#btn-share-trip')).toHaveCount(0);
+      await expect(page.locator('.tb-logo')).toContainText('TripGo');
     });
   }
-  test('桌面寬度仍顯示「TripGo」文字', async ({ page }) => {
-    await page.setViewportSize({ width: 1024, height: 800 });
+  test('名字有空白時只顯示第一個字（Albert SHIUE → Albert），完整名字放在提示', async ({ page }) => {
     await enterTrip(page);
-    await expect(page.locator('.tb-logo-txt')).toBeVisible();
+    await page.evaluate(() => startApp(S.groupCode, S.myUid, 'Albert SHIUE', S.tripName, S.isOrg));
+    await expect(page.locator('#tb-myname')).toHaveText('Albert');
+    await expect(page.locator('#tb-myname')).toHaveAttribute('title', 'Albert SHIUE');
   });
+
+});
+
+test('首頁旅程卡片：「匯出」換成「分享」，點了複製分享連結，不會進入旅程', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await login(page);
+  await page.goto('/');
+  const btn = page.locator('#jtp-list .jtp-share-btn').first();
+  await expect(btn).toHaveText('分享', { timeout: 6000 });
+  await expect(page.locator('#jtp-list', { hasText: '匯出' })).toHaveCount(0);
+  await btn.click();
+  await expect(page.locator('#toast, .toast').first()).toContainText('分享連結已複製');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('?view=TEST01');
+  await expect(page.locator('#S-app.show')).toHaveCount(0);   // 點分享不會進入旅程
 });
