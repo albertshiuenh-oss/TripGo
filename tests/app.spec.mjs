@@ -1512,3 +1512,45 @@ test.describe('開啟時的自動定位不會把畫面拉走', () => {
     expect(await page.evaluate(() => window.__pans)).toEqual([ZHUNAN]);
   });
 });
+
+test.describe('旅程簡介（點上方行程名稱）', () => {
+  const asMember = async (page) => { await enterTrip(page); await page.evaluate(() => { S.isOrg = false; }); };
+
+  test('組織者：點行程名稱展開，寫簡介存檔後寫入 Firebase，換行保留；HTML 只當文字', async ({ page }) => {
+    await enterTrip(page);
+    await page.locator('#tb-trip').click();
+    await expect(page.locator('#trip-intro')).toHaveClass(/open/);
+    await expect(page.locator('#ti-body')).toContainText('還沒有旅程簡介');
+    await page.locator('#ti-editbtn').click();
+    await page.locator('#ti-text').fill('第一行介紹\n<b>集合</b> 08:00 桃園機場');
+    await page.locator('#ti-save').click();
+    await expect.poll(() => page.evaluate(() => window.__fbStub.dump().tripgo.groups.TEST01.intro)).toBe('第一行介紹\n<b>集合</b> 08:00 桃園機場');
+    await expect(page.locator('#ti-body')).toHaveText('第一行介紹\n<b>集合</b> 08:00 桃園機場');
+    await expect(page.locator('#ti-body b')).toHaveCount(0);
+    const box = await page.locator('#trip-intro').boundingBox();
+    const tb = await page.locator('#S-app .topbar').boundingBox();
+    expect(Math.abs(box.y - (tb.y + tb.height))).toBeLessThan(2);   // 從標題列下方展開
+    await page.locator('#tb-trip').click();
+    await expect(page.locator('#trip-intro')).not.toHaveClass(/open/);
+  });
+
+  test('一般團員：看得到簡介，但沒有編輯按鈕；別人更新時即時顯示', async ({ page }) => {
+    await asMember(page);
+    await page.evaluate(() => window.FB.set('tripgo/groups/TEST01/intro', '大阪三日遊'));
+    await page.locator('#tb-trip').click();
+    await expect(page.locator('#ti-body')).toHaveText('大阪三日遊');
+    await expect(page.locator('#ti-editbtn')).toBeHidden();
+    await page.evaluate(() => window.FB.set('tripgo/groups/TEST01/intro', '大阪三日遊（更新）'));
+    await expect(page.locator('#ti-body')).toHaveText('大阪三日遊（更新）');
+    await page.evaluate(() => editIntro());
+    await expect(page.locator('#ti-edit')).toBeHidden();
+  });
+
+  test('「切換旅程」移到左上角 logo 選單（連點兩下 logo）', async ({ page }) => {
+    await enterTrip(page);
+    await page.evaluate(() => showLogoMenu());   // 手機上是連點兩下 logo 打開（觸控判斷）
+    await page.locator('#lm-switch').click();
+    await expect(page.locator('#trip-switcher')).toBeVisible();
+    await expect(page.locator('#trip-intro')).not.toHaveClass(/open/);
+  });
+});
