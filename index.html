@@ -4503,13 +4503,13 @@ document.addEventListener('change',function(e){
 });
 function resvTag(s){
   if(!hasResv(s.category)||!s.resv) return '';
-  var m={'已訂':['r-yes','✅ 已訂'],'待訂':['r-todo','⏳ 待訂'],'免訂':['r-none','🚶 免訂']}[s.resv]; if(!m) return '';
-  return '<span class="cat-tag resv-tag '+m[0]+'">'+m[1]+(s.resv!=='免訂'&&s.resvNo?' #'+escHtml(s.resvNo):'')+'</span>';
+  var m={'已訂':['r-yes','✅'],'待訂':['r-todo','⏳ 待訂'],'免訂':['r-none','🚶 免訂']}[s.resv]; if(!m) return '';   // 已訂只留綠色勾勾（title 寫「已訂」）
+  return '<span class="cat-tag resv-tag '+m[0]+'" title="'+s.resv+'" aria-label="'+s.resv+'">'+m[1]+(s.resv!=='免訂'&&s.resvNo?' #'+escHtml(s.resvNo):'')+'</span>';
 }
 function resvBadge(s){   // 一行式清單用的短標籤；沒設定不顯示（上方統計會算）
   if(!hasResv(s.category)||!s.resv) return '';
-  var m={'已訂':['r-yes','✅ 已訂'],'待訂':['r-todo','⏳ 待訂'],'免訂':['r-none','🚶 免訂']}[s.resv]; if(!m) return '';
-  return '<span class="rest-resv '+m[0]+'">'+m[1]+(s.resv!=='免訂'&&s.resvNo?' #'+escHtml(s.resvNo):'')+'</span>';
+  var m={'已訂':['r-yes','✅'],'待訂':['r-todo','⏳ 待訂'],'免訂':['r-none','🚶 免訂']}[s.resv]; if(!m) return '';   // 已訂只留綠色勾勾（title 寫「已訂」）
+  return '<span class="rest-resv '+m[0]+'" title="'+s.resv+'" aria-label="'+s.resv+'">'+m[1]+(s.resv!=='免訂'&&s.resvNo?' #'+escHtml(s.resvNo):'')+'</span>';
 }
 var _restSub='food';
 function restItems(sub){

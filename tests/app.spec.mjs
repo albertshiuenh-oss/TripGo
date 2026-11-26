@@ -1034,7 +1034,7 @@ test.describe('餐廳預訂', () => {
     await expect(page.locator('#ief-resv-no')).toHaveValue('<b>A123</b>');
     await page.locator('.tab[data-pane="restaurant"]').click();
     const card = page.locator('.rest-card', { hasText: '道頓堀' });
-    await expect(card.locator('.rest-resv')).toHaveText('✅ 已訂 #<b>A123</b>');
+    await expect(card.locator('.rest-resv')).toHaveText('✅ #<b>A123</b>');   // 已訂只留綠色勾勾
     await expect(page.locator('#restaurant-list b')).toHaveCount(0);
   });
 
@@ -1083,7 +1083,7 @@ test.describe('住宿預訂', () => {
     await page.locator('#ief-resv-no').fill('HTL-88');
     await page.locator('.exp-ef-save').click();
     await page.waitForFunction(() => S.stops.find((s) => s.name === '道頓堀').resvNo === 'HTL-88');
-    await expect(page.locator('#stop-list .resv-tag.r-yes')).toHaveText('✅ 已訂 #HTL-88');
+    await expect(page.locator('#stop-list .resv-tag.r-yes')).toHaveText('✅ #HTL-88');
     await openEdit(page, '道頓堀');
     await expect(page.locator('#ief-resv')).toHaveValue('已訂');
   });
@@ -1553,4 +1553,26 @@ test.describe('旅程簡介（點上方行程名稱）', () => {
     await expect(page.locator('#trip-switcher')).toBeVisible();
     await expect(page.locator('#trip-intro')).not.toHaveClass(/open/);
   });
+});
+
+test('已訂的標籤只有綠色勾勾（和編號）；待訂、免訂不變；摘要仍寫「已訂」', async ({ page }) => {
+  await enterTrip(page);
+  await page.evaluate(() => {
+    const b = 'tripgo/groups/TEST01/stops/';
+    const mk = (name, resv, resvNo, n) => ({ name, day: 'Oct 2', arrive: '1' + n + ':00', lat: 34.7, lng: 135.5, category: '住宿', resv, resvNo, createdAt: 800 + n });
+    window.FB.set(b + '-q1', mk('甲旅館', '已訂', '', 1));
+    window.FB.set(b + '-q2', mk('乙旅館', '待訂', 'X1', 2));
+    window.FB.set(b + '-q3', mk('丙旅館', '免訂', '', 3));
+  });
+  await page.waitForFunction(() => S.stops.some((s) => s.name === '丙旅館'));
+  const tag = (n) => page.locator('#stop-list .stop-item, #stop-list > *', { hasText: n }).locator('.resv-tag').first();
+  await expect(tag('甲旅館')).toHaveText('✅');
+  await expect(tag('甲旅館')).toHaveAttribute('title', '已訂');
+  await expect(tag('乙旅館')).toHaveText('⏳ 待訂 #X1');
+  await expect(tag('丙旅館')).toHaveText('🚶 免訂');
+  await page.locator('.tab[data-pane="restaurant"]').click();
+  await page.locator('.rest-sub[data-sub="stay"]').click();
+  await expect(page.locator('.rest-row', { hasText: '甲旅館' }).locator('.rest-resv')).toHaveText('✅');
+  await expect(page.locator('.rest-row', { hasText: '乙旅館' }).locator('.rest-resv')).toHaveText('⏳ 待訂 #X1');
+  await expect(page.locator('#rest-resv-sum')).toContainText('已訂 1');
 });
