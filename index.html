@@ -11,7 +11,7 @@
 /* ── TripGo boot: version, preview isolation, early error capture ──
    Must run before any other script touches localStorage or Firebase. */
 (function(){
-  window.TG_VERSION='5.16';
+  window.TG_VERSION='5.17';
   var PV=/\/preview\//.test(location.pathname)||/[?&]preview=1(&|$)/.test(location.search);
   window.TG_PREVIEW=PV;
 
@@ -58,7 +58,7 @@
   });
 })();
 </script>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.16%3C/text%3E%3C/svg%3E"/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.17%3C/text%3E%3C/svg%3E"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="TripGo"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -124,6 +124,17 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .jtp-count{font-size:11px;color:rgba(255,255,255,.8);font-weight:600}
 #jtp-list{display:flex;flex-direction:column;gap:6px}
 /* ── Logo 選單 ── */
+.trip-intro{position:fixed;left:0;right:0;top:var(--tb-h,45px);z-index:7000;background:#fff;border-bottom:1px solid var(--border);box-shadow:0 8px 20px rgba(0,0,0,.12);
+  max-height:0;overflow:hidden;transition:max-height .28s ease;padding:0 16px}
+.trip-intro.open{max-height:70vh;overflow-y:auto}
+.trip-intro .ti-body{padding-top:14px;font-size:14px;line-height:1.7;color:var(--text);white-space:pre-wrap;word-break:break-word}
+.trip-intro .ti-empty{color:var(--text2)}
+.trip-intro textarea{width:100%;min-height:180px;margin-top:12px;border:1px solid var(--border);border-radius:10px;padding:10px;font:inherit;font-size:14px;line-height:1.6;box-sizing:border-box}
+.trip-intro .ti-btns{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+.trip-intro .ti-foot{display:flex;justify-content:space-between;align-items:center;padding:10px 0 12px}
+.trip-intro button{border:1px solid var(--border);background:#fff;color:var(--text2);font-size:13px;font-weight:600;border-radius:8px;padding:6px 12px;cursor:pointer}
+.trip-intro .ti-save{background:var(--blue);border-color:var(--blue);color:#fff}
+.trip-intro .ti-close{margin-left:auto}
 .logo-menu{display:none;position:fixed;top:48px;left:8px;background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.2);z-index:8000;overflow:hidden;min-width:160px}
 .logo-menu.show{display:block}
 .logo-menu-item{display:flex;align-items:center;gap:10px;padding:12px 16px;font-size:13px;color:#1C2B3A;cursor:pointer;border-bottom:1px solid #f0f0f0;transition:background .1s}
@@ -1227,6 +1238,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 <!-- ========== JOIN SCREEN ========== -->
   <!-- Logo 選單 -->
   <div class="logo-menu" id="logo-menu">
+    <div class="logo-menu-item" id="lm-switch">🔄 切換旅程</div>
     <div class="logo-menu-item" id="lm-briefing">📸 產出旅程簡介</div>
     <div class="logo-menu-item danger" id="lm-home">🏠 回到首頁</div>
     <div class="logo-menu-item" id="lm-close">✕ 不用了</div>
@@ -1262,7 +1274,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <button class="login-submit" id="btn-pin-submit" disabled>登入 / 建立帳號</button>
       <div class="login-err-msg" id="login-err"></div>
     </div>
-    <div class="login-footer">TripGo v5.16</div>
+    <div class="login-footer">TripGo v5.17</div>
   </div>
 
 <div id="S-join" class="hide">
@@ -1279,7 +1291,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.16 &nbsp;·&nbsp; 2026-11-24</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.17 &nbsp;·&nbsp; 2026-11-26</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -1386,6 +1398,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 
 <!-- ========== MAIN APP ========== -->
 <div id="S-app">
+  <div class="trip-intro" id="trip-intro" aria-hidden="true">
+    <div class="ti-body" id="ti-body"></div>
+    <div class="ti-edit" id="ti-edit" style="display:none">
+      <textarea id="ti-text" maxlength="5000" placeholder="寫下這趟旅程的介紹：主題、集合時間、要準備的東西…"></textarea>
+      <div class="ti-btns"><button class="ti-cancel" id="ti-cancel">取消</button><button class="ti-save" id="ti-save">儲存</button></div>
+    </div>
+    <div class="ti-foot"><button class="ti-editbtn" id="ti-editbtn" style="display:none">✏️ 編輯簡介</button><button class="ti-close" id="ti-close">收起 ▴</button></div>
+  </div>
   <div class="topbar">
     <span class="tb-logo" id="tb-logo"><i class="ti ti-map-2"></i> TripGo</span>
     <span class="tb-trip" id="tb-trip">旅遊群組</span>
@@ -1915,7 +1935,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 <!-- Main App JS -->
 <script>
 'use strict';
-// TripGo v5.16
+// TripGo v5.17
 
 // ════════════════════════════════
 // STATE
@@ -2402,6 +2422,7 @@ function startApp(code, uid, name, tripName, isOrg){
   document.querySelectorAll('.stop-txt.active').forEach(function(e){e.classList.remove('active');});
   // Clear old listeners before subscribing new ones
   window.FB.clearListeners();
+  if(_introOpen) toggleIntro(false);
 
   var FB=window.FB;
   var _firstMembers=true, _prevMemberCount=0;
@@ -2480,6 +2501,8 @@ function startApp(code, uid, name, tripName, isOrg){
     }
     _firstExpense=false;
   });
+  S.intro='';
+  FB.onValue('tripgo/groups/'+code+'/intro',function(snap){ S.intro=snap.val()||''; if(_introOpen&&!_introEditing) renderIntro(); });
   FB.onValue('tripgo/groups/'+code+'/locations',function(snap){
     S.allLocs={}; // 位置功能已移除
   });
@@ -4480,13 +4503,13 @@ document.addEventListener('change',function(e){
 });
 function resvTag(s){
   if(!hasResv(s.category)||!s.resv) return '';
-  var m={'已訂':['r-yes','✅ 已訂'],'待訂':['r-todo','⏳ 待訂'],'免訂':['r-none','🚶 免訂']}[s.resv]; if(!m) return '';
-  return '<span class="cat-tag resv-tag '+m[0]+'">'+m[1]+(s.resv!=='免訂'&&s.resvNo?' #'+escHtml(s.resvNo):'')+'</span>';
+  var m={'已訂':['r-yes','✅'],'待訂':['r-todo','⏳ 待訂'],'免訂':['r-none','🚶 免訂']}[s.resv]; if(!m) return '';   // 已訂只留綠色勾勾（title 寫「已訂」）
+  return '<span class="cat-tag resv-tag '+m[0]+'" title="'+s.resv+'" aria-label="'+s.resv+'">'+m[1]+(s.resv!=='免訂'&&s.resvNo?' #'+escHtml(s.resvNo):'')+'</span>';
 }
 function resvBadge(s){   // 一行式清單用的短標籤；沒設定不顯示（上方統計會算）
   if(!hasResv(s.category)||!s.resv) return '';
-  var m={'已訂':['r-yes','✅ 已訂'],'待訂':['r-todo','⏳ 待訂'],'免訂':['r-none','🚶 免訂']}[s.resv]; if(!m) return '';
-  return '<span class="rest-resv '+m[0]+'">'+m[1]+(s.resv!=='免訂'&&s.resvNo?' #'+escHtml(s.resvNo):'')+'</span>';
+  var m={'已訂':['r-yes','✅'],'待訂':['r-todo','⏳ 待訂'],'免訂':['r-none','🚶 免訂']}[s.resv]; if(!m) return '';   // 已訂只留綠色勾勾（title 寫「已訂」）
+  return '<span class="rest-resv '+m[0]+'" title="'+s.resv+'" aria-label="'+s.resv+'">'+m[1]+(s.resv!=='免訂'&&s.resvNo?' #'+escHtml(s.resvNo):'')+'</span>';
 }
 var _restSub='food';
 function restItems(sub){
@@ -5221,6 +5244,45 @@ function leaveTrip(code,uid){
     if(document.getElementById('trip-switcher').classList.contains('show')) openTripSwitcher();
     showToast('✅ 已離開旅程',2000);
   });
+}
+// ── 旅程簡介：點上方行程名稱展開／收起；只有組織者可以編輯（存在 tripgo/groups/<code>/intro，純文字）──
+var _introOpen=false, _introEditing=false;
+function renderIntro(){
+  var b=document.getElementById('ti-body');
+  b.innerHTML=S.intro?escHtml(S.intro):'<span class="ti-empty">'+(S.isOrg?'還沒有旅程簡介，按「編輯簡介」寫一段吧。':'組織者還沒寫旅程簡介。')+'</span>';
+  document.getElementById('ti-editbtn').style.display=S.isOrg&&!_introEditing?'':'none';
+}
+function toggleIntro(open){
+  _introOpen=open==null?!_introOpen:open;
+  var el=document.getElementById('trip-intro');
+  if(_introOpen){
+    var tb=document.querySelector('#S-app .topbar'); if(tb) el.style.setProperty('--tb-h',tb.getBoundingClientRect().bottom+'px');
+    _introEditing=false; document.getElementById('ti-edit').style.display='none'; document.getElementById('ti-body').style.display='';
+    renderIntro();
+  }
+  el.classList.toggle('open',_introOpen); el.setAttribute('aria-hidden',_introOpen?'false':'true');
+}
+function editIntro(){
+  if(!S.isOrg) return;
+  _introEditing=true;
+  document.getElementById('ti-text').value=S.intro||'';
+  document.getElementById('ti-body').style.display='none';
+  document.getElementById('ti-edit').style.display='';
+  document.getElementById('ti-editbtn').style.display='none';
+  document.getElementById('ti-text').focus();
+}
+function saveIntro(){
+  if(!S.isOrg) return;
+  var v=document.getElementById('ti-text').value.replace(/\s+$/,'');
+  window.FB.set('tripgo/groups/'+S.groupCode+'/intro',v);
+  S.intro=v; _introEditing=false;
+  document.getElementById('ti-edit').style.display='none'; document.getElementById('ti-body').style.display='';
+  renderIntro(); showToast('✅ 旅程簡介已儲存',1800);
+}
+function cancelIntro(){
+  _introEditing=false;
+  document.getElementById('ti-edit').style.display='none'; document.getElementById('ti-body').style.display='';
+  renderIntro();
 }
 function openTripSwitcher(){
   var trips=getStoredTrips(), curCode=S.groupCode;
@@ -6304,7 +6366,11 @@ window.addEventListener('load',function(){
     if(inp) inp.value=document.getElementById('tb-trip').textContent||'';
   });
   document.getElementById('btn-invite').addEventListener('click',function(){openModal('M-invite');});
-  document.getElementById('tb-trip').addEventListener('click',openTripSwitcher);
+  document.getElementById('tb-trip').addEventListener('click',function(){ toggleIntro(); });   // 點行程名稱 → 旅程簡介
+  document.getElementById('ti-close').addEventListener('click',function(){ toggleIntro(false); });
+  document.getElementById('ti-editbtn').addEventListener('click',editIntro);
+  document.getElementById('ti-save').addEventListener('click',saveIntro);
+  document.getElementById('ti-cancel').addEventListener('click',cancelIntro);
   document.getElementById('btn-tsw-close').addEventListener('click',closeTripSwitcher);
   document.getElementById('btn-tsw-join').addEventListener('click',function(){closeTripSwitcher();goToHome();setTimeout(function(){goSub('join');},100);});
   document.getElementById('btn-tsw-create').addEventListener('click',function(){closeTripSwitcher();goToHome();setTimeout(requestCreate,100);});
@@ -6418,6 +6484,10 @@ window.addEventListener('load',function(){
   // ── 登入畫面事件 ──
   document.getElementById('btn-pin-submit').addEventListener('click',doPinSubmit);
   // Logo 選單
+  document.getElementById('lm-switch').addEventListener('click',function(){
+    document.getElementById('logo-menu').classList.remove('show');
+    openTripSwitcher();
+  });
   document.getElementById('lm-briefing').addEventListener('click',function(){
     document.getElementById('logo-menu').classList.remove('show');
     exportBriefingImage();
@@ -6480,7 +6550,7 @@ window.addEventListener('load',function(){
       // 版本號
       ctx.fillStyle='rgba(255,255,255,0.65)';
       ctx.font='bold 28px system-ui,-apple-system,sans-serif';
-      ctx.fillText('v5.16',90,152);
+      ctx.fillText('v5.17',90,152);
       // 插入 apple-touch-icon
       var lnk=document.querySelector('link[rel="apple-touch-icon"]')||document.createElement('link');
       lnk.rel='apple-touch-icon'; lnk.href=c.toDataURL('image/png');
