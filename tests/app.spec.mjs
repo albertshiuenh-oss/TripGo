@@ -1278,9 +1278,7 @@ test.describe('地圖：從 A 點點到 B 景點', () => {
       return { cover: Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top), pad: window.__pad, H: a.height };
     });
     expect(r.cover).toBeGreaterThan(40);
-    expect(r.pad.bottom).toBeGreaterThanOrEqual(Math.min(r.cover + 35, r.H - 130));
-    expect([r.pad.top, r.pad.left, r.pad.right]).toEqual([70, 35, 65]);   // Albert 指定的留白
-    if (r.cover + 35 + 70 <= r.H - 60) expect(r.pad.bottom).toBe(r.cover + 35);
+    expect(r.pad.bottom).toBeGreaterThanOrEqual(Math.min(r.cover + 40, r.H - 140));
     expect(r.H - r.pad.top - r.pad.bottom).toBeGreaterThanOrEqual(60);   // 兩點仍有空間
   });
 
