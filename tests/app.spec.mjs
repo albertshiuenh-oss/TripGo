@@ -1694,7 +1694,8 @@ test.describe('備註與旅程簡介一起翻譯（Google 翻譯，只改顯示�
     await page.evaluate(() => window.FB.set('tripgo/groups/TEST01/stops/-a02/note', '晚餐後散步'));
     await page.waitForFunction(() => S.stops.find((s) => s.name === '道頓堀').note === '晚餐後散步');
     await page.locator('#lang-bar .lb-b[data-l="en"]').click();
-    await expect(page.locator('#toast, .toast').first()).toContainText('Cloud Translation API');
+    await expect(page.locator('#lang-msg')).toContainText('Cloud Translation API');   // 一直顯示在語言按鈕下方
+    await expect(page.locator('#lang-msg')).toContainText('are blocked');            // 附上 Google 回傳的原因
     await expect.poll(() => page.evaluate(() => { const i = S.stops.findIndex((s) => s.name === '道頓堀'); return document.querySelector('#st-' + i + ' .stop-name').innerText; })).toContain('EN place 3');
     expect(await line(page, '道頓堀')).toContain('晚餐後散步');
   });
@@ -1723,4 +1724,21 @@ test('Google 給不出英文名稱（找不到、或只有韓文）時改用翻�
   const [t3, l3] = await row('入住 Anook Signature Hotel Busan');
   expect(t3).toContain('Anook Signature Hotel Busan');
   expect(l3).not.toContain('· Anook');                  // 和標題一樣 → 不重複
+});
+
+test('切到英文後點景點：左側資訊卡的標題也是英文；地圖上點店家照樣顯示原名', async ({ page }) => {
+  await enterTrip(page);
+  await page.evaluate(() => {
+    function P(o) { this.o = o; }
+    P.searchByText = (r) => Promise.resolve({ places: [{ id: 'x', displayName: 'Osaka Castle', addressComponents: [{ types: ['country'], shortText: 'JP' }] }] });
+    P.prototype.fetchFields = function () { return Promise.resolve({ place: { displayName: '大阪城' } }); };
+    google.maps.places.Place = P;
+  });
+  await page.locator('#lang-bar .lb-b[data-l="en"]').click();
+  await page.waitForFunction(() => document.querySelector('#stop-list').innerText.includes('Osaka Castle'));
+  await page.evaluate(() => tapStop(S.stops.findIndex((s) => s.name === '大阪城')));
+  await expect(page.locator('#place-card.show #pc-name')).toHaveText('Osaka Castle');
+  await expect(page.locator('#pc-name')).toHaveAttribute('translate', 'no');
+  await page.evaluate(() => { _pcStop = null; _applyPlaceCard({ name: '一蘭拉麵', types: ['restaurant'] }); });
+  await expect(page.locator('#pc-name')).toHaveText('一蘭拉麵');
 });

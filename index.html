@@ -129,6 +129,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .lang-bar .lb-b{border:1px solid var(--border);background:#fff;color:var(--text2);font-size:12px;font-weight:600;border-radius:12px;padding:2px 9px;cursor:pointer}
 .lang-bar .lb-b.on{background:var(--blue);border-color:var(--blue);color:#fff}
 .stop-local{color:var(--text)}
+.lang-msg{margin:4px 14px 0;padding:6px 10px;border-radius:8px;background:#FFF3E0;color:#B3530A;font-size:12px;line-height:1.5}
 .trip-intro{position:fixed;left:0;right:0;top:var(--tb-h,45px);z-index:7000;background:#fff;border-bottom:1px solid var(--border);box-shadow:0 8px 20px rgba(0,0,0,.12);
   max-height:0;overflow:hidden;transition:max-height .28s ease;padding:0 16px}
 .trip-intro.open{max-height:70vh;overflow-y:auto}
@@ -1476,6 +1477,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <!-- Itinerary pane -->
       <div class="pane on" id="pane-itinerary">
         <div class="lang-bar" id="lang-bar" translate="no"><span class="lb-t">🌐 景點名稱</span><button class="lb-b on" data-l="">中文</button><button class="lb-b" data-l="en">English</button><button class="lb-b" data-l="ja">日本語</button></div>
+        <div class="lang-msg" id="lang-msg" style="display:none"></div>
         <div id="stop-list"></div>
         <button class="add-stop-btn" id="btn-add-stop"><i class="ti ti-plus"></i> 新增景點</button>
         <div id="new-stop-panel" style="display:none;margin:0 14px 12px"></div>
@@ -2320,7 +2322,8 @@ function isOpenNow(place){
 function _applyPlaceCard(place){
   S.currentPlace=place;
   _pcData={phone:place.formatted_phone_number||'',website:place.website||''};
-  document.getElementById('pc-name').textContent=place.name||'';
+  document.getElementById('pc-name').textContent=_pcStop&&_nameLang?dispTitle(_pcStop):(place.name||'');
+  document.getElementById('pc-name').setAttribute('translate',_pcStop&&_nameLang?'no':'yes');
   document.getElementById('pc-type').textContent=placeTypeZh(place.types);
   var ratingHtml='';
   if(place.rating){
@@ -2340,7 +2343,9 @@ function _applyPlaceCard(place){
   refitPairAfterCard();
 }
 // Full showPlaceCard - moves map to place location (for search results)
+var _pcStop=null;   // 資訊卡是從哪個行程景點打開的（地圖上點店家時為 null）
 function showPlaceCard(pid){
+  _pcStop=null;
   if(!plSvc) return;
   S.currentPlaceId=pid;
   plSvc.getDetails({placeId:pid,
@@ -3120,7 +3125,7 @@ function tapStop(i){
       plSvc.textSearch({query:s.name,location:{lat:lat,lng:lng},radius:500},function(results,status){
         if(_tapToken!==token) return; // stale callback - a newer tap happened, ignore
         if(status===google.maps.places.PlacesServiceStatus.OK&&results&&results.length>0)
-          showPlaceCardFixed(results[0].place_id);
+          { _pcStop=s; showPlaceCardFixed(results[0].place_id); }
         else showSimplePc(s);
       });
     }
@@ -3132,7 +3137,7 @@ function tapStop(i){
       if(status===google.maps.places.PlacesServiceStatus.OK&&results&&results.length>0){
         var loc=results[0].geometry.location;
         focusStopOnMap(loc, s.name, s._key);
-        showPlaceCardFixed(results[0].place_id);
+        _pcStop=s; showPlaceCardFixed(results[0].place_id);
       } else showSimplePc(s);
     });
   }
@@ -3143,7 +3148,9 @@ function tapStop(i){
 
 function showSimplePc(s){
   S.currentPlace={name:s.name,geometry:null};
-  document.getElementById('pc-name').textContent=s.name;
+  _pcStop=s;
+  document.getElementById('pc-name').textContent=_nameLang?dispTitle(s):s.name;
+  document.getElementById('pc-name').setAttribute('translate',_nameLang?'no':'yes');
   document.getElementById('pc-type').textContent='📍 行程景點';
   document.getElementById('pc-rating').innerHTML='';
   var info='';
@@ -4541,18 +4548,19 @@ function translateTexts(lang){
       x.d.data.translations.forEach(function(t,j){ _trCache[lang+'|'+q[j]]=t.translatedText; });
     });
   })).then(function(){ try{ localStorage.setItem('tg_trcache',JSON.stringify(_trCache)); }catch(e){} return 'ok'; })
-  .catch(function(e){ return /disabled|not.*(enabled|been used)|PERMISSION|API_KEY|blocked|403/i.test(String(e&&e.message||e))?'api':'fail'; });
+  .catch(function(e){ var m=String(e&&e.message||e).slice(0,140); return {err:/disabled|not.*(enabled|been used)|PERMISSION|API_KEY|blocked|403/i.test(m)?'api':'fail', msg:m}; });
 }
 function saveNameCache(){ try{ localStorage.setItem('tg_namecache',JSON.stringify(_nameCache)); }catch(e){} }
+function langMsg(t){ var m=document.getElementById('lang-msg'); if(!m) return; m.textContent=t||''; m.style.display=t?'':'none'; }
 function setNameLang(lang){
+  langMsg('');
   document.querySelectorAll('#lang-bar .lb-b').forEach(function(b){ b.classList.toggle('on',b.dataset.l===lang); });
   _nameLang=lang; try{ localStorage.setItem('tg_namelang',lang); }catch(e){}
   if(!lang){ renderStops(); if(_introOpen&&!_introEditing) renderIntro(); return; }
   var doTr=function(){   // 備註、簡介、Google 給不出名稱的景點 → Google 翻譯（一次送出）
     return translateTexts(lang).then(function(r){
       if(_nameLang!==lang) return;
-      if(r==='api') showToast('⚠️ Google 翻譯（Cloud Translation API）未開啟，備註維持中文',3500);
-      else if(r==='fail') showToast('⚠️ 備註翻譯失敗，維持中文',2400);
+      if(r&&r.err) langMsg(r.err==='api'?'⚠️ 備註沒有翻譯：Google 翻譯（Cloud Translation API）未開啟，或金鑰的「API 限制」沒有勾選它。（'+r.msg+'）':'⚠️ 備註翻譯失敗：'+r.msg);
       renderStops(); if(_introOpen&&!_introEditing) renderIntro();
     });
   };
@@ -4579,7 +4587,7 @@ function setNameLang(lang){
   Promise.all([next(),next(),next()]).then(function(){
     loadEnd('names'); saveNameCache();
     if(_nameLang!==lang) return;
-    if(apiErr){ showToast('⚠️ Google 地點服務（Places API (New)）未開啟，無法轉換名稱',3500); setNameLang(''); return; }
+    if(apiErr){ showToast('⚠️ Google 地點服務（Places API (New)）未開啟，無法轉換名稱',3500); setNameLang(''); langMsg('⚠️ 景點名稱沒有轉換：Google 地點服務（Places API (New)）未開啟，或金鑰的「API 限制」沒有勾選它。'); return; }
     renderStops(); doTr();   // Google 找不到的景點，名稱改用翻譯
   });
 }
