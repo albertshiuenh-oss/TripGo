@@ -11,7 +11,7 @@
 /* ── TripGo boot: version, preview isolation, early error capture ──
    Must run before any other script touches localStorage or Firebase. */
 (function(){
-  window.TG_VERSION='5.17';
+  window.TG_VERSION='5.18';
   var PV=/\/preview\//.test(location.pathname)||/[?&]preview=1(&|$)/.test(location.search);
   window.TG_PREVIEW=PV;
 
@@ -58,7 +58,7 @@
   });
 })();
 </script>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.17%3C/text%3E%3C/svg%3E"/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a3a5c'/%3E%3Ctext x='32' y='38' text-anchor='middle' fill='%23ffffff' font-size='36' font-weight='bold' font-family='system-ui%2C-apple-system'%3ET%3C/text%3E%3Ctext x='32' y='56' text-anchor='middle' fill='rgba(255%2C255%2C255%2C.65)' font-size='12' font-family='system-ui%2C-apple-system'%3Ev5.18%3C/text%3E%3C/svg%3E"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="TripGo"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -124,6 +124,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 .jtp-count{font-size:11px;color:rgba(255,255,255,.8);font-weight:600}
 #jtp-list{display:flex;flex-direction:column;gap:6px}
 /* ── Logo 選單 ── */
+.lang-bar{display:flex;align-items:center;gap:4px;justify-content:flex-end;padding:6px 14px 0;font-size:12px;color:var(--text2)}
+.lang-bar .lb-t{margin-right:auto}
+.lang-bar .lb-b{border:1px solid var(--border);background:#fff;color:var(--text2);font-size:12px;font-weight:600;border-radius:12px;padding:2px 9px;cursor:pointer}
+.lang-bar .lb-b.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.stop-local{color:var(--text)}
 .trip-intro{position:fixed;left:0;right:0;top:var(--tb-h,45px);z-index:7000;background:#fff;border-bottom:1px solid var(--border);box-shadow:0 8px 20px rgba(0,0,0,.12);
   max-height:0;overflow:hidden;transition:max-height .28s ease;padding:0 16px}
 .trip-intro.open{max-height:70vh;overflow-y:auto}
@@ -1274,7 +1279,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       <button class="login-submit" id="btn-pin-submit" disabled>登入 / 建立帳號</button>
       <div class="login-err-msg" id="login-err"></div>
     </div>
-    <div class="login-footer">TripGo v5.17</div>
+    <div class="login-footer">TripGo v5.18</div>
   </div>
 
 <div id="S-join" class="hide">
@@ -1291,7 +1296,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
   <div class="js-logo">🗺️</div>
   <div class="js-title">TripGo</div>
   <div class="js-sub-tag">團體旅遊管理 APP</div>
-  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.17 &nbsp;·&nbsp; 2026-11-26</div>
+  <div style="position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.45);z-index:1;letter-spacing:.3px">TripGo v5.18 &nbsp;·&nbsp; 2026-11-27</div>
 
   <!-- Home -->
   <div id="js-home">
@@ -1470,6 +1475,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
       </div>
       <!-- Itinerary pane -->
       <div class="pane on" id="pane-itinerary">
+        <div class="lang-bar" id="lang-bar" translate="no"><span class="lb-t">🌐 景點名稱</span><button class="lb-b on" data-l="">中文</button><button class="lb-b" data-l="en">English</button><button class="lb-b" data-l="ja">日本語</button></div>
         <div id="stop-list"></div>
         <button class="add-stop-btn" id="btn-add-stop"><i class="ti ti-plus"></i> 新增景點</button>
         <div id="new-stop-panel" style="display:none;margin:0 14px 12px"></div>
@@ -1935,7 +1941,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2B5F8E}
 <!-- Main App JS -->
 <script>
 'use strict';
-// TripGo v5.17
+// TripGo v5.18
 
 // ════════════════════════════════
 // STATE
@@ -2763,9 +2769,9 @@ function renderStops(){
         '<div class="stop-cb'+(sel?' on':'')+'" id="cb-'+i+'"></div>' +
         '<div class="stop-txt" id="st-'+i+'">' +
           '<div class="stop-name"'+(tbadge?' style="padding-right:95px"':'')+'>'+
-            '<i class="ti ti-chevron-right stop-arr" id="sa-'+i+'" style="font-size:12px;font-weight:700;vertical-align:middle;margin-right:4px;transition:transform .2s;color:inherit;opacity:1"></i>'+escHtml(s.name||'')+nextTag+(s.category?'<span class="cat-tag cat-'+s.category+'">'+(s.category==='住宿'?'🏨':s.category==='景點'?'📍':s.category==='餐廳'?'🍽️':'📌')+' '+s.category+'</span>':'')+
+            '<i class="ti ti-chevron-right stop-arr" id="sa-'+i+'" style="font-size:12px;font-weight:700;vertical-align:middle;margin-right:4px;transition:transform .2s;color:inherit;opacity:1"></i>'+dispNameHtml(s)+nextTag+(s.category?'<span class="cat-tag cat-'+s.category+'">'+(s.category==='住宿'?'🏨':s.category==='景點'?'📍':s.category==='餐廳'?'🍽️':'📌')+' '+s.category+'</span>':'')+
           '</div>' +
-          '<div class="stop-time">'+escHtml((s.day?s.day+' ':'')+(s.arrive||'')+(s.depart?' ~ '+s.depart:''))+stayStr+resvTag(s)+(s.note?' · '+escHtml(s.note.substring(0,25)):'')+'</div>' +
+          '<div class="stop-time">'+escHtml((s.day?s.day+' ':'')+(s.arrive||'')+(s.depart?' ~ '+s.depart:''))+stayStr+resvTag(s)+dispLocalHtml(s)+(s.note?' · '+escHtml(s.note.substring(0,25)):'')+'</div>' +
         '</div>' +
         (MS_MODE?'':(tbadge?'<div style="position:absolute;top:11px;right:14px;display:flex;align-items:center;gap:4px;">'+tbadge+'</div>':'')) +
       '</div>' +
@@ -4485,6 +4491,53 @@ function transitOptsHtml(cur){
   return TRANSIT_OPTS.map(function(o){return '<option value="'+o[0]+'"'+(cur===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('');
 }
 function transitIcon(m){ return m==='walk'?'ti-walk':m==='bus'?'ti-bus':m==='train'?'ti-train':m==='other'?'ti-route':'ti-car'; }
+// ── 景點名稱換成 Google 地圖的英文／日文（只改顯示，不改資料）──
+// 標題 = Google 的目標語言名稱；時間那行加上「當地語言名稱」（去中文地區時就是原本的中文名稱）。
+// 這兩段標成 translate="no"，其他敘述交給 Apple／瀏覽器的「翻譯網頁」。結果存在這台手機（localStorage）。
+var _nameLang='', _nameCache={};
+try{ _nameLang=localStorage.getItem('tg_namelang')||''; _nameCache=JSON.parse(localStorage.getItem('tg_namecache')||'{}'); }catch(e){}
+var LOCAL_LANG={KR:'ko',JP:'ja',TW:'zh-TW',HK:'zh-HK',MO:'zh-HK',CN:'zh-CN',SG:'en',TH:'th',VN:'vi',FR:'fr',DE:'de',IT:'it',ES:'es',US:'en',GB:'en',AU:'en'};
+function nameKey(s,lang){ return lang+'|'+(s.name||'')+'|'+(+s.lat).toFixed(4)+','+(+s.lng).toFixed(4); }
+function nameInfo(s){ return _nameLang&&+s.lat?_nameCache[nameKey(s,_nameLang)]:null; }
+function dispNameHtml(s){ var n=nameInfo(s); return n&&n.t?'<span translate="no">'+escHtml(n.t)+'</span>':escHtml(s.name||''); }
+function dispLocalHtml(s){ var n=nameInfo(s); return n&&n.l?' · <span class="stop-local" translate="no">'+escHtml(n.l)+'</span>':''; }
+function saveNameCache(){ try{ localStorage.setItem('tg_namecache',JSON.stringify(_nameCache)); }catch(e){} }
+function setNameLang(lang){
+  document.querySelectorAll('#lang-bar .lb-b').forEach(function(b){ b.classList.toggle('on',b.dataset.l===lang); });
+  _nameLang=lang; try{ localStorage.setItem('tg_namelang',lang); }catch(e){}
+  if(!lang){ renderStops(); return; }
+  var todo=S.stops.filter(function(s){ return +s.lat&&!_nameCache[nameKey(s,lang)]; });
+  if(!todo.length){ renderStops(); return; }
+  var P=window.google&&google.maps&&google.maps.places&&google.maps.places.Place;
+  if(!P||!P.searchByText){ showToast('⚠️ 地圖還沒載入，稍後再試',2200); setNameLang(''); return; }
+  loadBegin('names','查 Google 景點名稱');
+  var failed=0, apiErr=false, i=0;
+  var one=function(s){
+    return P.searchByText({textQuery:s.name, locationBias:{center:{lat:+s.lat,lng:+s.lng},radius:800}, language:lang, maxResultCount:1, fields:['id','displayName','addressComponents']})
+    .then(function(r){
+      var pl=r&&r.places&&r.places[0]; if(!pl){ failed++; _nameCache[nameKey(s,lang)]={t:'',l:''}; return; }
+      var cc=((pl.addressComponents||[]).find(function(c){return (c.types||[]).indexOf('country')>=0;})||{}).shortText||'';
+      var loc=LOCAL_LANG[cc]||'';
+      var rec={t:pl.displayName||'', l:''};
+      _nameCache[nameKey(s,lang)]=rec;
+      if(!loc||loc===lang) return;
+      if(loc.indexOf('zh')===0){ rec.l=s.name; return; }   // 去中文地區：當地語言＝原本的中文名稱
+      return new P({id:pl.id, requestedLanguage:loc}).fetchFields({fields:['displayName']}).then(function(x){ rec.l=(x&&x.place||{}).displayName||''; }).catch(function(){});
+    }).catch(function(e){ failed++; if(/disabled|not.*(enabled|activated|authorized|been used)|PERMISSION|API_KEY|REQUEST_DENIED|403/i.test(String(e&&e.message||e))) apiErr=true; });
+  };
+  var next=function(){ if(i>=todo.length||apiErr) return Promise.resolve(); var s=todo[i++]; return one(s).then(next); };
+  Promise.all([next(),next(),next()]).then(function(){
+    loadEnd('names'); saveNameCache();
+    if(_nameLang!==lang) return;
+    if(apiErr){ showToast('⚠️ Google 地點服務（Places API (New)）未開啟，無法轉換名稱',3500); setNameLang(''); return; }
+    renderStops();
+    if(failed) showToast('有 '+failed+' 個景點在 Google 找不到，維持原本名稱',2600);
+  });
+}
+document.addEventListener('click',function(e){
+  var b=e.target&&e.target.closest&&e.target.closest('#lang-bar .lb-b'); if(!b) return;
+  setNameLang(b.dataset.l);
+});
 function hasResv(cat){ return cat==='餐廳'||cat==='住宿'; }   // 可以填預訂的分類
 var RESV_OPTS=[['','—'],['待訂','⏳ 待訂'],['已訂','✅ 已訂'],['免訂','🚶 免訂']];   // 選單文字要短，手機上三欄並排才放得下
 function resvFieldsHtml(s,show){
@@ -6550,7 +6603,7 @@ window.addEventListener('load',function(){
       // 版本號
       ctx.fillStyle='rgba(255,255,255,0.65)';
       ctx.font='bold 28px system-ui,-apple-system,sans-serif';
-      ctx.fillText('v5.17',90,152);
+      ctx.fillText('v5.18',90,152);
       // 插入 apple-touch-icon
       var lnk=document.querySelector('link[rel="apple-touch-icon"]')||document.createElement('link');
       lnk.rel='apple-touch-icon'; lnk.href=c.toDataURL('image/png');

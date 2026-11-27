@@ -1576,3 +1576,76 @@ test('已訂的標籤只有綠色勾勾（和編號）；待訂、免訂不變�
   await expect(page.locator('.rest-row', { hasText: '乙旅館' }).locator('.rest-resv')).toHaveText('⏳ 待訂 #X1');
   await expect(page.locator('#rest-resv-sum')).toContainText('已訂 1');
 });
+
+test.describe('景點名稱一鍵轉英文／日文（Google 地圖名稱，只改顯示）', () => {
+  // 假的 Google Places (New)：依語言回傳名稱；大阪城在日本（JP），道頓堀假裝在台灣（TW）
+  const fakePlaces = (page, { fail = false } = {}) => page.evaluate((fail) => {
+    window.__ps = [];
+    const NAMES = { '大阪城': { en: 'Osaka Castle', ja: '大阪城', cc: 'JP', id: 'p1' }, '道頓堀': { en: 'Dotonbori', ja: '道頓堀', cc: 'TW', id: 'p2' } };
+    const byId = { p1: { ja: '大阪城' }, p2: { 'zh-TW': '道頓堀' } };
+    function Place(o) { this.o = o; }
+    Place.searchByText = (req) => {
+      window.__ps.push(['search', req.textQuery, req.language]);
+      if (fail) return Promise.reject(new Error('Places API (New) has not been used in project 123 before or it is disabled'));
+      const n = NAMES[req.textQuery];
+      return Promise.resolve({ places: n ? [{ id: n.id, displayName: n[req.language], addressComponents: [{ types: ['country', 'political'], shortText: n.cc }] }] : [] });
+    };
+    Place.prototype.fetchFields = function () { window.__ps.push(['details', this.o.id, this.o.requestedLanguage]); return Promise.resolve({ place: { displayName: (byId[this.o.id] || {})[this.o.requestedLanguage] } }); };
+    google.maps.places.Place = Place;
+  }, fail);
+  const title = (page, raw) => page.evaluate((raw) => { const i = S.stops.findIndex((s) => s.name === raw); return document.querySelector('#st-' + i + ' .stop-name').innerText.trim(); }, raw);
+  const timeLine = (page, raw) => page.evaluate((raw) => { const i = S.stops.findIndex((s) => s.name === raw); return document.querySelector('#st-' + i + ' .stop-time').innerText; }, raw);
+
+  test('按 English：標題換成 Google 英文名；時間那行加上當地語言名稱；資料不變', async ({ page }) => {
+    await enterTrip(page);
+    await fakePlaces(page);
+    const before = await page.evaluate(() => JSON.stringify(window.__fbStub.dump().tripgo.groups.TEST01.stops));
+    await page.locator('#lang-bar .lb-b[data-l="en"]').click();
+    await expect.poll(() => title(page, '大阪城')).toContain('Osaka Castle');
+    expect(await timeLine(page, '大阪城')).toContain('大阪城');        // 日本 → 當地語言（日文）名稱
+    expect(await title(page, '道頓堀')).toContain('Dotonbori');
+    expect(await timeLine(page, '道頓堀')).toContain('道頓堀');        // 台灣 → 原本的中文名稱
+    expect(await page.evaluate(() => JSON.stringify(window.__fbStub.dump().tripgo.groups.TEST01.stops))).toBe(before);   // 只改顯示
+    const i = await page.evaluate(() => S.stops.findIndex((s) => s.name === '大阪城'));
+    await expect(page.locator('#st-' + i + ' .stop-name [translate="no"]')).toHaveText('Osaka Castle');   // Apple 不會再翻
+    await expect(page.locator('#st-' + i + ' .stop-local[translate="no"]')).toHaveText('大阪城');
+    const ps = await page.evaluate(() => window.__ps);
+    expect(ps).toContainEqual(['details', 'p1', 'ja']);
+    expect(ps.filter((x) => x[0] === 'details' && x[1] === 'p2')).toEqual([]);   // 中文地區不用再查
+  });
+
+  test('切回「中文」恢復原樣；再切 English 不重查（記在手機裡），重新整理後仍記得語言', async ({ page }) => {
+    await enterTrip(page);
+    await fakePlaces(page);
+    await page.locator('#lang-bar .lb-b[data-l="en"]').click();
+    await expect.poll(() => title(page, '大阪城')).toContain('Osaka Castle');
+    await page.locator('#lang-bar .lb-b[data-l=""]').click();
+    expect(await title(page, '大阪城')).toMatch(/^大阪城/);
+    expect(await title(page, '大阪城')).not.toContain('Osaka');
+    expect(await timeLine(page, '大阪城')).not.toContain(' · 大阪城');
+    const n = await page.evaluate(() => window.__ps.length);
+    await page.locator('#lang-bar .lb-b[data-l="en"]').click();
+    expect(await title(page, '大阪城')).toContain('Osaka Castle');
+    expect(await page.evaluate(() => window.__ps.length)).toBe(n);
+    expect(await page.evaluate(() => localStorage.getItem('tg_namelang'))).toBe('en');
+  });
+
+  test('日本語：標題用 Google 日文名稱；當地語言也是日文時不重複顯示', async ({ page }) => {
+    await enterTrip(page);
+    await fakePlaces(page);
+    await page.locator('#lang-bar .lb-b[data-l="ja"]').click();
+    await expect.poll(() => page.evaluate(() => window.__ps.filter((x) => x[0] === 'search').length)).toBeGreaterThan(1);
+    await expect.poll(() => timeLine(page, '道頓堀')).toContain('· 道頓堀');
+    expect(await timeLine(page, '大阪城')).not.toContain('· 大阪城');
+  });
+
+  test('Google 地點服務沒開：提示並回到中文，行程不壞', async ({ page }) => {
+    await enterTrip(page);
+    await fakePlaces(page, { fail: true });
+    await page.locator('#lang-bar .lb-b[data-l="en"]').click();
+    await expect(page.locator('#toast, .toast').first()).toContainText('Places API (New)');
+    await expect(page.locator('#lang-bar .lb-b.on')).toHaveAttribute('data-l', '');
+    expect(await title(page, '大阪城')).toMatch(/^大阪城/);
+    expect(await page.evaluate(() => window.__ps.filter((x) => x[0] === 'search').length)).toBeLessThanOrEqual(3);   // 發現沒開就停，不會每個景點都試
+  });
+});
