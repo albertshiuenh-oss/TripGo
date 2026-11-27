@@ -43,6 +43,10 @@ export const test = base.extend({
       if (url.includes('html2canvas')) return js('window.html2canvas=function(){return Promise.resolve(document.createElement("canvas"))}');
       if (url.includes('tabler-icons')) return route.fulfill({ contentType: 'text/css', body: '' });
       if (url.includes('api.open-meteo.com')) return route.fulfill({ json: weatherFor(url) });
+      if (url.includes('translation.googleapis.com')) {   // 假的 Google 翻譯：回傳「[語言] 原文」
+        const b = route.request().postDataJSON() || {};
+        return route.fulfill({ json: { data: { translations: (b.q || []).map((x) => ({ translatedText: '[' + b.target + '] ' + x })) } } });
+      }
       if (url.includes('currency-api')) return route.fulfill({ json: { date: '2026-10-01', usd: { usd: 1, twd: 32, jpy: 150, eur: 0.92, ntd: 32 } } });
       return route.abort();
     });

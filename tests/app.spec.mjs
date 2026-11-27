@@ -1630,12 +1630,14 @@ test.describe('景點名稱一鍵轉英文／日文（Google 地圖名稱，只�
     expect(await page.evaluate(() => localStorage.getItem('tg_namelang'))).toBe('en');
   });
 
-  test('日本語：標題用 Google 日文名稱；當地語言也是日文時不重複顯示', async ({ page }) => {
+  test('日本語：標題用 Google 日文名稱；當地名稱和標題相同時不重複顯示', async ({ page }) => {
     await enterTrip(page);
     await fakePlaces(page);
     await page.locator('#lang-bar .lb-b[data-l="ja"]').click();
     await expect.poll(() => page.evaluate(() => window.__ps.filter((x) => x[0] === 'search').length)).toBeGreaterThan(1);
-    await expect.poll(() => timeLine(page, '道頓堀')).toContain('· 道頓堀');
+    await expect.poll(() => title(page, '道頓堀')).toMatch(/^道頓堀/);
+    await page.waitForTimeout(200);
+    expect(await timeLine(page, '道頓堀')).not.toContain('· 道頓堀');   // 當地名稱和標題一樣 → 不重複
     expect(await timeLine(page, '大阪城')).not.toContain('· 大阪城');
   });
 
@@ -1648,4 +1650,77 @@ test.describe('景點名稱一鍵轉英文／日文（Google 地圖名稱，只�
     expect(await title(page, '大阪城')).toMatch(/^大阪城/);
     expect(await page.evaluate(() => window.__ps.filter((x) => x[0] === 'search').length)).toBeLessThanOrEqual(3);   // 發現沒開就停，不會每個景點都試
   });
+});
+
+test.describe('備註與旅程簡介一起翻譯（Google 翻譯，只改顯示）', () => {
+  const fakePlaces = (page) => page.evaluate(() => {
+    function P(o) { this.o = o; }
+    P.searchByText = (r) => Promise.resolve({ places: [{ id: 'x', displayName: 'EN place ' + r.textQuery.length, addressComponents: [{ types: ['country'], shortText: 'JP' }] }] });
+    P.prototype.fetchFields = function () { return Promise.resolve({ place: { displayName: 'JA' } }); };
+    google.maps.places.Place = P;
+  });
+  const line = (page, raw) => page.evaluate((raw) => { const i = S.stops.findIndex((s) => s.name === raw); return document.querySelector('#st-' + i + ' .stop-time').innerText; }, raw);
+
+  test('按 English：備註和簡介變成英文；資料不變；切回中文恢復', async ({ page }) => {
+    await enterTrip(page);
+    await fakePlaces(page);
+    await page.evaluate(() => { window.FB.set('tripgo/groups/TEST01/stops/-a02/note', '晚餐後散步'); window.FB.set('tripgo/groups/TEST01/intro', '大阪三日遊'); });
+    await page.waitForFunction(() => S.stops.find((s) => s.name === '道頓堀').note === '晚餐後散步');
+    const reqs = [];
+    page.on('request', (r) => { if (r.url().includes('translation.googleapis.com')) reqs.push(r.postDataJSON()); });
+    await page.locator('#lang-bar .lb-b[data-l="en"]').click();
+    await expect.poll(() => line(page, '道頓堀')).toContain('[en] 晚餐後散步');
+    await page.locator('#tb-trip').click();
+    await expect(page.locator('#ti-body')).toHaveText('[en] 大阪三日遊');
+    expect(reqs.length).toBe(1);   // 一次送出全部要翻的文字
+    expect(reqs[0].target).toBe('en');
+    expect(reqs[0].q).toEqual(expect.arrayContaining(['晚餐後散步', '大阪三日遊']));
+    expect(await page.evaluate(() => window.__fbStub.dump().tripgo.groups.TEST01.stops['-a02'].note)).toBe('晚餐後散步');
+    await page.locator('#ti-editbtn').click();
+    await expect(page.locator('#ti-text')).toHaveValue('大阪三日遊');   // 編輯時是原文
+    await page.locator('#ti-cancel').click();
+    await page.locator('#lang-bar .lb-b[data-l=""]').click();
+    expect(await line(page, '道頓堀')).toContain('晚餐後散步');
+    expect(await line(page, '道頓堀')).not.toContain('[en]');
+    await page.locator('#lang-bar .lb-b[data-l="en"]').click();
+    await expect.poll(() => line(page, '道頓堀')).toContain('[en] 晚餐後散步');
+    expect(reqs.length).toBe(1);   // 記在手機裡，不重翻
+  });
+
+  test('Google 翻譯沒開：提示，備註維持中文，景點名稱照樣轉換', async ({ page }) => {
+    await enterTrip(page);
+    await fakePlaces(page);
+    await page.route(/translation\.googleapis\.com/, (r) => r.fulfill({ status: 403, json: { error: { code: 403, message: 'Requests to this API translate.googleapis.com method google.cloud.translate.v2.TranslateService.TranslateText are blocked.' } } }));
+    await page.evaluate(() => window.FB.set('tripgo/groups/TEST01/stops/-a02/note', '晚餐後散步'));
+    await page.waitForFunction(() => S.stops.find((s) => s.name === '道頓堀').note === '晚餐後散步');
+    await page.locator('#lang-bar .lb-b[data-l="en"]').click();
+    await expect(page.locator('#toast, .toast').first()).toContainText('Cloud Translation API');
+    await expect.poll(() => page.evaluate(() => { const i = S.stops.findIndex((s) => s.name === '道頓堀'); return document.querySelector('#st-' + i + ' .stop-name').innerText; })).toContain('EN place 3');
+    expect(await line(page, '道頓堀')).toContain('晚餐後散步');
+  });
+});
+
+test('Google 給不出英文名稱（找不到、或只有韓文）時改用翻譯的原名；當地名稱和標題相同時不重複', async ({ page }) => {
+  await enterTrip(page);
+  await page.evaluate(() => {
+    const st = {}; const mk = (name, n) => ({ name, day: 'Dec 24', arrive: '1' + n + ':00', lat: 35.1 + n / 100, lng: 129, category: '景點', createdAt: n });
+    st['-k1'] = mk('宵夜 해성막창집 본점', 1); st['-k2'] = mk('聖誕夜燈散步', 2); st['-k3'] = mk('入住 Anook Signature Hotel Busan', 3);
+    window.FB.set('tripgo/groups/TEST01/stops', st);
+    const R = { '宵夜 해성막창집 본점': ['k1', '해성막창집 본점'], '入住 Anook Signature Hotel Busan': ['k3', 'Anook Signature Hotel Busan'] };
+    const L = { k1: '해성막창집 본점', k3: 'Anook Signature Hotel Busan' };
+    function P(o) { this.o = o; }
+    P.searchByText = (r) => Promise.resolve({ places: R[r.textQuery] ? [{ id: R[r.textQuery][0], displayName: R[r.textQuery][1], addressComponents: [{ types: ['country'], shortText: 'KR' }] }] : [] });
+    P.prototype.fetchFields = function () { return Promise.resolve({ place: { displayName: L[this.o.id] } }); };
+    google.maps.places.Place = P;
+  });
+  await page.waitForFunction(() => S.stops.length === 3);
+  const row = (raw) => page.evaluate((raw) => { const i = S.stops.findIndex((s) => s.name === raw); return [document.querySelector('#st-' + i + ' .stop-name').innerText, document.querySelector('#st-' + i + ' .stop-time').innerText]; }, raw);
+  await page.locator('#lang-bar .lb-b[data-l="en"]').click();
+  await expect.poll(async () => (await row('聖誕夜燈散步'))[0]).toContain('[en] 聖誕夜燈散步');   // Google 找不到 → 翻譯
+  const [t1, l1] = await row('宵夜 해성막창집 본점');
+  expect(t1).toContain('[en] 宵夜 해성막창집 본점');   // Google 只有韓文 → 翻譯原名
+  expect(l1).toContain('해성막창집 본점');             // 韓文當地名稱照樣放在時間那行
+  const [t3, l3] = await row('入住 Anook Signature Hotel Busan');
+  expect(t3).toContain('Anook Signature Hotel Busan');
+  expect(l3).not.toContain('· Anook');                  // 和標題一樣 → 不重複
 });

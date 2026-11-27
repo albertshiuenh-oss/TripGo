@@ -1994,7 +1994,7 @@ function loadMapsScript(){
   if(_mapsLoading||window._mapsReady) return; _mapsLoading=true;
   loadBegin('maps','載入地圖');
   var sc=document.createElement('script');
-  sc.src='https://maps.googleapis.com/maps/api/js?key=AIzaSyAqyQyNtBSvK7qLuVR49RqgkKqU1Y2vUjQ&libraries=places&callback=initMap';
+  sc.src='https://maps.googleapis.com/maps/api/js?key='+GMAPS_KEY+'&libraries=places&callback=initMap';
   sc.async=true; sc.onerror=function(){ _mapsLoading=false; window._mapsFailed(); };
   document.head.appendChild(sc);
 }
@@ -2771,7 +2771,7 @@ function renderStops(){
           '<div class="stop-name"'+(tbadge?' style="padding-right:95px"':'')+'>'+
             '<i class="ti ti-chevron-right stop-arr" id="sa-'+i+'" style="font-size:12px;font-weight:700;vertical-align:middle;margin-right:4px;transition:transform .2s;color:inherit;opacity:1"></i>'+dispNameHtml(s)+nextTag+(s.category?'<span class="cat-tag cat-'+s.category+'">'+(s.category==='住宿'?'🏨':s.category==='景點'?'📍':s.category==='餐廳'?'🍽️':'📌')+' '+s.category+'</span>':'')+
           '</div>' +
-          '<div class="stop-time">'+escHtml((s.day?s.day+' ':'')+(s.arrive||'')+(s.depart?' ~ '+s.depart:''))+stayStr+resvTag(s)+dispLocalHtml(s)+(s.note?' · '+escHtml(s.note.substring(0,25)):'')+'</div>' +
+          '<div class="stop-time">'+escHtml((s.day?s.day+' ':'')+(s.arrive||'')+(s.depart?' ~ '+s.depart:''))+stayStr+resvTag(s)+dispLocalHtml(s)+(s.note?' · '+escHtml(dispNote(s.note,25)):'')+'</div>' +
         '</div>' +
         (MS_MODE?'':(tbadge?'<div style="position:absolute;top:11px;right:14px;display:flex;align-items:center;gap:4px;">'+tbadge+'</div>':'')) +
       '</div>' +
@@ -3148,7 +3148,7 @@ function showSimplePc(s){
   document.getElementById('pc-rating').innerHTML='';
   var info='';
   if(s.arrive||s.depart) info+='<div class="pc-info-row"><i class="ti ti-clock"></i><span>'+(s.arrive||'')+(s.depart?' → '+s.depart:'')+'</span></div>';
-  if(s.note) info+='<div class="pc-info-row"><i class="ti ti-info-circle"></i><span>'+escHtml(s.note)+'</span></div>';
+  if(s.note) info+='<div class="pc-info-row"><i class="ti ti-info-circle"></i><span>'+escHtml(dispNote(s.note))+'</span></div>';
   document.getElementById('pc-info').innerHTML=info;
   document.getElementById('place-card').classList.add('show');
   refitPairAfterCard();
@@ -4494,20 +4494,70 @@ function transitIcon(m){ return m==='walk'?'ti-walk':m==='bus'?'ti-bus':m==='tra
 // ── 景點名稱換成 Google 地圖的英文／日文（只改顯示，不改資料）──
 // 標題 = Google 的目標語言名稱；時間那行加上「當地語言名稱」（去中文地區時就是原本的中文名稱）。
 // 這兩段標成 translate="no"，其他敘述交給 Apple／瀏覽器的「翻譯網頁」。結果存在這台手機（localStorage）。
+var GMAPS_KEY='AIzaSyAqyQyNtBSvK7qLuVR49RqgkKqU1Y2vUjQ';   // 地圖、地點、翻譯共用的金鑰（網站限制在 Google Cloud 設定）
 var _nameLang='', _nameCache={};
 try{ _nameLang=localStorage.getItem('tg_namelang')||''; _nameCache=JSON.parse(localStorage.getItem('tg_namecache')||'{}'); }catch(e){}
 var LOCAL_LANG={KR:'ko',JP:'ja',TW:'zh-TW',HK:'zh-HK',MO:'zh-HK',CN:'zh-CN',SG:'en',TH:'th',VN:'vi',FR:'fr',DE:'de',IT:'it',ES:'es',US:'en',GB:'en',AU:'en'};
 function nameKey(s,lang){ return lang+'|'+(s.name||'')+'|'+(+s.lat).toFixed(4)+','+(+s.lng).toFixed(4); }
 function nameInfo(s){ return _nameLang&&+s.lat?_nameCache[nameKey(s,_nameLang)]:null; }
-function dispNameHtml(s){ var n=nameInfo(s); return n&&n.t?'<span translate="no">'+escHtml(n.t)+'</span>':escHtml(s.name||''); }
-function dispLocalHtml(s){ var n=nameInfo(s); return n&&n.l?' · <span class="stop-local" translate="no">'+escHtml(n.l)+'</span>':''; }
+// Google 沒給目標語言的名稱：找不到，或回傳的名稱還是目標語言用不到的文字（韓文、泰文…；英文時也包括漢字、假名）
+function needTrName(n){
+  if(!n||!n.t) return true;
+  var foreign=_nameLang==='ja'?/[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF\u0E00-\u0E7F]/:/[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF\u0E00-\u0E7F\u3040-\u30FF\u3400-\u9FFF]/;
+  return foreign.test(n.t);
+}
+function dispTitle(s){
+  if(!_nameLang) return s.name||'';
+  var n=nameInfo(s);
+  if(!needTrName(n)) return n.t;
+  return _trCache[_nameLang+'|'+(s.name||'')]||s.name||'';
+}
+function dispNameHtml(s){ return _nameLang?'<span translate="no">'+escHtml(dispTitle(s))+'</span>':escHtml(s.name||''); }
+function dispLocalHtml(s){ var n=nameInfo(s); return n&&n.l&&n.l!==dispTitle(s)?' · <span class="stop-local" translate="no">'+escHtml(n.l)+'</span>':''; }
+// 備註與旅程簡介：用 Google Cloud Translation 翻成同一個語言（只改顯示）。結果存在這台手機。
+var _trCache={};
+try{ _trCache=JSON.parse(localStorage.getItem('tg_trcache')||'{}'); }catch(e){}
+function dispNote(t,max){
+  var x=_nameLang&&t?_trCache[_nameLang+'|'+t]:null;
+  if(x) return max?(x.length>max*2?x.slice(0,max*2)+'…':x):x;   // 英文字比較長，給兩倍長度
+  return max?String(t).substring(0,max):t;
+}
+function translateTexts(lang){
+  var want=[];
+  S.stops.forEach(function(s){
+    if(s.note) want.push(s.note);
+    if(s.name&&needTrName(+s.lat?_nameCache[nameKey(s,lang)]:null)) want.push(s.name);
+  });
+  if(S.intro) want.push(S.intro);
+  want=want.filter(function(t,i){ return want.indexOf(t)===i&&!_trCache[lang+'|'+t]; });
+  if(!want.length) return Promise.resolve('ok');
+  var chunks=[]; for(var i=0;i<want.length;i+=100) chunks.push(want.slice(i,i+100));
+  return Promise.all(chunks.map(function(q){
+    return fetch('https://translation.googleapis.com/language/translate/v2?key='+GMAPS_KEY,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({q:q,target:lang,format:'text'})})
+    .then(function(r){ return r.json().then(function(d){ return {ok:r.ok,d:d}; }); })
+    .then(function(x){
+      if(!x.ok||!x.d||!x.d.data) throw new Error((x.d&&x.d.error&&x.d.error.message)||'translate failed');
+      x.d.data.translations.forEach(function(t,j){ _trCache[lang+'|'+q[j]]=t.translatedText; });
+    });
+  })).then(function(){ try{ localStorage.setItem('tg_trcache',JSON.stringify(_trCache)); }catch(e){} return 'ok'; })
+  .catch(function(e){ return /disabled|not.*(enabled|been used)|PERMISSION|API_KEY|blocked|403/i.test(String(e&&e.message||e))?'api':'fail'; });
+}
 function saveNameCache(){ try{ localStorage.setItem('tg_namecache',JSON.stringify(_nameCache)); }catch(e){} }
 function setNameLang(lang){
   document.querySelectorAll('#lang-bar .lb-b').forEach(function(b){ b.classList.toggle('on',b.dataset.l===lang); });
   _nameLang=lang; try{ localStorage.setItem('tg_namelang',lang); }catch(e){}
-  if(!lang){ renderStops(); return; }
+  if(!lang){ renderStops(); if(_introOpen&&!_introEditing) renderIntro(); return; }
+  var doTr=function(){   // 備註、簡介、Google 給不出名稱的景點 → Google 翻譯（一次送出）
+    return translateTexts(lang).then(function(r){
+      if(_nameLang!==lang) return;
+      if(r==='api') showToast('⚠️ Google 翻譯（Cloud Translation API）未開啟，備註維持中文',3500);
+      else if(r==='fail') showToast('⚠️ 備註翻譯失敗，維持中文',2400);
+      renderStops(); if(_introOpen&&!_introEditing) renderIntro();
+    });
+  };
   var todo=S.stops.filter(function(s){ return +s.lat&&!_nameCache[nameKey(s,lang)]; });
-  if(!todo.length){ renderStops(); return; }
+  if(!todo.length){ renderStops(); doTr(); return; }
   var P=window.google&&google.maps&&google.maps.places&&google.maps.places.Place;
   if(!P||!P.searchByText){ showToast('⚠️ 地圖還沒載入，稍後再試',2200); setNameLang(''); return; }
   loadBegin('names','查 Google 景點名稱');
@@ -4530,8 +4580,7 @@ function setNameLang(lang){
     loadEnd('names'); saveNameCache();
     if(_nameLang!==lang) return;
     if(apiErr){ showToast('⚠️ Google 地點服務（Places API (New)）未開啟，無法轉換名稱',3500); setNameLang(''); return; }
-    renderStops();
-    if(failed) showToast('有 '+failed+' 個景點在 Google 找不到，維持原本名稱',2600);
+    renderStops(); doTr();   // Google 找不到的景點，名稱改用翻譯
   });
 }
 document.addEventListener('click',function(e){
@@ -5302,7 +5351,7 @@ function leaveTrip(code,uid){
 var _introOpen=false, _introEditing=false;
 function renderIntro(){
   var b=document.getElementById('ti-body');
-  b.innerHTML=S.intro?escHtml(S.intro):'<span class="ti-empty">'+(S.isOrg?'還沒有旅程簡介，按「編輯簡介」寫一段吧。':'組織者還沒寫旅程簡介。')+'</span>';
+  b.innerHTML=S.intro?escHtml(dispNote(S.intro)):'<span class="ti-empty">'+(S.isOrg?'還沒有旅程簡介，按「編輯簡介」寫一段吧。':'組織者還沒寫旅程簡介。')+'</span>';
   document.getElementById('ti-editbtn').style.display=S.isOrg&&!_introEditing?'':'none';
 }
 function toggleIntro(open){
