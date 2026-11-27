@@ -1576,3 +1576,199 @@ test('已訂的標籤只有綠色勾勾（和編號）；待訂、免訂不變�
   await expect(page.locator('.rest-row', { hasText: '乙旅館' }).locator('.rest-resv')).toHaveText('⏳ 待訂 #X1');
   await expect(page.locator('#rest-resv-sum')).toContainText('已訂 1');
 });
+
+test.describe('景點名稱一鍵轉英文／日文（Google 地圖名稱，只改顯示）', () => {
+  // 假的 Google Places (New)：依語言回傳名稱；大阪城在日本（JP），道頓堀假裝在台灣（TW）
+  const fakePlaces = (page, { fail = false } = {}) => page.evaluate((fail) => {
+    window.__ps = [];
+    const NAMES = { '大阪城': { en: 'Osaka Castle', ja: '大阪城', cc: 'JP', id: 'p1' }, '道頓堀': { en: 'Dotonbori', ja: '道頓堀', cc: 'TW', id: 'p2' } };
+    const byId = { p1: { ja: '大阪城' }, p2: { 'zh-TW': '道頓堀' } };
+    function Place(o) { this.o = o; }
+    Place.searchByText = (req) => {
+      window.__ps.push(['search', req.textQuery, req.language]);
+      if (fail) return Promise.reject(new Error('Places API (New) has not been used in project 123 before or it is disabled'));
+      const n = NAMES[req.textQuery];
+      return Promise.resolve({ places: n ? [{ id: n.id, displayName: n[req.language], addressComponents: [{ types: ['country', 'political'], shortText: n.cc }] }] : [] });
+    };
+    Place.prototype.fetchFields = function () { window.__ps.push(['details', this.o.id, this.o.requestedLanguage]); return Promise.resolve({ place: { displayName: (byId[this.o.id] || {})[this.o.requestedLanguage] } }); };
+    google.maps.places.Place = Place;
+  }, fail);
+  const title = (page, raw) => page.evaluate((raw) => { const i = S.stops.findIndex((s) => s.name === raw); return document.querySelector('#st-' + i + ' .stop-name').innerText.trim(); }, raw);
+  const timeLine = (page, raw) => page.evaluate((raw) => { const i = S.stops.findIndex((s) => s.name === raw); return document.querySelector('#st-' + i + ' .stop-time').innerText; }, raw);
+
+  test('按 English：標題換成 Google 英文名；時間那行加上當地語言名稱；資料不變', async ({ page }) => {
+    await enterTrip(page);
+    await fakePlaces(page);
+    const before = await page.evaluate(() => JSON.stringify(window.__fbStub.dump().tripgo.groups.TEST01.stops));
+    await page.locator('#lang-bar .lb-b[data-l="en"]').click();
+    await expect.poll(() => title(page, '大阪城')).toContain('Osaka Castle');
+    expect(await timeLine(page, '大阪城')).toContain('大阪城');        // 日本 → 當地語言（日文）名稱
+    expect(await title(page, '道頓堀')).toContain('Dotonbori');
+    expect(await timeLine(page, '道頓堀')).toContain('道頓堀');        // 台灣 → 原本的中文名稱
+    expect(await page.evaluate(() => JSON.stringify(window.__fbStub.dump().tripgo.groups.TEST01.stops))).toBe(before);   // 只改顯示
+    const i = await page.evaluate(() => S.stops.findIndex((s) => s.name === '大阪城'));
+    await expect(page.locator('#st-' + i + ' .stop-name [translate="no"]')).toHaveText('Osaka Castle');   // Apple 不會再翻
+    await expect(page.locator('#st-' + i + ' .stop-local[translate="no"]')).toHaveText('大阪城');
+    const ps = await page.evaluate(() => window.__ps);
+    expect(ps).toContainEqual(['details', 'p1', 'ja']);
+    expect(ps.filter((x) => x[0] === 'details' && x[1] === 'p2')).toEqual([]);   // 中文地區不用再查
+  });
+
+  test('切回「中文」恢復原樣；再切 English 不重查（記在手機裡），重新整理後仍記得語言', async ({ page }) => {
+    await enterTrip(page);
+    await fakePlaces(page);
+    await page.locator('#lang-bar .lb-b[data-l="en"]').click();
+    await expect.poll(() => title(page, '大阪城')).toContain('Osaka Castle');
+    await page.locator('#lang-bar .lb-b[data-l=""]').click();
+    expect(await title(page, '大阪城')).toMatch(/^大阪城/);
+    expect(await title(page, '大阪城')).not.toContain('Osaka');
+    expect(await timeLine(page, '大阪城')).not.toContain(' · 大阪城');
+    const n = await page.evaluate(() => window.__ps.length);
+    await page.locator('#lang-bar .lb-b[data-l="en"]').click();
+    expect(await title(page, '大阪城')).toContain('Osaka Castle');
+    expect(await page.evaluate(() => window.__ps.length)).toBe(n);
+    expect(await page.evaluate(() => localStorage.getItem('tg_namelang'))).toBe('en');
+  });
+
+  test('日本語：標題用 Google 日文名稱；當地名稱和標題相同時不重複顯示', async ({ page }) => {
+    await enterTrip(page);
+    await fakePlaces(page);
+    await page.locator('#lang-bar .lb-b[data-l="ja"]').click();
+    await expect.poll(() => page.evaluate(() => window.__ps.filter((x) => x[0] === 'search').length)).toBeGreaterThan(1);
+    await expect.poll(() => title(page, '道頓堀')).toMatch(/^道頓堀/);
+    await page.waitForTimeout(200);
+    expect(await timeLine(page, '道頓堀')).not.toContain('· 道頓堀');   // 當地名稱和標題一樣 → 不重複
+    expect(await timeLine(page, '大阪城')).not.toContain('· 大阪城');
+  });
+
+  test('Google 地點服務沒開：提示並回到中文，行程不壞', async ({ page }) => {
+    await enterTrip(page);
+    await fakePlaces(page, { fail: true });
+    await page.locator('#lang-bar .lb-b[data-l="en"]').click();
+    await expect(page.locator('#toast, .toast').first()).toContainText('Places API (New)');
+    await expect(page.locator('#lang-bar .lb-b.on')).toHaveAttribute('data-l', '');
+    expect(await title(page, '大阪城')).toMatch(/^大阪城/);
+    expect(await page.evaluate(() => window.__ps.filter((x) => x[0] === 'search').length)).toBeLessThanOrEqual(3);   // 發現沒開就停，不會每個景點都試
+  });
+});
+
+test.describe('備註與旅程簡介一起翻譯（Google 翻譯，只改顯示）', () => {
+  const fakePlaces = (page) => page.evaluate(() => {
+    function P(o) { this.o = o; }
+    P.searchByText = (r) => Promise.resolve({ places: [{ id: 'x', displayName: 'EN place ' + r.textQuery.length, addressComponents: [{ types: ['country'], shortText: 'JP' }] }] });
+    P.prototype.fetchFields = function () { return Promise.resolve({ place: { displayName: 'JA' } }); };
+    google.maps.places.Place = P;
+  });
+  const line = (page, raw) => page.evaluate((raw) => { const i = S.stops.findIndex((s) => s.name === raw); return document.querySelector('#st-' + i + ' .stop-time').innerText; }, raw);
+
+  test('按 English：備註和簡介變成英文；資料不變；切回中文恢復', async ({ page }) => {
+    await enterTrip(page);
+    await fakePlaces(page);
+    await page.evaluate(() => { window.FB.set('tripgo/groups/TEST01/stops/-a02/note', '晚餐後散步'); window.FB.set('tripgo/groups/TEST01/intro', '大阪三日遊'); });
+    await page.waitForFunction(() => S.stops.find((s) => s.name === '道頓堀').note === '晚餐後散步');
+    const reqs = [];
+    page.on('request', (r) => { if (r.url().includes('translation.googleapis.com')) reqs.push(r.postDataJSON()); });
+    await page.locator('#lang-bar .lb-b[data-l="en"]').click();
+    await expect.poll(() => line(page, '道頓堀')).toContain('[en] 晚餐後散步');
+    await page.locator('#tb-trip').click();
+    await expect(page.locator('#ti-body')).toHaveText('[en] 大阪三日遊');
+    expect(reqs.length).toBe(1);   // 一次送出全部要翻的文字
+    expect(reqs[0].target).toBe('en');
+    expect(reqs[0].q).toEqual(expect.arrayContaining(['晚餐後散步', '大阪三日遊']));
+    expect(await page.evaluate(() => window.__fbStub.dump().tripgo.groups.TEST01.stops['-a02'].note)).toBe('晚餐後散步');
+    await page.locator('#ti-editbtn').click();
+    await expect(page.locator('#ti-text')).toHaveValue('大阪三日遊');   // 編輯時是原文
+    await page.locator('#ti-cancel').click();
+    await page.locator('#lang-bar .lb-b[data-l=""]').click();
+    expect(await line(page, '道頓堀')).toContain('晚餐後散步');
+    expect(await line(page, '道頓堀')).not.toContain('[en]');
+    await page.locator('#lang-bar .lb-b[data-l="en"]').click();
+    await expect.poll(() => line(page, '道頓堀')).toContain('[en] 晚餐後散步');
+    expect(reqs.length).toBe(1);   // 記在手機裡，不重翻
+  });
+
+  test('Google 翻譯沒開：提示，備註維持中文，景點名稱照樣轉換', async ({ page }) => {
+    await enterTrip(page);
+    await fakePlaces(page);
+    await page.route(/translation\.googleapis\.com/, (r) => r.fulfill({ status: 403, json: { error: { code: 403, message: 'Requests to this API translate.googleapis.com method google.cloud.translate.v2.TranslateService.TranslateText are blocked.' } } }));
+    await page.evaluate(() => window.FB.set('tripgo/groups/TEST01/stops/-a02/note', '晚餐後散步'));
+    await page.waitForFunction(() => S.stops.find((s) => s.name === '道頓堀').note === '晚餐後散步');
+    await page.locator('#lang-bar .lb-b[data-l="en"]').click();
+    await expect(page.locator('#lang-msg')).toContainText('Cloud Translation API');   // 一直顯示在語言按鈕下方
+    await expect(page.locator('#lang-msg')).toContainText('are blocked');            // 附上 Google 回傳的原因
+    await expect.poll(() => page.evaluate(() => { const i = S.stops.findIndex((s) => s.name === '道頓堀'); return document.querySelector('#st-' + i + ' .stop-name').innerText; })).toContain('EN place 3');
+    expect(await line(page, '道頓堀')).toContain('晚餐後散步');
+  });
+});
+
+test('Google 給不出英文名稱（找不到、或只有韓文）時改用翻譯的原名；當地名稱和標題相同時不重複', async ({ page }) => {
+  await enterTrip(page);
+  await page.evaluate(() => {
+    const st = {}; const mk = (name, n) => ({ name, day: 'Dec 24', arrive: '1' + n + ':00', lat: 35.1 + n / 100, lng: 129, category: '景點', createdAt: n });
+    st['-k1'] = mk('宵夜 해성막창집 본점', 1); st['-k2'] = mk('聖誕夜燈散步', 2); st['-k3'] = mk('入住 Anook Signature Hotel Busan', 3);
+    window.FB.set('tripgo/groups/TEST01/stops', st);
+    const R = { '宵夜 해성막창집 본점': ['k1', '해성막창집 본점'], '入住 Anook Signature Hotel Busan': ['k3', 'Anook Signature Hotel Busan'] };
+    const L = { k1: '해성막창집 본점', k3: 'Anook Signature Hotel Busan' };
+    function P(o) { this.o = o; }
+    P.searchByText = (r) => Promise.resolve({ places: R[r.textQuery] ? [{ id: R[r.textQuery][0], displayName: R[r.textQuery][1], addressComponents: [{ types: ['country'], shortText: 'KR' }] }] : [] });
+    P.prototype.fetchFields = function () { return Promise.resolve({ place: { displayName: L[this.o.id] } }); };
+    google.maps.places.Place = P;
+  });
+  await page.waitForFunction(() => S.stops.length === 3);
+  const row = (raw) => page.evaluate((raw) => { const i = S.stops.findIndex((s) => s.name === raw); return [document.querySelector('#st-' + i + ' .stop-name').innerText, document.querySelector('#st-' + i + ' .stop-time').innerText]; }, raw);
+  await page.locator('#lang-bar .lb-b[data-l="en"]').click();
+  await expect.poll(async () => (await row('聖誕夜燈散步'))[0]).toContain('[en] 聖誕夜燈散步');   // Google 找不到 → 翻譯
+  const [t1, l1] = await row('宵夜 해성막창집 본점');
+  expect(t1).toContain('[en] 宵夜 해성막창집 본점');   // Google 只有韓文 → 翻譯原名
+  expect(l1).toContain('해성막창집 본점');             // 韓文當地名稱照樣放在時間那行
+  const [t3, l3] = await row('入住 Anook Signature Hotel Busan');
+  expect(t3).toContain('Anook Signature Hotel Busan');
+  expect(l3).not.toContain('· Anook');                  // 和標題一樣 → 不重複
+});
+
+test('切到英文後點景點：左側資訊卡的標題也是英文；地圖上點店家照樣顯示原名', async ({ page }) => {
+  await enterTrip(page);
+  await page.evaluate(() => {
+    function P(o) { this.o = o; }
+    P.searchByText = (r) => Promise.resolve({ places: [{ id: 'x', displayName: 'Osaka Castle', addressComponents: [{ types: ['country'], shortText: 'JP' }] }] });
+    P.prototype.fetchFields = function () { return Promise.resolve({ place: { displayName: '大阪城' } }); };
+    google.maps.places.Place = P;
+  });
+  await page.locator('#lang-bar .lb-b[data-l="en"]').click();
+  await page.waitForFunction(() => document.querySelector('#stop-list').innerText.includes('Osaka Castle'));
+  await page.evaluate(() => tapStop(S.stops.findIndex((s) => s.name === '大阪城')));
+  await expect(page.locator('#place-card.show #pc-name')).toHaveText('Osaka Castle');
+  await expect(page.locator('#pc-name')).toHaveAttribute('translate', 'no');
+  await page.evaluate(() => { _pcStop = null; _applyPlaceCard({ name: '一蘭拉麵', types: ['restaurant'] }); });
+  await expect(page.locator('#pc-name')).toHaveText('一蘭拉麵');
+});
+
+test('切到 English／日本語：行程頁的介面文字（停留、分類、預訂、下一站、按鈕）也一起換；切回中文恢復', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-10-02T09:00:00+09:00'));
+  await enterTrip(page);
+  await page.evaluate(() => {
+    window.FB.set('tripgo/groups/TEST01/stops/-a02/category', '餐廳');
+    window.FB.set('tripgo/groups/TEST01/stops/-a02/resv', '免訂');
+    function P(o) { this.o = o; }
+    P.searchByText = () => Promise.resolve({ places: [] });
+    google.maps.places.Place = P;
+  });
+  await page.waitForFunction(() => S.stops.find((s) => s.name === '道頓堀').resv === '免訂');
+  const list = () => page.locator('#stop-list').innerText();
+  expect(await list()).toContain('停留');
+  await page.locator('#lang-bar .lb-b[data-l="en"]').click();
+  await expect.poll(list).toContain('Stay 3h');
+  const txt = await list();
+  expect(txt).not.toContain('停留');
+  expect(txt).toContain('Restaurant');
+  expect(txt).toContain('No booking');
+  expect(txt).toContain('Next');
+  await expect(page.locator('#btn-add-stop')).toContainText('Add stop');
+  await expect(page.locator('#lang-bar .lb-t')).toHaveText('🌐 Place names');
+  await page.locator('#lang-bar .lb-b[data-l="ja"]').click();
+  await expect.poll(list).toContain('滞在 3時間');
+  expect(await list()).toContain('予約不要');
+  await page.locator('#lang-bar .lb-b[data-l=""]').click();
+  expect(await list()).toContain('停留 3時');
+  await expect(page.locator('#btn-add-stop')).toContainText('新增景點');
+});
