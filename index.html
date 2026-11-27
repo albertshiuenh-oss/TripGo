@@ -2714,7 +2714,12 @@ function sortStopsForDisplay(raw){
   return result;
 }
 
+function renderStopsUiLabels(){
+  var b=document.getElementById('btn-add-stop'); if(b) b.innerHTML='<i class="ti ti-plus"></i> '+escHtml(T('新增景點'));
+  var l=document.querySelector('#lang-bar .lb-t'); if(l) l.textContent='🌐 '+T('景點名稱');
+}
 function renderStops(){
+  renderStopsUiLabels();
   var el=document.getElementById('stop-list');
   if(!S.stops.length){
     el.innerHTML='<div class="stop-empty">尚無行程景點<br>點下方「新增景點」開始規劃</div>';
@@ -2742,7 +2747,7 @@ function renderStops(){
     }
     var isNext=i===nextIdx;
     var pastCls='';  // past-fading removed
-    var nextTag=isNext?'<span class="next-stop-tag">下一站</span>':'';
+    var nextTag=isNext?'<span class="next-stop-tag">'+T('下一站')+'</span>':'';
     // Transit badge with live-vs-planned coloring
     var tbadge='';
     if(s.transit&&s.transit.minutes){
@@ -2767,22 +2772,22 @@ function renderStops(){
       var _sa=parseT(s.arrive),_sd=parseT(s.depart);
       if(_sa!=null&&_sd!=null){var _st=_sd-_sa;if(_st<0)_st+=1440;
         var _sh=Math.floor(_st/60),_sm=_st%60;
-        if(_st>0) stayStr=' · <span style="color:var(--green);font-weight:700">停留 '+(_sh?_sh+'時':'')+(_sm?_sm+'分':'')+'</span>';}
+        if(_st>0) stayStr=' · <span style="color:var(--green);font-weight:700">'+stayLabel(_sh,_sm)+'</span>';}
     }
     html+='<div class="stop-wrap'+pastCls+'" id="sw-'+i+'">' +
       '<div class="stop-row'+(isNext?' stop-next-row':'')+'" id="sr-'+i+'" style="position:relative">' +
         '<div class="stop-cb'+(sel?' on':'')+'" id="cb-'+i+'"></div>' +
         '<div class="stop-txt" id="st-'+i+'">' +
           '<div class="stop-name"'+(tbadge?' style="padding-right:95px"':'')+'>'+
-            '<i class="ti ti-chevron-right stop-arr" id="sa-'+i+'" style="font-size:12px;font-weight:700;vertical-align:middle;margin-right:4px;transition:transform .2s;color:inherit;opacity:1"></i>'+dispNameHtml(s)+nextTag+(s.category?'<span class="cat-tag cat-'+s.category+'">'+(s.category==='住宿'?'🏨':s.category==='景點'?'📍':s.category==='餐廳'?'🍽️':'📌')+' '+s.category+'</span>':'')+
+            '<i class="ti ti-chevron-right stop-arr" id="sa-'+i+'" style="font-size:12px;font-weight:700;vertical-align:middle;margin-right:4px;transition:transform .2s;color:inherit;opacity:1"></i>'+dispNameHtml(s)+nextTag+(s.category?'<span class="cat-tag cat-'+s.category+'">'+(s.category==='住宿'?'🏨':s.category==='景點'?'📍':s.category==='餐廳'?'🍽️':'📌')+' '+escHtml(T(s.category))+'</span>':'')+
           '</div>' +
           '<div class="stop-time">'+escHtml((s.day?s.day+' ':'')+(s.arrive||'')+(s.depart?' ~ '+s.depart:''))+stayStr+resvTag(s)+dispLocalHtml(s)+(s.note?' · '+escHtml(dispNote(s.note,25)):'')+'</div>' +
         '</div>' +
         (MS_MODE?'':(tbadge?'<div style="position:absolute;top:11px;right:14px;display:flex;align-items:center;gap:4px;">'+tbadge+'</div>':'')) +
       '</div>' +
       '<div class="stop-expand" id="se-'+i+'">' +
-        '<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-checkbox" aria-hidden="true"></i>活動清單<div style="display:flex;align-items:center;gap:6px;margin-left:auto"><button class="exp-ins-btn" data-i="'+i+'"><i class="ti ti-row-insert-bottom" aria-hidden="true"></i> 插入</button><button class="exp-edit-btn" data-i="'+i+'"><i class="ti ti-pencil" aria-hidden="true"></i> 編輯</button><button class="exp-del-btn" data-i="'+i+'"><i class="ti ti-trash" aria-hidden="true"></i> 刪除</button></div></div>'+(actsHtml||'')+'</div>' +
-        (notesHtml?'<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-alert-triangle" style="color:#F9AB00" aria-hidden="true"></i>注意事項</div>'+notesHtml+'</div>':'') +
+        '<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-checkbox" aria-hidden="true"></i>'+T('活動清單')+'<div style="display:flex;align-items:center;gap:6px;margin-left:auto"><button class="exp-ins-btn" data-i="'+i+'"><i class="ti ti-row-insert-bottom" aria-hidden="true"></i> '+T('插入')+'</button><button class="exp-edit-btn" data-i="'+i+'"><i class="ti ti-pencil" aria-hidden="true"></i> '+T('編輯')+'</button><button class="exp-del-btn" data-i="'+i+'"><i class="ti ti-trash" aria-hidden="true"></i> '+T('刪除')+'</button></div></div>'+(actsHtml||'')+'</div>' +
+        (notesHtml?'<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-alert-triangle" style="color:#F9AB00" aria-hidden="true"></i>'+T('注意事項')+'</div>'+notesHtml+'</div>':'') +
 
         '</div>' +
     '</div>';
@@ -4508,6 +4513,15 @@ var LOCAL_LANG={KR:'ko',JP:'ja',TW:'zh-TW',HK:'zh-HK',MO:'zh-HK',CN:'zh-CN',SG:'
 function nameKey(s,lang){ return lang+'|'+(s.name||'')+'|'+(+s.lat).toFixed(4)+','+(+s.lng).toFixed(4); }
 function nameInfo(s){ return _nameLang&&+s.lat?_nameCache[nameKey(s,_nameLang)]:null; }
 // Google 沒給目標語言的名稱：找不到，或回傳的名稱還是目標語言用不到的文字（韓文、泰文…；英文時也包括漢字、假名）
+// 行程頁的介面文字：切換語言時一起換（只有行程頁看得到的這些）
+var UI_TR={
+  en:{'停留':'Stay','時':'h','分':'m','下一站':'Next','住宿':'Hotel','景點':'Sight','餐廳':'Restaurant','其他':'Other','待訂':'To book','免訂':'No booking','已訂':'Booked',
+      '活動清單':'Activities','注意事項':'Notes','插入':'Insert','編輯':'Edit','刪除':'Delete','新增景點':'Add stop','景點名稱':'Place names'},
+  ja:{'停留':'滞在','時':'時間','分':'分','下一站':'次','住宿':'宿泊','景點':'観光','餐廳':'レストラン','其他':'その他','待訂':'予約待ち','免訂':'予約不要','已訂':'予約済み',
+      '活動清單':'アクティビティ','注意事項':'注意事項','插入':'挿入','編輯':'編集','刪除':'削除','新增景點':'スポット追加','景點名稱':'スポット名'}
+};
+function T(zh){ var d=_nameLang&&UI_TR[_nameLang]; return d&&d[zh]||zh; }
+function stayLabel(h,m){ return T('停留')+' '+(h?h+T('時'):'')+(_nameLang==='en'&&h&&m?' ':'')+(m?m+T('分'):''); }
 function needTrName(n){
   if(!n||!n.t) return true;
   var foreign=_nameLang==='ja'?/[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF\u0E00-\u0E7F]/:/[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF\u0E00-\u0E7F\u3040-\u30FF\u3400-\u9FFF]/;
@@ -4613,13 +4627,13 @@ document.addEventListener('change',function(e){
 });
 function resvTag(s){
   if(!hasResv(s.category)||!s.resv) return '';
-  var m={'已訂':['r-yes','✅'],'待訂':['r-todo','⏳ 待訂'],'免訂':['r-none','🚶 免訂']}[s.resv]; if(!m) return '';   // 已訂只留綠色勾勾（title 寫「已訂」）
-  return '<span class="cat-tag resv-tag '+m[0]+'" title="'+s.resv+'" aria-label="'+s.resv+'">'+m[1]+(s.resv!=='免訂'&&s.resvNo?' #'+escHtml(s.resvNo):'')+'</span>';
+  var m={'已訂':['r-yes','✅'],'待訂':['r-todo','⏳ '+T('待訂')],'免訂':['r-none','🚶 '+T('免訂')]}[s.resv]; if(!m) return '';   // 已訂只留綠色勾勾（title 寫「已訂」）
+  return '<span class="cat-tag resv-tag '+m[0]+'" title="'+T(s.resv)+'" aria-label="'+T(s.resv)+'">'+m[1]+(s.resv!=='免訂'&&s.resvNo?' #'+escHtml(s.resvNo):'')+'</span>';
 }
 function resvBadge(s){   // 一行式清單用的短標籤；沒設定不顯示（上方統計會算）
   if(!hasResv(s.category)||!s.resv) return '';
-  var m={'已訂':['r-yes','✅'],'待訂':['r-todo','⏳ 待訂'],'免訂':['r-none','🚶 免訂']}[s.resv]; if(!m) return '';   // 已訂只留綠色勾勾（title 寫「已訂」）
-  return '<span class="rest-resv '+m[0]+'" title="'+s.resv+'" aria-label="'+s.resv+'">'+m[1]+(s.resv!=='免訂'&&s.resvNo?' #'+escHtml(s.resvNo):'')+'</span>';
+  var m={'已訂':['r-yes','✅'],'待訂':['r-todo','⏳ '+T('待訂')],'免訂':['r-none','🚶 '+T('免訂')]}[s.resv]; if(!m) return '';   // 已訂只留綠色勾勾（title 寫「已訂」）
+  return '<span class="rest-resv '+m[0]+'" title="'+T(s.resv)+'" aria-label="'+T(s.resv)+'">'+m[1]+(s.resv!=='免訂'&&s.resvNo?' #'+escHtml(s.resvNo):'')+'</span>';
 }
 var _restSub='food';
 function restItems(sub){
@@ -6321,9 +6335,9 @@ function closeInlineEdit(i, collapse){
   expPanel.innerHTML=
     '<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-checkbox"></i>活動清單'+
       '<div style="display:flex;align-items:center;gap:6px;margin-left:auto">'+
-      '<button class="exp-ins-btn" data-i="'+i+'"><i class="ti ti-row-insert-bottom"></i> 插入</button>'+
-      '<button class="exp-edit-btn" data-i="'+i+'"><i class="ti ti-pencil"></i> 編輯</button>'+
-      '<button class="exp-del-btn" data-i="'+i+'"><i class="ti ti-trash"></i> 刪除</button>'+
+      '<button class="exp-ins-btn" data-i="'+i+'"><i class="ti ti-row-insert-bottom"></i> '+T('插入')+'</button>'+
+      '<button class="exp-edit-btn" data-i="'+i+'"><i class="ti ti-pencil"></i> '+T('編輯')+'</button>'+
+      '<button class="exp-del-btn" data-i="'+i+'"><i class="ti ti-trash"></i> '+T('刪除')+'</button>'+
       '</div>'+
     '</div>'+(actsHtml||'')+'</div>'+
     (notesHtml?'<div class="exp-section"><div class="exp-sec-title"><i class="ti ti-alert-triangle" style="color:#F9AB00"></i>注意事項</div>'+notesHtml+'</div>':'');

@@ -1742,3 +1742,33 @@ test('切到英文後點景點：左側資訊卡的標題也是英文；地圖�
   await page.evaluate(() => { _pcStop = null; _applyPlaceCard({ name: '一蘭拉麵', types: ['restaurant'] }); });
   await expect(page.locator('#pc-name')).toHaveText('一蘭拉麵');
 });
+
+test('切到 English／日本語：行程頁的介面文字（停留、分類、預訂、下一站、按鈕）也一起換；切回中文恢復', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-10-02T09:00:00+09:00'));
+  await enterTrip(page);
+  await page.evaluate(() => {
+    window.FB.set('tripgo/groups/TEST01/stops/-a02/category', '餐廳');
+    window.FB.set('tripgo/groups/TEST01/stops/-a02/resv', '免訂');
+    function P(o) { this.o = o; }
+    P.searchByText = () => Promise.resolve({ places: [] });
+    google.maps.places.Place = P;
+  });
+  await page.waitForFunction(() => S.stops.find((s) => s.name === '道頓堀').resv === '免訂');
+  const list = () => page.locator('#stop-list').innerText();
+  expect(await list()).toContain('停留');
+  await page.locator('#lang-bar .lb-b[data-l="en"]').click();
+  await expect.poll(list).toContain('Stay 3h');
+  const txt = await list();
+  expect(txt).not.toContain('停留');
+  expect(txt).toContain('Restaurant');
+  expect(txt).toContain('No booking');
+  expect(txt).toContain('Next');
+  await expect(page.locator('#btn-add-stop')).toContainText('Add stop');
+  await expect(page.locator('#lang-bar .lb-t')).toHaveText('🌐 Place names');
+  await page.locator('#lang-bar .lb-b[data-l="ja"]').click();
+  await expect.poll(list).toContain('滞在 3時間');
+  expect(await list()).toContain('予約不要');
+  await page.locator('#lang-bar .lb-b[data-l=""]').click();
+  expect(await list()).toContain('停留 3時');
+  await expect(page.locator('#btn-add-stop')).toContainText('新增景點');
+});
